@@ -21,6 +21,80 @@ export function rollDice(count) {
   return results;
 }
 
+export function rollPlainDice(count) {
+  const results = [];
+  for (let i = 0; i < count; i++) {
+    results.push(Math.floor(Math.random() * 6) + 1);
+  }
+  return results;
+}
+
+export function evaluateGMRollOutcome(total, wildDie, dcValue) {
+  const beat = total > dcValue;
+  const rawFirst = wildDie?.rawFirst;
+  const exploded = wildDie?.exploded || false;
+
+  let neededExplosion = false;
+  if (exploded && beat) {
+    const explosionBonus = wildDie.value - 6;
+    const totalWithout = total - explosionBonus;
+    neededExplosion = totalWithout <= dcValue;
+  }
+
+  if (beat && rawFirst === 1) {
+    return {
+      outcome: 'PARTIAL_SUCCESS',
+      heroPointDelta: 1,
+      hasChoice: true,
+      choiceType: 'wild1_beat',
+      neededExplosion: false,
+      complication: true,
+    };
+  }
+
+  if (beat && rawFirst === 6) {
+    return {
+      outcome: 'PENDING_CHOICE',
+      heroPointDelta: 0,
+      hasChoice: true,
+      choiceType: 'wild6_beat',
+      neededExplosion,
+      complication: false,
+    };
+  }
+
+  if (beat) {
+    return {
+      outcome: 'SUCCESS',
+      heroPointDelta: 0,
+      hasChoice: false,
+      choiceType: null,
+      neededExplosion: false,
+      complication: false,
+    };
+  }
+
+  if (!beat && rawFirst === 1) {
+    return {
+      outcome: 'CRITICAL_FAIL',
+      heroPointDelta: 1,
+      hasChoice: false,
+      choiceType: null,
+      neededExplosion: false,
+      complication: true,
+    };
+  }
+
+  return {
+    outcome: 'FAIL',
+    heroPointDelta: 0,
+    hasChoice: false,
+    choiceType: null,
+    neededExplosion: false,
+    complication: false,
+  };
+}
+
 export function calculateTotal(diceResults) {
   const wildDie = diceResults[0];
   const otherDice = diceResults.slice(1);

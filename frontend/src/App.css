@@ -691,6 +691,17 @@ button:disabled {
   background-color: #0f3460;
 }
 
+.exceptional-double-btn {
+  border-color: #06d6a0 !important;
+  color: #06d6a0 !important;
+  margin-top: 0.5rem;
+}
+
+.exceptional-double-btn:hover {
+  background-color: #06d6a0 !important;
+  color: #1a1a2e !important;
+}
+
 .doubled-indicator {
   display: flex;
   align-items: center;
@@ -949,4 +960,192 @@ button:disabled {
 .roll-flag-inline.doubled {
   background-color: rgba(255, 214, 10, 0.1);
   color: #ffd60a;
+}
+
+/* GM Roll Modal */
+.gm-roll-modal {
+  border-color: #06d6a0;
+}
+
+.gm-roll-banner {
+  background-color: rgba(6, 214, 160, 0.15);
+  border: 1px solid #06d6a0;
+  color: #06d6a0;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.dc-display {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #ccc;
+  margin-bottom: 1.5rem;
+}
+
+.dc-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffd60a;
+}
+
+.dc-dice-note {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.vs-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.vs-total {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #06d6a0;
+}
+
+.vs-label {
+  color: #888;
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.vs-dc {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffd60a;
+}
+
+.outcome-section {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.outcome-badge {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1a1a2e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.outcome-badge-sm {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: #1a1a2e;
+  text-transform: uppercase;
+}
+
+.hp-delta {
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #06d6a0;
+}
+
+.outcome-complication {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ef476f;
+}
+
+.choice-prompt {
+  color: #ccc;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.choice-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  border: 2px solid #444;
+  background-color: #0f3460;
+  color: #eee;
+  cursor: pointer;
+  min-width: 160px;
+  transition: all 0.2s;
+}
+
+.choice-btn:hover {
+  transform: translateY(-2px);
+}
+
+.choice-btn.exceptional {
+  border-color: #ffd60a;
+}
+
+.choice-btn.exceptional:hover {
+  background-color: rgba(255, 214, 10, 0.15);
+  box-shadow: 0 4px 12px rgba(255, 214, 10, 0.3);
+}
+
+.choice-btn.success {
+  border-color: #06d6a0;
+}
+
+.choice-btn.success:hover {
+  background-color: rgba(6, 214, 160, 0.15);
+  box-shadow: 0 4px 12px rgba(6, 214, 160, 0.3);
+}
+
+.choice-btn.partial {
+  border-color: #f9a825;
+}
+
+.choice-btn.partial:hover {
+  background-color: rgba(249, 168, 37, 0.15);
+  box-shadow: 0 4px 12px rgba(249, 168, 37, 0.3);
+}
+
+.choice-btn.choose-fail {
+  border-color: #ef476f;
+}
+
+.choice-btn.choose-fail:hover {
+  background-color: rgba(239, 71, 111, 0.15);
+  box-shadow: 0 4px 12px rgba(239, 71, 111, 0.3);
+}
+
+.choice-note {
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}
+
+/* GM Response cards */
+.gm-response-card {
+  padding: 0.75rem;
+  background-color: #0f3460;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #444;
 }

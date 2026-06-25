@@ -6,7 +6,7 @@ const router = express.Router();
 
 // POST /api/users/register - Create new user
 router.post('/register', async (req, res) => {
-  const { username, password, displayName } = req.body;
+  const { username, password, displayName, isGM } = req.body;
 
   if (!username || !password || !displayName) {
     return res.status(400).json({ error: 'Username, password, and display name required' });
@@ -21,6 +21,7 @@ router.post('/register', async (req, res) => {
     username,
     displayName,
     password, // TODO: Hash passwords with bcrypt
+    isGM: isGM || false,
     createdAt: new Date().toISOString(),
   };
 
@@ -31,6 +32,7 @@ router.post('/register', async (req, res) => {
     id: newUser.id,
     username: newUser.username,
     displayName: newUser.displayName,
+    isGM: newUser.isGM,
   });
 });
 
@@ -49,6 +51,7 @@ router.post('/login', async (req, res) => {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
+    isGM: user.isGM || false,
   });
 });
 
@@ -87,6 +90,7 @@ router.get('/:userId', async (req, res) => {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
+    isGM: user.isGM || false,
     createdAt: user.createdAt,
   });
 });

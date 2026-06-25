@@ -8,6 +8,7 @@ export default function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [isGM, setIsGM] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +20,10 @@ export default function LoginPage({ onLogin }) {
     try {
       const endpoint = isLogin ? '/users/login' : '/users/register';
       const body = { username, password };
-      if (!isLogin) body.displayName = displayName;
+      if (!isLogin) {
+        body.displayName = displayName;
+        body.isGM = isGM;
+      }
       const response = await axios.post(`${API_URL}${endpoint}`, body);
 
       onLogin(response.data);
@@ -65,17 +69,28 @@ export default function LoginPage({ onLogin }) {
           </div>
 
           {!isLogin && (
-            <div className="form-group">
-              <label htmlFor="displayName">Display Name</label>
-              <input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Name shown to other players"
-                required
-              />
-            </div>
+            <>
+              <div className="form-group">
+                <label htmlFor="displayName">Display Name</label>
+                <input
+                  id="displayName"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Name shown to other players"
+                  required
+                />
+              </div>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  id="isGM"
+                  type="checkbox"
+                  checked={isGM}
+                  onChange={(e) => setIsGM(e.target.checked)}
+                />
+                <label htmlFor="isGM" style={{ margin: 0 }}>Login as Game Master</label>
+              </div>
+            </>
           )}
 
           <button type="submit" disabled={loading} style={{ width: '100%' }}>

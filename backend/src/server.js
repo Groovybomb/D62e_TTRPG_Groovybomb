@@ -4,6 +4,8 @@ import userRoutes from './routes/users.js';
 import characterRoutes from './routes/characters.js';
 import rollRoutes from './routes/rolls.js';
 import spaceshipRoutes from './routes/spaceships.js';
+import messageRoutes from './routes/messages.js';
+import gmRollRoutes from './routes/gmRolls.js';
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 5000;
@@ -28,6 +30,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/characters', characterRoutes);
 app.use('/api/rolls', rollRoutes);
 app.use('/api/spaceships', spaceshipRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/gm-rolls', gmRollRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -10,6 +10,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const [phase, setPhase] = useState('setup'); // 'setup' | 'result'
   const [extraDice, setExtraDice] = useState(0);
   const [doubled, setDoubled] = useState(false);
+  const [doubleSource, setDoubleSource] = useState(null); // 'heroPoint' | 'exceptional' | null
   const [diceResults, setDiceResults] = useState([]);
   const [rollTotal, setRollTotal] = useState(null);
   const [rollFlag, setRollFlag] = useState(null); // null | 'REROLL' | 'DOUBLE_DOWN'
@@ -20,17 +21,25 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const heroPoints = character.heroPoints || 0;
 
   const canDouble = !doubled && heroPoints > 0;
-  const canReroll = heroPoints > (doubled ? 0 : 0); // reroll always costs a hero point
 
   const handleDouble = () => {
     if (heroPoints < 1) return;
     setDoubled(true);
+    setDoubleSource('heroPoint');
     onHeroPointChange(heroPoints - 1);
   };
 
+  const handleExceptionalDouble = () => {
+    setDoubled(true);
+    setDoubleSource('exceptional');
+  };
+
   const handleUndoDouble = () => {
+    if (doubleSource === 'heroPoint') {
+      onHeroPointChange(heroPoints + 1);
+    }
     setDoubled(false);
-    onHeroPointChange(heroPoints + 1);
+    setDoubleSource(null);
   };
 
   const executeRoll = async (flag = null) => {
@@ -116,12 +125,17 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             {/* Double dice */}
             <div className="double-section">
               {!doubled ? (
-                <button onClick={handleDouble} disabled={!canDouble} className="double-btn">
-                  Double Dice ({effectiveDice * 2}D6) — costs 1 Hero Point
-                </button>
+                <>
+                  <button onClick={handleDouble} disabled={!canDouble} className="double-btn">
+                    Double Dice ({effectiveDice * 2}D6) — costs 1 Hero Point
+                  </button>
+                  <button onClick={handleExceptionalDouble} className="double-btn exceptional-double-btn">
+                    Exceptional Success ({effectiveDice * 2}D6) — free
+                  </button>
+                </>
               ) : (
                 <div className="doubled-indicator">
-                  <span>Doubled! Rolling {effectiveDice}D6</span>
+                  <span>Doubled! Rolling {effectiveDice}D6 {doubleSource === 'exceptional' ? '(Exceptional Success)' : ''}</span>
                   <button onClick={handleUndoDouble} className="undo-double-btn">Undo</button>
                 </div>
               )}
@@ -190,7 +204,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
               Total: <span className="total-number">{rollTotal?.total}</span>
             </div>
 
-            {doubled && <div className="doubled-note">Doubled dice (Hero Point spent)</div>}
+            {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}
 
             {/* Action buttons */}
             <div className="result-actions">

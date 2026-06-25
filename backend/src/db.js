@@ -1,5 +1,4 @@
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
+import { Low, JSONFile } from 'lowdb';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -13,6 +12,8 @@ const defaultData = {
   spaceships: [],
   rolls: [],
   messages: [],
+  gmRollRequests: [],
+  gmRollResponses: [],
   gameSessions: [],
 };
 

@@ -69,7 +69,7 @@ router.post('/attack', async (req, res) => {
 
 // POST /api/rolls/damage - Store a damage roll
 router.post('/damage', async (req, res) => {
-  const { characterId, weaponName, diceRolled, wildDie, total, complication } = req.body;
+  const { characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag } = req.body;
 
   if (!characterId || !weaponName) {
     return res.status(400).json({ error: 'characterId and weaponName required' });
@@ -79,11 +79,15 @@ router.post('/damage', async (req, res) => {
     id: generateId(),
     rollType: 'DAMAGE',
     characterId,
+    characterName: characterName || '',
     weaponName,
+    damageFormula: damageFormula || '',
+    diceCount: diceCount || 0,
     diceRolled: diceRolled || [],
-    wildDie: wildDie || null,
     total: total || 0,
-    complication: complication || false,
+    doubled: doubled || false,
+    extraDice: extraDice || 0,
+    rollFlag: rollFlag || null,
     createdAt: new Date().toISOString(),
   };
 

@@ -17,8 +17,10 @@ export default function GamePage({ userId, displayName }) {
   useEffect(() => {
     fetchCharacters();
     fetchRolls();
-    const interval = setInterval(fetchRolls, 5000);
-    return () => clearInterval(interval);
+    fetchMessages();
+    const rollInterval = setInterval(fetchRolls, 5000);
+    const msgInterval = setInterval(fetchMessages, 3000);
+    return () => { clearInterval(rollInterval); clearInterval(msgInterval); };
   }, [userId]);
 
   const fetchCharacters = async () => {
@@ -38,16 +40,25 @@ export default function GamePage({ userId, displayName }) {
     } catch { /* ignore */ }
   };
 
-  const handleChat = (e) => {
+  const fetchMessages = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/messages`);
+      setChatMessages(res.data);
+    } catch { /* ignore */ }
+  };
+
+  const handleChat = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    setChatMessages(prev => [{
-      id: Date.now(),
-      author: displayName,
-      text: chatInput.trim(),
-      timestamp: new Date().toLocaleTimeString(),
-    }, ...prev]);
-    setChatInput('');
+    try {
+      await axios.post(`${API_URL}/messages`, {
+        userId,
+        author: displayName,
+        text: chatInput.trim(),
+      });
+      setChatInput('');
+      fetchMessages();
+    } catch { /* ignore */ }
   };
 
   const handleHeroPointChange = async (newPoints) => {
@@ -81,10 +92,9 @@ export default function GamePage({ userId, displayName }) {
 
   const getCharName = (id) => allCharacters.find(c => c.id === id)?.name || 'Unknown';
 
-  // Interleave rolls and chat messages by time
   const combined = [
     ...rolls.map(r => ({ type: 'roll', data: r, time: new Date(r.createdAt).getTime() })),
-    ...chatMessages.map(m => ({ type: 'chat', data: m, time: new Date().getTime() })),
+    ...chatMessages.map(m => ({ type: 'chat', data: m, time: new Date(m.createdAt).getTime() })),
   ].sort((a, b) => b.time - a.time);
 
   return (
@@ -162,7 +172,7 @@ export default function GamePage({ userId, displayName }) {
                 <div key={`chat-${item.data.id}`} className="message">
                   <div className="message-author">{item.data.author}</div>
                   <div className="message-text">{item.data.text}</div>
-                  <div className="message-time">{item.data.timestamp}</div>
+                  <div className="message-time">{new Date(item.data.createdAt).toLocaleTimeString()}</div>
                 </div>
               );
             }
@@ -170,6 +180,51 @@ export default function GamePage({ userId, displayName }) {
             const roll = item.data;
             const charName = getCharName(roll.characterId);
             const wildDie = roll.wildDie;
+
+            if (roll.rollType === 'GM_ROLL') {
+              const outcomeColor = roll.outcome === 'EXCEPTIONAL_SUCCESS' ? '#ffd60a'
+                : roll.outcome === 'SUCCESS' ? '#06d6a0'
+                : roll.outcome === 'PARTIAL_SUCCESS' ? '#f9a825'
+                : roll.outcome === 'CRITICAL_FAIL' ? '#b71c1c'
+                : roll.outcome === 'FAIL' ? '#ef476f' : '#888';
+              const outcomeLabel = roll.outcome === 'EXCEPTIONAL_SUCCESS' ? 'Exceptional Success'
+                : roll.outcome === 'SUCCESS' ? 'Success'
+                : roll.outcome === 'PARTIAL_SUCCESS' ? 'Partial Success'
+                : roll.outcome === 'CRITICAL_FAIL' ? 'Critical Fail'
+                : roll.outcome === 'FAIL' ? 'Fail' : roll.outcome;
+
+              return (
+                <div key={roll.id} className="message system" style={{ borderLeft: `3px solid ${outcomeColor}` }}>
+                  <div className="message-author">{charName} <span style={{ color: '#ffd60a', fontSize: '0.8rem' }}>[GM Roll]</span></div>
+                  <div className="message-text">
+                    <strong>{roll.skill}</strong> — {roll.total} vs DC {roll.dcValue}{' '}
+                    <span style={{ color: outcomeColor, fontWeight: 700 }}>{outcomeLabel}</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.2rem' }}>
+                    Dice: [{roll.diceRolled?.join(', ')}]
+                    {roll.complication && <span style={{ color: '#ef476f', fontWeight: 700 }}> COMPLICATION</span>}
+                    {roll.heroPointDelta > 0 && <span style={{ color: '#06d6a0' }}> +{roll.heroPointDelta} HP</span>}
+                  </div>
+                  <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
+                </div>
+              );
+            }
+
+            if (roll.rollType === 'DAMAGE') {
+              return (
+                <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #e94560' }}>
+                  <div className="message-author">{charName} <span style={{ color: '#e94560', fontSize: '0.8rem' }}>[Damage]</span></div>
+                  <div className="message-text">
+                    <strong>{roll.weaponName}</strong> ({roll.damageFormula}) — <strong style={{ color: '#e94560', fontSize: '1.1em' }}>{roll.total}</strong> damage
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.2rem' }}>
+                    Dice: [{roll.diceRolled?.join(', ')}]
+                    {roll.rollFlag && <span style={{ color: '#ffd60a' }}> {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}</span>}
+                  </div>
+                  <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
+                </div>
+              );
+            }
 
             return (
               <div key={roll.id} className={`message system`}>

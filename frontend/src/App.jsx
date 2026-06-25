@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import './App.css';
 import LoginPage from './pages/LoginPage';
 import CharacterPage from './pages/CharacterPage';
 import SpaceshipPage from './pages/SpaceshipPage';
 import GamePage from './pages/GamePage';
 import GameMasterPage from './pages/GameMasterPage';
+import GMRollModal from './components/GMRollModal';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TABS = [
   { key: 'characters', label: 'Character Sheet' },
@@ -16,6 +20,8 @@ const TABS = [
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('login');
+  const [myCharacters, setMyCharacters] = useState([]);
+  const [activeGMRoll, setActiveGMRoll] = useState(null);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -24,6 +30,47 @@ function App() {
       setCurrentPage('characters');
     }
   }, []);
+
+  const fetchMyCharacters = async (userId) => {
+    try {
+      const res = await axios.get(`${API_URL}/characters`);
+      setMyCharacters(res.data.filter(c => c.userId === userId));
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchMyCharacters(currentUser.id);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const poll = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/gm-rolls/active?userId=${currentUser.id}`);
+        if (res.data.length > 0 && !activeGMRoll) {
+          setActiveGMRoll(res.data[0]);
+        }
+      } catch { /* ignore */ }
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [currentUser, activeGMRoll]);
+
+  const handleGMRollHeroPointChange = async (newPoints) => {
+    const char = myCharacters[0];
+    if (!char) return;
+    try {
+      await axios.patch(`${API_URL}/characters/${char.id}`, { heroPoints: newPoints });
+      setMyCharacters(prev => prev.map(c => c.id === char.id ? { ...c, heroPoints: newPoints } : c));
+    } catch { /* ignore */ }
+  };
+
+  const handleGMRollClose = () => {
+    setActiveGMRoll(null);
+    if (currentUser) fetchMyCharacters(currentUser.id);
+  };
 
   const handleLogin = (user) => {
     setCurrentUser(user);
@@ -43,7 +90,7 @@ function App() {
         <nav className="navbar">
           <div className="nav-left">
             <h1>D62e</h1>
-            {TABS.map(tab => (
+            {TABS.filter(tab => tab.key !== 'gm' || currentUser.isGM).map(tab => (
               <button
                 key={tab.key}
                 className={currentPage === tab.key ? 'active' : ''}
@@ -73,10 +120,19 @@ function App() {
         {currentPage === 'game' && currentUser && (
           <GamePage userId={currentUser.id} displayName={currentUser.displayName} />
         )}
-        {currentPage === 'gm' && currentUser && (
+        {currentPage === 'gm' && currentUser && currentUser.isGM && (
           <GameMasterPage userId={currentUser.id} />
         )}
       </main>
+
+      {activeGMRoll && myCharacters.length > 0 && (
+        <GMRollModal
+          request={activeGMRoll}
+          character={myCharacters[0]}
+          onClose={handleGMRollClose}
+          onHeroPointChange={handleGMRollHeroPointChange}
+        />
+      )}
     </div>
   );
 }

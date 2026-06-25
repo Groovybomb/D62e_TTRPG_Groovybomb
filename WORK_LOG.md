@@ -4,28 +4,29 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Phase:** 7/10 — Roll System Complete (not yet tested in browser)
+**Phase:** 8/10 — Chat + GM Roll System + Damage Rolls + Exceptional Success Complete (browser tested)
 
 **What's Working:**
 - Login/register with display name
 - Full character sheet (7 attrs, 30+ skills, weapons, talents, perks, items)
 - **Roll modal with wild die system** — click Roll on any skill/attribute, modal opens, roll dice, see results
+- **Damage Roll buttons** — Roll button on each weapon's damage, plain d6 sum (no wild die)
+- **Exceptional Success doubling** — free dice doubling on skill, attribute, damage, and GM rolls (no HP cost)
 - Hero Points — spend on Double Dice or Re-Roll
 - Spacecraft sheet with stats and crew
-- Roll Log / Chat tab (reads from backend every 5 sec)
-- Game Master tab with difficulty table and all rolls
+- **Roll Log / Chat tab** — real-time display (5s roll refresh, 3s chat refresh), interleaved rolls + messages
+- **Chat persistence** — messages saved to backend, survive page refresh
+- **GM Roll System** — GM picks skill/attribute, sets DC (static or dice roll), all players get popup to roll
+- **GM Roll outcomes** — 5 tiers (Exceptional Success, Success, Partial Success, Fail, Critical Fail) with auto HP awards
+- **Player choice scenarios** — wild die 6 (exceptional vs success), wild die 1 (partial vs fail)
+- Game Master tab with roll initiator, response tracking, difficulty table
 - Data persists in lowdb JSON file
 
 **NOT Working Yet:**
-- WebSocket (no real-time, must refresh manually)
+- WebSocket (polling-based, not true real-time)
 - Game sessions (all rolls in one global log)
-- Chat persistence (lost on page refresh)
 - Password hashing, JWT auth
-
-**Immediate Next Step:**
-1. `cd backend && npm run dev`
-2. `cd frontend && npm run dev` (in another terminal)
-3. Test in browser at http://localhost:3000 — use test checklist below
+- Input validation
 
 See file sections below for detailed architecture, API, file inventory.
 
@@ -200,6 +201,53 @@ Before committing, verify:
 - [x] Quick Roll selector on Game tab also opens roll modal
 - [x] Added comprehensive CSS for modal, dice faces, roll flags, buttons
 
+### Phase 8: Chat System + GM-Initiated Roll System
+- [x] **Chat persistence** — messages saved to backend via POST /api/messages, loaded with 3s polling
+- [x] Created backend/src/routes/messages.js — GET (last 100) and POST endpoints
+- [x] Chat messages interleaved with rolls in Roll Log / Chat tab (sorted by timestamp)
+- [x] Fixed lowdb v4/Node 24 compatibility — changed imports in db.js
+- [x] **GM Roll System** — full roll-calling workflow:
+  - [x] GM picks skill/attribute from dropdown, sets DC (static number or dice roll)
+  - [x] Static DC: number input with difficulty quick-select buttons (5 Very Easy → 40 Mythical)
+  - [x] Dice DC: adjustable dice count with Roll DC button, shows individual dice + sum
+  - [x] "Call for Roll" creates request, broadcasts to all logged-in players via polling
+- [x] Created backend/src/routes/gmRolls.js — 6 endpoints for full GM roll lifecycle
+- [x] Added gmRollRequests and gmRollResponses collections to db.js
+- [x] **Player GM Roll Modal** (frontend/src/components/GMRollModal.jsx):
+  - [x] Pops up over any tab (mounted in App.jsx, polled every 3s)
+  - [x] Three phases: setup → result → choice/done
+  - [x] Setup: dice pool from character's skill, extra dice, double dice option
+  - [x] Result: dice visual, total vs DC, outcome badge, re-roll/double-down
+  - [x] Choice scenarios for wild die 6 (exceptional vs success) and wild die 1 (partial vs fail)
+- [x] **Outcome evaluation** (frontend/src/utils/dice.js — evaluateGMRollOutcome):
+  - [x] Exceptional Success: beat DC + wild 6 → +1 HP
+  - [x] Success: beat DC → +2 HP (wild 6, no explosion needed), +1 HP (needed explosion), 0 HP (other)
+  - [x] Partial Success: beat DC + wild 1 → +1 HP with complication (or choose fail for +2 HP)
+  - [x] Fail: total ≤ DC → 0 HP
+  - [x] Critical Fail: total ≤ DC + wild 1 → +1 HP with complication
+- [x] **Hero Points auto-updated** on character sheet after GM roll outcomes
+- [x] **GM response tracking** — GM tab shows active request, response count, individual results with outcome badges
+- [x] **Roll Log display** — GM_ROLL entries show character name, [GM Roll] tag, skill, total vs DC, outcome badge, HP delta
+- [x] Added ~200 lines of GM roll CSS (modal, banners, outcome badges, choice buttons, response cards)
+- [x] **Browser tested** — all core flows verified working (see Testing Checklist)
+
+### Phase 8b: Damage Roll Buttons + Exceptional Success Doubling
+- [x] **Damage Roll button** on each weapon in Character Sheet (next to damage value)
+  - [x] Parses damage formula (e.g., "4D6" → 4 dice) via regex `/(\d+)D/i`
+  - [x] Opens DamageRollModal — plain d6 sum, no wild die mechanics
+  - [x] Supports Extra Dice, Double Dice (HP cost), Re-Roll (HP cost), Double Down
+  - [x] Red-themed visual (border, dice faces, total display)
+  - [x] Posts to `POST /api/rolls/damage` with characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag
+- [x] **Damage rolls in Roll Log** — [Damage] tag (red), weapon name, formula, total, dice array
+- [x] **Exceptional Success doubling** — free dice doubling across all roll modals:
+  - [x] RollModal (skill/attribute rolls) — green "Exceptional Success" button, free doubling
+  - [x] DamageRollModal (weapon damage) — green "Exceptional Success" button, free doubling
+  - [x] GMRollModal (GM-initiated rolls) — green "Exceptional Success" button, free doubling
+  - [x] `doubleSource` state tracks 'heroPoint' vs 'exceptional' — Undo only refunds HP for heroPoint source
+  - [x] Doubled note shows "(Exceptional Success)" or "(Hero Point spent)" in result phase
+- [x] Added `.exceptional-double-btn` CSS styles (green border/text, green hover fill)
+- [x] **Browser tested** — damage rolls, exceptional success on all modals, Roll Log display all verified
+
 ---
 
 ## 📋 Roll System Architecture (Phase 7)
@@ -228,6 +276,35 @@ The dice rolling system follows D6 Second Edition rules:
 - `backend/src/routes/rolls.js` — updated to store wild die details, roll flags (REROLL, DOUBLE_DOWN)
 - CSS added to `frontend/src/App.css` — modal, dice faces, roll flags, buttons
 
+## 📋 GM Roll System Architecture (Phase 8)
+
+**Polling-Based Communication (No WebSocket):**
+- GM creates a roll request → stored in `gmRollRequests` collection
+- Players poll `GET /api/gm-rolls/active?userId=X` every 3 seconds from App.jsx
+- When a pending request is found → `GMRollModal` pops up over whatever page the player is on
+- Player responses stored in `gmRollResponses` + copied to `rolls` as `rollType: "GM_ROLL"`
+- GM polls for responses on their tab, can close the request when done
+
+**Outcome Evaluation (evaluateGMRollOutcome in dice.js):**
+- total > DC + wild 6 → PENDING_CHOICE (player picks: exceptional +1 HP or success +2/+1 HP)
+- total > DC + wild 2-5 → SUCCESS (0 HP)
+- total > DC + wild 1 → PENDING_CHOICE (player picks: partial +1 HP or fail +2 HP)
+- total ≤ DC + wild 2-6 → FAIL (0 HP)
+- total ≤ DC + wild 1 → CRITICAL_FAIL (+1 HP, complication)
+
+**"Needed Explosion" check:** When wild die = 6 and player beats DC, compute `totalWithoutExplosion = total - (wildDie.value - 6)`. If ≤ DC, explosion was needed → success only awards +1 HP instead of +2.
+
+**DC Dice Rolls:** Use plain d6 sums (no wild die mechanics) — `rollPlainDice()` in dice.js.
+
+**Key Files Created (Phase 8):**
+- `backend/src/routes/messages.js` — chat message endpoints (GET/POST)
+- `backend/src/routes/gmRolls.js` — 6 endpoints for GM roll lifecycle
+- `frontend/src/components/GMRollModal.jsx` — player-facing GM roll popup (setup → result → choice)
+- `frontend/src/utils/dice.js` — added `rollPlainDice()` and `evaluateGMRollOutcome()`
+- `frontend/src/pages/GameMasterPage.jsx` — rebuilt with roll initiator, response tracking
+- `frontend/src/pages/GamePage.jsx` — updated with chat persistence and GM_ROLL display
+- `frontend/src/App.jsx` — added GM roll polling and modal mounting at app level
+
 ## 📊 Current Status
 
 ### What Works Now
@@ -237,22 +314,23 @@ The dice rolling system follows D6 Second Edition rules:
 ✅ Dice pool: attribute + skill = total D6 to roll
 ✅ Computed Dodge (Perception ×5) and Parry (Agility ×5)
 ✅ **Roll buttons on every skill and attribute** — click to open roll modal
+✅ **Damage Roll buttons on weapons** — plain d6 sum (no wild die), red-themed modal
+✅ **Exceptional Success doubling** — free dice doubling on skill, attribute, damage, and GM rolls
 ✅ **Wild die system** — explodes on 6, complication on 1
 ✅ **Roll modal** — setup (add dice, double for 1 HP), result (show dice), options (re-roll, double down)
 ✅ **Hero Points** — spent on Double Dice and Re-Roll, auto-saved to backend
 ✅ **Roll log** — shows all rolls with wild die details, flags, color-coded dice
+✅ **Chat persistence** — messages saved to db, 3s polling, interleaved with rolls in Roll Log / Chat
+✅ **GM Roll System** — GM calls for rolls, players get popup on any tab, 5-tier outcomes with auto HP
 ✅ **Spacecraft** — stats (Navicomp, Maneuverability, Engines, Hull, Shield), weapons, crew, reference panels
-✅ **Game Master tab** — difficulty table, all characters with stats, recent rolls
-✅ **Chat** — send messages alongside rolls in Roll Log / Chat tab
+✅ **Game Master tab** — roll initiator (static/dice DC), response tracking, difficulty table, recent rolls
 ✅ **Dark-themed UI** — responsive, modern, tab-based navigation
 ✅ All data persists in lowdb (backend/data/db.json)
 
 ### What Still Needs Work
-- [ ] **WebSocket** — real-time rolls/chat across players (currently must refresh manually)
-- [ ] **Chat persistence** — currently in-memory only, lost on page refresh
+- [ ] **WebSocket** — true real-time (currently polling every 3-5s, works but not instant)
 - [ ] **Game sessions** — group players, manage initiative, track resources
-- [ ] **GM roll calling** — GM can call rolls for specific players
-- [ ] **Attack & Damage rolls UI** — implement on Game page
+- [ ] **Attack rolls UI** — opposed roll system on Game page (damage rolls done on Character Sheet)
 - [ ] **Password hashing** — currently plain text (use bcrypt)
 - [ ] **JWT tokens** — proper authentication (currently just user ID)
 - [ ] **Input validation** — form validation on client and server
@@ -261,43 +339,16 @@ The dice rolling system follows D6 Second Edition rules:
 
 ## 🎯 Next Steps (Priority Order)
 
-### Immediate (Test & Validate Everything Works)
-**IMPORTANT:** Haven't tested in browser yet — dependencies added but not run.
-
-```bash
-# Terminal 1 - Backend
-cd backend && npm run dev
-
-# Terminal 2 - Frontend  
-cd frontend && npm run dev
-
-# Then in browser: http://localhost:3000
-```
-
-**Test checklist:**
-- [ ] Register new user with username + password + display name
-- [ ] Login
-- [ ] Create character, verify attributes/skills loaded
-- [ ] Click "Roll" on a skill in Character Sheet
-- [ ] Roll modal opens, roll dice, see result
-- [ ] Roll appears in Roll Log / Chat tab
-- [ ] Double Dice button works, costs Hero Point
-- [ ] Re-Roll / Double Down buttons work, appear in log with flags
-- [ ] Create spacecraft, verify stats load
-- [ ] Logout / login again, data still there
-
 ### Short Term (Critical Path)
-1. **WebSocket** — real-time rolls broadcast to all players in a session (blocking feature for multiplayer)
-2. **Game sessions** — let players join a session, share rolls/chat live
-3. **Chat persistence** — save messages to db, load on page refresh
-4. **GM features** — roll calling, setting difficulty, seeing all player rolls in real-time
+1. **WebSocket** — replace polling with real-time push (currently 3-5s polling works but isn't instant)
+2. **Game sessions** — let players join a session, share rolls/chat within a group
+3. **Attack rolls UI** — opposed roll system on Game page (damage rolls already on Character Sheet)
 
 ### Medium Term (Polish & UX)
 1. **Password hashing** — use bcrypt in backend auth routes
 2. **JWT tokens** — replace plain user ID with proper auth tokens
 3. **Input validation** — validate character names, skill values, etc.
-4. **Attack & Damage rolls** — UI on Game page, same roll system
-5. **Error handling** — better user-facing error messages
+4. **Error handling** — better user-facing error messages
 
 ### Long Term (Polish)
 1. **Animations** — dice rolling animation, pop effects on explode
@@ -310,16 +361,14 @@ cd frontend && npm run dev
 
 ## 🐛 Known Issues / Limitations
 
-- **NOT TESTED YET** — code written but not run in browser. First test is immediate next step.
 - **Passwords plain text** — stored unhashed in db.json; use bcrypt for production
 - **No authentication** — user ID in localStorage, anyone with ID can modify their characters
-- **No WebSocket** — rolls/chat not real-time; must refresh manually
-- **Chat not persistent** — in-memory only, lost on page refresh
-- **No game sessions** — all rolls in one global log, no grouping by game
+- **Polling, not WebSocket** — GM rolls poll every 3s, chat every 3s, roll log every 5s (functional but not instant)
+- **No game sessions** — all rolls/chat in one global log, no grouping by game
 - **lowdb limitations** — file-based JSON, fine for 2-4 players, not scalable
 - **No input validation** — should validate skill values (0-5?), names, etc.
-- **Exploding dice** — currently adds all exploded dice to total; verify against D6 2e rules
-- **Re-roll logic** — "greater than difficulty" rule from ORCHESTRATION.md not yet implemented
+- **GM Roll modal scrolling** — on smaller viewports the modal may require scrolling to reach buttons
+- **Single character per player for GM rolls** — currently uses first character; multi-character selection not implemented
 
 ---
 
@@ -335,7 +384,9 @@ D62e/
 │   │   └── routes/
 │   │       ├── users.js           ✅ Working
 │   │       ├── characters.js       ✅ Working
-│   │       └── rolls.js           ✅ Working
+│   │       ├── rolls.js           ✅ Working
+│   │       ├── messages.js        ✅ Working (Phase 8)
+│   │       └── gmRolls.js         ✅ Working (Phase 8)
 │   ├── data/
 │   │   └── db.json                (auto-created)
 │   ├── .env                       ✅ Set
@@ -350,7 +401,8 @@ D62e/
 │   │   │   ├── GameMasterPage.jsx    ✅ All characters, difficulty table, rolls
 │   │   │   └── SpaceshipPage.jsx     ✅ Ship stats, weapons, crew, rules panels
 │   │   ├── components/
-│   │   │   └── RollModal.jsx         ✅ Roll popup (setup + result phases)
+│   │   │   ├── RollModal.jsx         ✅ Roll popup (setup + result phases)
+│   │   │   └── GMRollModal.jsx       ✅ GM roll popup (setup → result → choice) (Phase 8)
 │   │   ├── data/
 │   │   │   └── attributes.js         ✅ Attribute/skill definitions, getDicePool()
 │   │   ├── utils/
@@ -394,9 +446,22 @@ D62e/
 ### Rolls
 - `POST /api/rolls/skill` — Save skill roll (characterId, skill, attribute, diceCount, diceRolled, wildDie, total, complication, doubled, extraDice, rollFlag, linkedRollId)
 - `POST /api/rolls/attack` — Save attack roll (attackerId, defenderId, attackerRoll, defenderRoll)
-- `POST /api/rolls/damage` — Save damage roll (characterId, weaponName, diceRolled, wildDie, total)
+- `POST /api/rolls/damage` — Save damage roll (characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag)
 - `GET /api/rolls` — Get all rolls (50 newest)
 - `GET /api/rolls/character/:characterId` — Get character's rolls
+
+### Messages
+- `GET /api/messages` — Get last 100 messages (newest first)
+- `POST /api/messages` — Send message (userId, author, text)
+
+### GM Rolls
+- `POST /api/gm-rolls` — GM creates roll request (skill, attribute, label, dcType, dcValue)
+- `GET /api/gm-rolls/active?userId=X` — Player polls for pending requests (returns active requests player hasn't responded to)
+- `POST /api/gm-rolls/:id/respond` — Player submits roll response (also saves to rolls as GM_ROLL, updates character HP)
+- `PATCH /api/gm-rolls/:id/respond/:responseId` — Update response for outcome choice (wild-6 or wild-1 scenarios)
+- `GET /api/gm-rolls/:id/responses` — GM polls for incoming responses
+- `PATCH /api/gm-rolls/:id` — GM closes/cancels request (sets status to "closed"/"cancelled")
+- `GET /api/gm-rolls` — Returns last 50 GM roll requests for history
 
 ### Spaceships
 - `POST /api/spaceships` — Create ship (userId, name)
@@ -413,16 +478,26 @@ Current db.json structure:
 ```json
 {
   "users": [
-    { "id", "username", "password", "createdAt" }
+    { "id", "username", "password", "displayName", "createdAt" }
   ],
   "characters": [
-    { "id", "userId", "name", "skills", "health", "armor", "credits", "createdAt", "updatedAt" }
+    { "id", "userId", "name", "attributes", "heroPoints", "armor", "weapons", "talents", "flaws", "perks", "items", "notes", "createdAt", "updatedAt" }
   ],
   "rolls": [
-    { "id", "characterId", "rollType", "diceRolled", "wildCount", "resultLevel", "createdAt" }
+    { "id", "characterId", "rollType", "skill", "attribute", "diceCount", "diceRolled", "wildDie", "total", "complication", "doubled", "extraDice", "rollFlag", "linkedRollId", "dcValue", "outcome", "heroPointDelta", "createdAt" }
   ],
-  "spaceships": [],
-  "messages": [],
+  "spaceships": [
+    { "id", "userId", "name", "stats", "weapons", "crew", "notes", "createdAt", "updatedAt" }
+  ],
+  "messages": [
+    { "id", "userId", "author", "text", "createdAt" }
+  ],
+  "gmRollRequests": [
+    { "id", "gmUserId", "skill", "attribute", "label", "dcType", "dcValue", "dcDiceCount", "status", "createdAt" }
+  ],
+  "gmRollResponses": [
+    { "id", "requestId", "characterId", "characterName", "userId", "diceCount", "diceRolled", "wildDie", "total", "complication", "outcome", "heroPointDelta", "rollFlag", "createdAt" }
+  ],
   "gameSessions": []
 }
 ```
@@ -431,23 +506,49 @@ Current db.json structure:
 
 ## 🔍 Testing Checklist
 
-- [ ] Backend starts without errors
-- [ ] Frontend loads at http://localhost:3000
-- [ ] Can register new user
-- [ ] Can login with registered credentials
-- [ ] Can create character
-- [ ] Can view character details
-- [ ] Can execute skill roll
-- [ ] Roll appears in log with correct format
-- [ ] Wild dice (1s) are counted correctly
-- [ ] Can delete character
-- [ ] Can switch between characters
-- [ ] Can view all rolls in Game Master page
-- [ ] Data persists after server restart
-- [ ] No console errors
+### Core (Verified 2026-06-25)
+- [x] Backend starts without errors (node src/server.js on port 5000)
+- [x] Frontend loads at http://localhost:3000
+- [x] Can register new user with display name
+- [x] Can login with registered credentials
+- [x] Can create character with full attribute/skill sheet
+- [x] Roll buttons work on character sheet skills
+- [x] Roll modal: setup → roll → result flow works
+- [x] Roll appears in Roll Log / Chat tab
+- [x] Chat messages persist and display alongside rolls
+- [x] Spacecraft page loads
+
+### GM Roll System (Verified 2026-06-25)
+- [x] GM can select skill/attribute from dropdown
+- [x] Static DC: number input + difficulty quick-select buttons work
+- [x] Dice DC: roll button generates random DC sum
+- [x] "Call for Roll" creates active request
+- [x] GM Roll Modal pops up for player (even on non-GM tabs)
+- [x] Player can roll dice against DC in modal
+- [x] Success outcome displays correctly (total > DC, wild 2-5)
+- [x] Fail outcome displays correctly (total ≤ DC)
+- [x] Double Down works in GM roll modal
+- [x] GM sees responses with outcome badges in real-time
+- [x] "Close Roll" resets GM tab to new roll form
+- [x] GM_ROLL entries appear in Roll Log with proper formatting
+- [x] Recent Rolls panel on GM tab shows roll history
+- [ ] Choice scenario: wild die 6 + beat DC (exceptional vs success) — not yet hit randomly
+- [ ] Choice scenario: wild die 1 + beat DC (partial vs fail) — not yet hit randomly
+- [ ] Critical Fail scenario (total ≤ DC + wild 1) — not yet hit randomly
+- [ ] Re-Roll in GM roll modal — not tested (would need HP)
+
+### Damage Rolls & Exceptional Success (Verified 2026-06-25)
+- [x] Roll button visible next to weapon damage on Character Sheet
+- [x] Damage modal opens with correct dice count (parsed from formula)
+- [x] Damage roll: plain d6 sum, no wild die — correct
+- [x] Exceptional Success button: doubles dice for free (no HP cost)
+- [x] Undo exceptional success: does not refund HP
+- [x] Damage roll appears in Roll Log with [Damage] tag, weapon name, formula, total
+- [x] Exceptional Success button on skill/attribute roll modal — works, free doubling
+- [x] Exceptional Success button on GM roll modal — works, free doubling
 
 ---
 
-**Last Updated:** 2026-06-24 (Phase 7 complete)
-**Last Work Done:** Roll system overhaul — wild die mechanics, modal UI, Hero Points, re-roll/double-down logic
-**Status:** NOT YET TESTED IN BROWSER — next step is to run npm install and test
+**Last Updated:** 2026-06-25 (Phase 8b complete)
+**Last Work Done:** Damage roll buttons on weapons + Exceptional Success free doubling on all roll modals
+**Status:** BROWSER TESTED — all roll types verified working (skill, attribute, damage, GM rolls)

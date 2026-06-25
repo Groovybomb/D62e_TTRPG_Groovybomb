@@ -14,26 +14,27 @@ Keeping it updated helps coordinate work and track project status at a glance.
 
 This document describes the structure, conventions, and key architectural decisions for the D62e TTRPG platform.
 
-**Current Build Status:** Phase 7 complete. All core features implemented and documented. NOT YET TESTED IN BROWSER.
+**Current Build Status:** Phase 8 complete. All core features implemented, documented, and browser-tested.
 
 ## Current Implementation Status
 
-**What's Built (Phase 1-7):**
+**What's Built (Phase 1-8):**
 - ✅ User authentication (register/login with displayName)
 - ✅ Character Sheet: 7 attributes, 30+ skills, weapons, talents, flaws, perks, items, notes
 - ✅ **Roll System** — Wild die (explodes on 6, complication on 1), Hero Points (Double Dice, Re-Roll, Double Down)
 - ✅ Roll Modal popup — setup (extra dice, double), result (visual dice), reroll options
 - ✅ Roll buttons on every attribute and skill (opens modal)
 - ✅ Spacecraft sheet — stats, weapons, crew, game rules panels
-- ✅ Roll Log / Chat tab — real-time display (5-sec refresh), interleaved rolls + messages
-- ✅ Game Master tab — all characters, difficulty table, roll history
+- ✅ Roll Log / Chat tab — real-time display (5-sec refresh), interleaved rolls + persistent chat messages
+- ✅ **Chat persistence** — messages saved to backend, 3s polling
+- ✅ **GM Roll System** — GM calls for rolls, players get popup, 5-tier outcomes with auto HP awards
+- ✅ Game Master tab — roll initiator (static/dice DC), response tracking, difficulty table, roll history
 - ✅ Dark-themed responsive UI — 4 main tabs (Character Sheet, Spacecraft, Roll Log/Chat, Game Master)
 - ✅ Data persistence — lowdb (JSON file-based)
 
 **What's NOT Built Yet:**
-- ❌ WebSocket (no real-time)
+- ❌ WebSocket (polling-based, not true real-time)
 - ❌ Game Sessions (no grouping of players)
-- ❌ Chat persistence (lost on refresh)
 - ❌ JWT auth (plain user ID in localStorage)
 - ❌ Password hashing (plain text in db)
 - ❌ Input validation

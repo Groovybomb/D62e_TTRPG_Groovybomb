@@ -14,6 +14,7 @@ export default function CharacterPage({ userId }) {
   const [newName, setNewName] = useState('');
   const [error, setError] = useState('');
   const [rollModal, setRollModal] = useState(null);
+  const [damageRoll, setDamageRoll] = useState(null);
 
   useEffect(() => { fetchCharacters(); }, [userId]);
 
@@ -89,6 +90,11 @@ export default function CharacterPage({ userId }) {
     setRollModal(rollInfo);
   };
 
+  const openDamageRoll = (damageInfo) => {
+    if (editing) return;
+    setDamageRoll(damageInfo);
+  };
+
   const handleHeroPointChange = async (newPoints) => {
     if (!char) return;
     const updated = { ...char, heroPoints: newPoints };
@@ -154,6 +160,7 @@ export default function CharacterPage({ userId }) {
           onSkillChange={updateSkillDice}
           onFieldChange={(field, val) => setEditData({ ...editData, [field]: val })}
           onRoll={openRollModal}
+          onDamageRoll={openDamageRoll}
         />
       )}
 
@@ -165,11 +172,20 @@ export default function CharacterPage({ userId }) {
           onHeroPointChange={handleHeroPointChange}
         />
       )}
+
+      {damageRoll && char && (
+        <DamageRollModal
+          damageInfo={damageRoll}
+          character={char}
+          onClose={() => setDamageRoll(null)}
+          onHeroPointChange={handleHeroPointChange}
+        />
+      )}
     </div>
   );
 }
 
-function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onFieldChange, onRoll }) {
+function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onFieldChange, onRoll, onDamageRoll }) {
   const dodge = (char.attributes.perception?.dice || 0) * 5;
   const parry = (char.attributes.agility?.dice || 0) * 5;
 
@@ -284,7 +300,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onFieldCha
       </div>
 
       {/* Weapons */}
-      <WeaponSection weapons={char.weapons || []} editing={editing} onChange={w => onFieldChange('weapons', w)} />
+      <WeaponSection weapons={char.weapons || []} editing={editing} onChange={w => onFieldChange('weapons', w)} character={char} onDamageRoll={onDamageRoll} />
 
       {/* Talents, Flaws, Perks, Items in a grid */}
       <div className="extras-grid">
@@ -305,10 +321,15 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onFieldCha
   );
 }
 
-function WeaponSection({ weapons, editing, onChange }) {
+function WeaponSection({ weapons, editing, onChange, character, onDamageRoll }) {
   const addWeapon = () => onChange([...weapons, { name: '', damage: '', ammo: '', shortRange: '', mediumRange: '', longRange: '' }]);
   const removeWeapon = (i) => onChange(weapons.filter((_, idx) => idx !== i));
   const updateWeapon = (i, field, value) => onChange(weapons.map((w, idx) => idx === i ? { ...w, [field]: value } : w));
+
+  const parseDamage = (damageStr) => {
+    const match = damageStr.match(/(\d+)D/i);
+    return match ? parseInt(match[1]) : null;
+  };
 
   return (
     <div className="card" style={{ marginTop: '1rem' }}>
@@ -346,7 +367,23 @@ function WeaponSection({ weapons, editing, onChange }) {
                 ) : (
                   <>
                     <td>{w.name}</td>
-                    <td>{w.damage}</td>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {w.damage}
+                      {w.damage && onDamageRoll && (
+                        <button
+                          className="roll-btn roll-btn-sm"
+                          title={`Roll damage for ${w.name}`}
+                          onClick={() => {
+                            const diceCount = parseDamage(w.damage);
+                            if (diceCount) {
+                              onDamageRoll({ weaponName: w.name, damageFormula: w.damage, diceCount });
+                            }
+                          }}
+                        >
+                          Roll
+                        </button>
+                      )}
+                    </td>
                     <td>{w.ammo}</td>
                     <td>{w.shortRange}</td>
                     <td>{w.mediumRange}</td>
@@ -396,6 +433,170 @@ function ListSection({ title, items, editing, onChange, fields }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange }) {
+  const [phase, setPhase] = useState('setup');
+  const [extraDice, setExtraDice] = useState(0);
+  const [doubled, setDoubled] = useState(false);
+  const [doubleSource, setDoubleSource] = useState(null);
+  const [diceResults, setDiceResults] = useState([]);
+  const [rollTotal, setRollTotal] = useState(null);
+
+  const baseDice = damageInfo.diceCount || 2;
+  const effectiveDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const heroPoints = character.heroPoints || 0;
+
+  const handleDouble = () => {
+    if (heroPoints < 1) return;
+    setDoubled(true);
+    setDoubleSource('heroPoint');
+    onHeroPointChange(heroPoints - 1);
+  };
+
+  const handleExceptionalDouble = () => {
+    setDoubled(true);
+    setDoubleSource('exceptional');
+  };
+
+  const handleUndoDouble = () => {
+    if (doubleSource === 'heroPoint') {
+      onHeroPointChange(heroPoints + 1);
+    }
+    setDoubled(false);
+    setDoubleSource(null);
+  };
+
+  const executeRoll = async (flag = null) => {
+    const count = effectiveDice;
+    if (count < 1) return;
+
+    // Roll plain dice (no wild die for damage)
+    const results = [];
+    for (let i = 0; i < count; i++) {
+      results.push(Math.floor(Math.random() * 6) + 1);
+    }
+    const total = results.reduce((a, b) => a + b, 0);
+
+    setDiceResults(results);
+    setRollTotal({ total, results });
+    setPhase('result');
+
+    try {
+      await axios.post(`${API_URL}/rolls/damage`, {
+        characterId: character.id,
+        characterName: character.name,
+        weaponName: damageInfo.weaponName,
+        damageFormula: damageInfo.damageFormula,
+        diceCount: count,
+        diceRolled: results,
+        total,
+        doubled,
+        extraDice,
+        rollFlag: flag,
+      });
+    } catch { /* roll still shows locally */ }
+  };
+
+  const handleReroll = () => {
+    if (heroPoints < 1) return;
+    onHeroPointChange(heroPoints - 1);
+    executeRoll('REROLL');
+  };
+
+  const handleDoubleDown = () => {
+    executeRoll('DOUBLE_DOWN');
+  };
+
+  const handleAccept = () => {
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ borderColor: '#e94560' }}>
+        <div style={{ padding: '0.75rem', borderBottom: '1px solid #e94560', marginBottom: '1rem', color: '#e94560', fontWeight: 700 }}>
+          DAMAGE ROLL — {damageInfo.weaponName}
+        </div>
+
+        <h2 className="modal-title">{damageInfo.damageFormula}</h2>
+
+        {phase === 'setup' && (
+          <div className="roll-setup">
+            <div className="dice-breakdown">
+              <span className="breakdown-total">{baseDice}D6</span>
+            </div>
+
+            <div className="extra-dice-row">
+              <label>Extra Dice:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setExtraDice(Math.max(0, extraDice - 1))} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{extraDice}</span>
+                <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
+              </div>
+            </div>
+
+            <div className="double-section">
+              {!doubled ? (
+                <>
+                  <button onClick={handleDouble} disabled={heroPoints < 1} className="double-btn">
+                    Double Dice ({effectiveDice * 2}D6) — costs 1 Hero Point
+                  </button>
+                  <button onClick={handleExceptionalDouble} className="double-btn exceptional-double-btn">
+                    Exceptional Success ({effectiveDice * 2}D6) — free
+                  </button>
+                </>
+              ) : (
+                <div className="doubled-indicator">
+                  <span>Doubled! Rolling {effectiveDice}D6 {doubleSource === 'exceptional' ? '(Exceptional Success)' : ''}</span>
+                  <button onClick={handleUndoDouble} className="undo-double-btn">Undo</button>
+                </div>
+              )}
+            </div>
+
+            <div className="hero-points-display">
+              Hero Points: <strong>{character.heroPoints}</strong>
+            </div>
+
+            <button onClick={() => executeRoll(null)} className="roll-execute-btn" disabled={effectiveDice < 1}>
+              Roll {effectiveDice}D6 Damage
+            </button>
+          </div>
+        )}
+
+        {phase === 'result' && (
+          <div className="roll-result-display">
+            <div className="dice-visual-row">
+              {diceResults.map((die, i) => (
+                <div key={i} className="die-face" style={{ backgroundColor: '#e94560' }}>
+                  <span className="die-number">{die}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="vs-display" style={{ marginTop: '1.5rem' }}>
+              <span className="vs-total" style={{ color: '#e94560', fontSize: '2em' }}>{rollTotal?.total}</span>
+              <span className="vs-label" style={{ color: '#888' }}>Damage</span>
+            </div>
+
+            {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}
+
+            <div className="result-actions">
+              <button onClick={handleReroll} disabled={heroPoints < 1} className="reroll-btn">
+                Re-Roll (costs 1 Hero Point)
+              </button>
+              <button onClick={handleDoubleDown} className="doubledown-btn">
+                Double Down (free, complication on 2nd fail)
+              </button>
+              <button onClick={handleAccept} className="close-result-btn">
+                Accept Result
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
