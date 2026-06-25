@@ -24,6 +24,30 @@ const OUTCOME_COLORS = {
   PENDING_CHOICE: '#888',
 };
 
+const PRESET_KEY = 'gm-roll-presets';
+
+// TODO: Move presets to backend (gmRollPresets table) for multi-device sync and persistence
+function loadPresets() {
+  try {
+    return JSON.parse(localStorage.getItem(PRESET_KEY)) || [];
+  } catch { return []; }
+}
+
+function presetsEqual(a, b) {
+  return a.selectedSkill === b.selectedSkill && a.dcType === b.dcType &&
+         a.staticDC === b.staticDC && a.dcDiceCount === b.dcDiceCount;
+}
+
+function savePreset(config) {
+  const presets = loadPresets();
+  const dupe = presets.findIndex(p => presetsEqual(p, config));
+  if (dupe !== -1) presets.splice(dupe, 1);
+  presets.unshift(config);
+  const trimmed = presets.slice(0, 20);
+  localStorage.setItem(PRESET_KEY, JSON.stringify(trimmed));
+  return trimmed;
+}
+
 export default function GameMasterPage({ userId }) {
   const [characters, setCharacters] = useState([]);
   const [rolls, setRolls] = useState([]);
@@ -39,6 +63,9 @@ export default function GameMasterPage({ userId }) {
   // Active request state
   const [activeRequest, setActiveRequest] = useState(null);
   const [responses, setResponses] = useState([]);
+
+  // Recent roll presets
+  const [presets, setPresets] = useState(() => loadPresets());
 
   useEffect(() => {
     fetchCharacters();
@@ -134,6 +161,9 @@ export default function GameMasterPage({ userId }) {
       });
       setActiveRequest(res.data);
       setResponses([]);
+
+      const preset = { selectedSkill, label, dcType, staticDC: dcType === 'static' ? dcValue : 15, dcDiceCount: dcType === 'dice' ? dcDiceCount : 4 };
+      setPresets(savePreset(preset));
     } catch { /* ignore */ }
   };
 
@@ -330,6 +360,45 @@ export default function GameMasterPage({ userId }) {
             </div>
           )}
         </div>
+
+        {/* Recent Calls presets */}
+        {presets.length > 0 && !activeRequest && (
+          <div className="card" style={{ marginTop: '1rem' }}>
+            <h3 style={{ color: '#ffd60a' }}>Recent Calls</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {presets.map((p, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setSelectedSkill(p.selectedSkill);
+                    setDcType(p.dcType);
+                    setStaticDC(p.staticDC);
+                    setDcDiceCount(p.dcDiceCount);
+                    setDcDiceResults(null);
+                    setDcDiceTotal(null);
+                  }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: selectedSkill === p.selectedSkill && dcType === p.dcType && staticDC === p.staticDC ? '#1a1a2e' : '#0f3460',
+                    border: '1px solid #444',
+                    borderRadius: '4px',
+                    color: '#eee',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{p.label}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>
+                    {p.dcType === 'static' ? `DC ${p.staticDC}` : `${p.dcDiceCount}D6 DC`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Difficulty reference */}
         <div className="card">
