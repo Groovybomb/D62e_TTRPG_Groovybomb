@@ -1,0 +1,25 @@
+{
+  "name": "d62e-backend",
+  "version": "0.1.0",
+  "description": "D62e TTRPG Platform Backend",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ttrpg",
+    "d62e"
+  ],
+  "author": "Groovybomb",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "lowdb": "^4.0.1",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {}
+}

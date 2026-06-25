@@ -1,0 +1,232 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { ATTRIBUTE_DEFINITIONS, getAllSkills, getDicePool } from '../data/attributes';
+import RollModal from '../components/RollModal';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+export default function GamePage({ userId, displayName }) {
+  const [characters, setCharacters] = useState([]);
+  const [allCharacters, setAllCharacters] = useState([]);
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [rolls, setRolls] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [rollModal, setRollModal] = useState(null);
+
+  useEffect(() => {
+    fetchCharacters();
+    fetchRolls();
+    const interval = setInterval(fetchRolls, 5000);
+    return () => clearInterval(interval);
+  }, [userId]);
+
+  const fetchCharacters = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/characters`);
+      setAllCharacters(res.data);
+      const mine = res.data.filter(c => c.userId === userId);
+      setCharacters(mine);
+      if (mine.length > 0 && !selectedCharacter) setSelectedCharacter(mine[0]);
+    } catch { /* ignore */ }
+  };
+
+  const fetchRolls = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/rolls`);
+      setRolls(res.data.slice(0, 50));
+    } catch { /* ignore */ }
+  };
+
+  const handleChat = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    setChatMessages(prev => [{
+      id: Date.now(),
+      author: displayName,
+      text: chatInput.trim(),
+      timestamp: new Date().toLocaleTimeString(),
+    }, ...prev]);
+    setChatInput('');
+  };
+
+  const handleHeroPointChange = async (newPoints) => {
+    if (!selectedCharacter) return;
+    try {
+      await axios.patch(`${API_URL}/characters/${selectedCharacter.id}`, { heroPoints: newPoints });
+      setSelectedCharacter({ ...selectedCharacter, heroPoints: newPoints });
+      setCharacters(characters.map(c => c.id === selectedCharacter.id ? { ...c, heroPoints: newPoints } : c));
+    } catch { /* ignore */ }
+  };
+
+  const handleSkillSelect = (e) => {
+    const [attrKey, skillKey] = e.target.value.split('.');
+    const attrDef = ATTRIBUTE_DEFINITIONS[attrKey];
+    const attr = selectedCharacter?.attributes[attrKey];
+    if (!attrDef || !attr) return;
+
+    const skillLabel = attrDef.skills[skillKey];
+    const skillDice = attr.skills[skillKey] || 0;
+    const totalDice = attr.dice + skillDice;
+
+    setRollModal({
+      label: `${skillLabel} (${attrDef.label})`,
+      attrLabel: attrDef.label,
+      attrDice: attr.dice,
+      skillLabel,
+      skillDice,
+      baseDice: totalDice,
+    });
+  };
+
+  const getCharName = (id) => allCharacters.find(c => c.id === id)?.name || 'Unknown';
+
+  // Interleave rolls and chat messages by time
+  const combined = [
+    ...rolls.map(r => ({ type: 'roll', data: r, time: new Date(r.createdAt).getTime() })),
+    ...chatMessages.map(m => ({ type: 'chat', data: m, time: new Date().getTime() })),
+  ].sort((a, b) => b.time - a.time);
+
+  return (
+    <div className="page" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '2rem', maxWidth: '1400px' }}>
+      {/* Left: Controls */}
+      <div>
+        <h2>Roll</h2>
+
+        {characters.length === 0 ? (
+          <div className="error">Create a character on the Character Sheet tab first!</div>
+        ) : (
+          <>
+            <div className="card">
+              <h3>Character</h3>
+              <select
+                value={selectedCharacter?.id || ''}
+                onChange={(e) => setSelectedCharacter(characters.find(c => c.id === e.target.value))}
+                className="select-input"
+                style={{ width: '100%', marginBottom: '0.5rem' }}
+              >
+                {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <div style={{ fontSize: '0.85rem', color: '#888' }}>
+                Hero Points: <strong style={{ color: '#e94560' }}>{selectedCharacter?.heroPoints || 0}</strong>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>Quick Roll</h3>
+              <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '0.75rem' }}>
+                Select a skill to open the roll popup:
+              </p>
+              <select
+                onChange={handleSkillSelect}
+                value=""
+                className="select-input"
+                style={{ width: '100%' }}
+              >
+                <option value="" disabled>Choose a skill...</option>
+                {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attr]) => (
+                  <optgroup key={attrKey} label={attr.label}>
+                    {Object.entries(attr.skills).map(([skillKey, skillLabel]) => {
+                      const total = selectedCharacter ? getDicePool(selectedCharacter, attrKey, skillKey) : 0;
+                      return (
+                        <option key={skillKey} value={`${attrKey}.${skillKey}`}>
+                          {skillLabel} ({total}D)
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Right: Roll Log & Chat */}
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Roll Log &amp; Chat</h2>
+          <button onClick={fetchRolls} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Refresh</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#0f3460', border: '1px solid #444', borderRadius: '8px 8px 0 0', padding: '1rem' }}>
+          {combined.length === 0 && (
+            <p style={{ color: '#888', textAlign: 'center', marginTop: '2rem' }}>
+              No rolls yet. Roll from the Character Sheet or use Quick Roll!
+            </p>
+          )}
+
+          {combined.map((item, i) => {
+            if (item.type === 'chat') {
+              return (
+                <div key={`chat-${item.data.id}`} className="message">
+                  <div className="message-author">{item.data.author}</div>
+                  <div className="message-text">{item.data.text}</div>
+                  <div className="message-time">{item.data.timestamp}</div>
+                </div>
+              );
+            }
+
+            const roll = item.data;
+            const charName = getCharName(roll.characterId);
+            const wildDie = roll.wildDie;
+
+            return (
+              <div key={roll.id} className={`message system`}>
+                <div className="message-author">
+                  {charName}
+                  {roll.rollFlag && (
+                    <span className={`roll-flag-inline ${roll.rollFlag === 'REROLL' ? 'reroll' : 'doubledown'}`}>
+                      {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}
+                    </span>
+                  )}
+                  {roll.doubled && <span className="roll-flag-inline doubled">DOUBLED</span>}
+                </div>
+                <div className="message-text">
+                  <strong>{roll.skill}</strong>
+                  {roll.attribute && roll.attribute !== roll.skill && <span style={{ color: '#888' }}> ({roll.attribute})</span>}
+                  {' — '}
+                  {roll.diceCount}D6 = <strong style={{ color: '#06d6a0', fontSize: '1.1em' }}>{roll.total}</strong>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.2rem' }}>
+                  Dice: [{roll.diceRolled?.join(', ')}]
+                  {wildDie && (
+                    <span>
+                      {' | Wild: '}
+                      <span style={{ color: wildDie.rawFirst === 6 ? '#06d6a0' : wildDie.rawFirst === 1 ? '#ef476f' : '#ccc', fontWeight: 700 }}>
+                        {wildDie.rolls?.join(' + ')} = {wildDie.total}
+                      </span>
+                      {wildDie.exploded && <span style={{ color: '#ffd60a' }}> EXPLODING!</span>}
+                    </span>
+                  )}
+                  {roll.complication && <span style={{ color: '#ef476f', fontWeight: 700 }}> COMPLICATION!</span>}
+                </div>
+                <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        <form onSubmit={handleChat} style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', backgroundColor: '#16213e', border: '1px solid #444', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+          <input
+            type="text"
+            value={chatInput}
+            onChange={e => setChatInput(e.target.value)}
+            placeholder="Type a message..."
+            style={{ flex: 1, padding: '0.6rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+          />
+          <button type="submit" style={{ padding: '0.6rem 1.25rem' }}>Send</button>
+        </form>
+      </div>
+
+      {rollModal && selectedCharacter && (
+        <RollModal
+          rollInfo={rollModal}
+          character={selectedCharacter}
+          onClose={() => { setRollModal(null); fetchRolls(); }}
+          onHeroPointChange={handleHeroPointChange}
+        />
+      )}
+    </div>
+  );
+}
