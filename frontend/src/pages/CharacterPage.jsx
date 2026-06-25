@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 import { ATTRIBUTE_DEFINITIONS, getDicePool } from '../data/attributes';
 import RollModal from '../components/RollModal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function CharacterPage({ userId }) {
   const [characters, setCharacters] = useState([]);
@@ -20,10 +19,9 @@ export default function CharacterPage({ userId }) {
 
   const fetchCharacters = async () => {
     try {
-      const res = await axios.get(`${API_URL}/characters`);
-      const mine = res.data.filter(c => c.userId === userId);
-      setCharacters(mine);
-      if (mine.length > 0 && !selectedId) setSelectedId(mine[0].id);
+      const res = await axios.get(`${API_URL}/characters`, { params: { userId } });
+      setCharacters(res.data);
+      if (res.data.length > 0 && !selectedId) setSelectedId(res.data[0].id);
     } catch { setError('Failed to load characters'); }
   };
 

@@ -14,74 +14,57 @@ Keeping it updated helps coordinate work and track project status at a glance.
 
 This document describes the structure, conventions, and key architectural decisions for the D62e TTRPG platform.
 
-**Current Build Status:** Phase 8 complete. All core features implemented, documented, and browser-tested.
+**Current Build Status:** v1.0.0 — All core features implemented, refactored, and browser-tested.
 
-## Current Implementation Status
+## v1 Feature Summary
 
-**What's Built (Phase 1-8):**
-- ✅ User authentication (register/login with displayName)
-- ✅ Character Sheet: 7 attributes, 30+ skills, weapons, talents, flaws, perks, items, notes
-- ✅ **Roll System** — Wild die (explodes on 6, complication on 1), Hero Points (Double Dice, Re-Roll, Double Down)
-- ✅ Roll Modal popup — setup (extra dice, double), result (visual dice), reroll options
-- ✅ Roll buttons on every attribute and skill (opens modal)
-- ✅ Spacecraft sheet — stats, weapons, crew, game rules panels
-- ✅ Roll Log / Chat tab — real-time display (5-sec refresh), interleaved rolls + persistent chat messages
-- ✅ **Chat persistence** — messages saved to backend, 3s polling
-- ✅ **GM Roll System** — GM calls for rolls, players get popup, 5-tier outcomes with auto HP awards
-- ✅ Game Master tab — roll initiator (static/dice DC), response tracking, difficulty table, roll history
-- ✅ Dark-themed responsive UI — 4 main tabs (Character Sheet, Spacecraft, Roll Log/Chat, Game Master)
-- ✅ Data persistence — lowdb (JSON file-based)
+- User authentication (register/login with displayName, GM role flag)
+- Character sheet: 7 attributes, 30+ skills, weapons, talents, flaws, perks, items, notes
+- Roll system: wild die mechanics, Hero Points (Double Dice, Re-Roll, Double Down, Exceptional Success)
+- Roll modal with setup and result phases, roll buttons on every attribute/skill
+- Damage rolls from weapon formulas
+- Spacecraft sheet: stats, weapons, crew stations, game rules panels
+- Roll log / chat: interleaved by timestamp, 3s polling
+- GM roll system: call for rolls, 5-tier outcomes, auto HP awards
+- Game Master tab: roll initiator, response tracking, difficulty table, presets
+- Dark-themed responsive UI with 4 tabs
+- Data persistence via lowdb (JSON file-based)
 
-**What's NOT Built Yet:**
-- ❌ WebSocket (polling-based, not true real-time)
-- ❌ Game Sessions (no grouping of players)
-- ❌ JWT auth (plain user ID in localStorage)
-- ❌ Password hashing (plain text in db)
-- ❌ Input validation
-
-See [WORK_LOG.md](WORK_LOG.md) for complete status, next steps, and known issues.
+See [WORK_LOG.md](WORK_LOG.md) for development history and known issues.
 
 ## Directory Structure
 
 ```
 D62e/
-├── frontend/                 # React/Vue/[framework] UI application
+├── frontend/
 │   ├── src/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── pages/           # Page-level components (Login, Characters, Spaceships, Game, etc.)
-│   │   ├── services/        # API clients and external service calls
-│   │   ├── utils/           # Utility functions and helpers
-│   │   ├── types/           # TypeScript type definitions
-│   │   ├── styles/          # Global styles and theme
-│   │   └── App.tsx          # Root component
+│   │   ├── components/      # RollModal.jsx, GMRollModal.jsx
+│   │   ├── pages/           # LoginPage, CharacterPage, SpaceshipPage, GamePage, GameMasterPage
+│   │   ├── data/            # attributes.js (skill definitions), outcomes.js (shared constants)
+│   │   ├── utils/           # dice.js (roll logic, wild die, outcome evaluation)
+│   │   ├── config.js        # Shared API_URL constant
+│   │   ├── App.jsx          # Root component, nav, GM roll polling
+│   │   ├── App.css          # All styling (dark theme)
+│   │   └── main.jsx         # React entry point
 │   └── package.json
 │
-├── backend/                  # Express/FastAPI/[framework] server
+├── backend/
 │   ├── src/
-│   │   ├── routes/          # API route definitions
-│   │   ├── controllers/      # Request handlers and business logic
-│   │   ├── models/          # Database models and schemas
-│   │   ├── middleware/       # Express/server middleware (auth, logging, etc.)
-│   │   ├── services/        # Core business logic (roll resolution, game state, etc.)
-│   │   ├── types/           # TypeScript interfaces and types
-│   │   ├── config/          # Configuration (database, env vars, etc.)
-│   │   └── server.ts        # Server entry point
+│   │   ├── routes/          # users, characters, rolls, spaceships, messages, gmRolls
+│   │   ├── server.js        # Express app with middleware and routes
+│   │   ├── db.js            # lowdb initialization with default schema
+│   │   └── utils.js         # generateId(), findById(), findIndexById()
+│   ├── data/                # db.json (auto-created, gitignored)
 │   └── package.json
 │
-├── docs/                     # Additional documentation
-│   ├── API.md               # API endpoint documentation
-│   ├── DATABASE.md          # Database schema and relationships
-│   └── DEPLOYMENT.md        # Deployment instructions
-│
-├── CLAUDE.md                # This file - Code documentation
+├── CLAUDE.md                # This file — codebase documentation
 ├── ORCHESTRATION.md         # Game rules and mechanics
-├── WORK_LOG.md              # Development progress tracking (update regularly!)
+├── WORK_LOG.md              # Development progress tracking
 ├── QUICKSTART.md            # Quick setup instructions
-├── PROJECT_SETUP.md         # Phase-by-phase development guide
 ├── README.md                # Project overview
-├── .gitignore              # Git ignore rules
-├── .env.example            # Environment variables template
-└── package.json            # Root package.json (if monorepo)
+├── .gitignore               # Git ignore rules
+├── .env.example             # Environment variables template
+└── package.json             # Root monorepo package.json
 ```
 
 ## Key Modules
@@ -89,135 +72,121 @@ D62e/
 ### Frontend
 
 **Pages:**
-- `LoginPage` - Authentication and user login
-- `CharacterPage` - Character creation and management
-- `SpaceshipPage` - Spaceship management and status
-- `GamePage` - Main gameplay interface with chat and roll log
-- `GameMasterPage` - GM controls for calling rolls and managing game state
+- `LoginPage` — Register/login with display name and GM checkbox
+- `CharacterPage` — Character sheet with edit mode, roll buttons on every skill/attribute, damage rolls
+- `SpaceshipPage` — Ship stats, weapons, crew stations, game rules reference panels
+- `GamePage` — Roll log + chat (interleaved by timestamp), quick roll selector
+- `GameMasterPage` — Call for rolls (static/dice DC), response tracking, difficulty table, presets
 
 **Components:**
-- `RollResult` - Display roll outcomes
-- `ChatWindow` - Real-time chat messages
-- `RollLog` - Historical record of all rolls
-- `CharacterSheet` - Character display and editing
-- `ShipStatus` - Spaceship information display
+- `RollModal` — Skill/attribute roll popup (setup phase + result phase)
+- `GMRollModal` — GM-initiated roll popup (setup + result + choice/done phases)
 
-**Services:**
-- `authService` - Login, logout, token management
-- `characterService` - Fetch/create/update characters
-- `gameService` - Real-time game state and communication
-- `rollService` - Initiate rolls and fetch results
+**Shared Data:**
+- `config.js` — Shared `API_URL` constant (used by all pages/components)
+- `data/attributes.js` — Attribute/skill definitions, `getDicePool()`, `DIFFICULTY_TABLE`
+- `data/outcomes.js` — Shared `OUTCOME_LABELS` and `OUTCOME_COLORS` maps
+- `utils/dice.js` — `rollDice()`, `rollPlainDice()`, `calculateTotal()`, `evaluateGMRollOutcome()`
 
 ### Backend
 
-**Models:**
-- `User` - Player accounts and authentication
-- `Character` - TTRPG character data
-- `Spaceship` - Ship information and status
-- `Roll` - Roll history and results
-- `GameSession` - Active game session state
+**Routes (all under `/api`):**
+- `users.js` — Register, login, get/update user, get user's characters
+- `characters.js` — CRUD with server-side `?userId=` filtering
+- `rolls.js` — Store skill/attack/damage rolls, get rolls (newest first)
+- `spaceships.js` — CRUD with server-side `?userId=` filtering
+- `messages.js` — Get last 100 messages, post new message
+- `gmRolls.js` — Full GM roll lifecycle (create, poll active, respond, update outcome, close)
 
-**Services:**
-- `RollService` - Roll mechanics, wild dice calculation, result determination
-- `AuthService` - User authentication and token generation
-- `GameStateService` - Game session management
-- `ChatService` - Message persistence and retrieval
+**Utilities:**
+- `utils.js` — `generateId()` (uuid), `findById()`, `findIndexById()`
+- `db.js` — lowdb initialization with default schema for all collections
 
-**Routes:**
-- `POST /auth/login` - User login
-- `GET /characters` - Fetch user's characters
-- `POST /characters` - Create character
-- `GET /spaceships` - Fetch user's spaceships
-- `POST /rolls` - Initiate a roll
-- `WS /game/:sessionId` - WebSocket for real-time gameplay
+## Data Storage
 
-## Database Schema
+All data persists in `backend/data/db.json` (lowdb, auto-created on first run). Collections:
+- `users` — accounts with username, password, displayName, isGM flag
+- `characters` — full character sheets (attributes, skills, weapons, talents, flaws, perks, items, notes)
+- `rolls` — skill/attack/damage roll history with full wild die details
+- `spaceships` — ship stats, weapons, crew stations
+- `messages` — chat messages (author, text, timestamp)
+- `gmRollRequests` — GM-initiated roll calls (skill, DC, status)
+- `gmRollResponses` — player responses to GM roll calls
+- `gameSessions` — placeholder (not yet used)
 
-[See docs/DATABASE.md for detailed schema]
+## Authentication
 
-High-level entities:
-- `users` - Player accounts
-- `characters` - Character sheets
-- `spaceships` - Ship data
-- `rolls` - Roll history with results
-- `game_sessions` - Active games
-- `messages` - Chat messages
+- Plain user ID stored in localStorage (no JWT)
+- Passwords stored in plain text (no hashing)
+- GM role set at registration via `isGM` flag
+- No session tokens or middleware auth checks
 
-## Authentication & Authorization
+## Communication
 
-- Token-based authentication (JWT or similar)
-- Sessions tied to authenticated users
-- Game Masters identified by role on game session
-- Only character/spaceship owners can modify their assets
+- Polling-based (no WebSocket)
+- Roll log / chat: 3-second polling interval
+- GM roll requests: 5-second polling by players
+- GM roll responses: 5-second polling by GM
 
-## Real-time Communication
+## Roll System
 
-- WebSocket connection for live game updates
-- Roll announcements broadcast to all players in a session
-- Chat messages pushed to connected clients
-- Game state changes (GM calls) propagated in real-time
+See [ORCHESTRATION.md](ORCHESTRATION.md) for full game rules.
 
-## Roll System (D62e 2e Rules)
+**Dice (`frontend/src/utils/dice.js`):**
+- `rollDice(count)` — rolls N d6, first is Wild Die
+- Wild Die = 6: explodes (keep rolling/adding until not-6)
+- Wild Die = 1: complication (wild = 0, highest other die removed)
+- Returns array of die objects with `{value, isWild, rolls, exploded, rawFirst}`
 
-See ORCHESTRATION.md for game mechanics. Implementation (Phase 7):
+**Roll Modal (`frontend/src/components/RollModal.jsx`):**
+- Two phases: setup (extra dice, Double Dice for 1 HP) → result (wild die display, totals)
+- Hero Point options: Re-Roll (1 HP), Double Down (free, complication on 2nd fail)
+- Exceptional Success auto-detected (total ≥ DC by threshold)
+- Roll flag saved to backend: `REROLL`, `DOUBLE_DOWN`, or `null`
 
-**Frontend (`frontend/src/utils/dice.js`):**
-- `rollDice(count)` — rolls N dice, first is "Wild Die"
-- Wild Die = 6? Explodes (keep rolling, add results, repeat until not-6)
-- Wild Die = 1? Complication (wild die = 0, highest other die removed)
-- Other dice just sum normally
-- Returns array of die objects with {value, isWild, rolls, exploded, rawFirst}
-
-**Components (`frontend/src/components/RollModal.jsx`):**
-- Roll popup with two phases: setup → result
-- Setup: shows dice breakdown, +/- extra dice, Double Dice button (1 HP)
-- Result: displays wild die in large colored box (green=6, red=1), shows explosion chain
-- Options: Re-Roll (1 HP) or Double Down (free, but complication on 2nd fail)
-- Flag saved to backend (REROLL, DOUBLE_DOWN, or null)
-
-**Backend (`backend/src/routes/rolls.js`):**
-- `POST /api/rolls/skill` — stores full roll data
-- Payload: characterId, skill, attribute, diceCount, diceRolled[], wildDie{}, total, complication, doubled, extraDice, rollFlag, linkedRollId
-- Also supports attack and damage rolls (less developed)
-
-**Character Sheet (`frontend/src/pages/CharacterPage.jsx`):**
-- Roll button next to each attribute and skill
-- Click to open RollModal with pre-filled rollInfo
-- Hero Points updated automatically when modal closes
+**GM Roll System (`frontend/src/components/GMRollModal.jsx`):**
+- GM sets skill + DC (static number or dice formula)
+- All logged-in players get popup via 5s polling
+- 5-tier outcomes: Exceptional Success, Success, Partial Success, Fail, Critical Fail
+- Auto Hero Point awards on Exceptional Success
 
 ## Conventions
 
 **Code Style:**
-- Use TypeScript throughout (strict mode)
-- Consistent naming: camelCase for variables, PascalCase for classes/types
-- Functional components preferred in frontend
-- Async/await over .then() chains
+- Plain JavaScript (no TypeScript)
+- camelCase for variables/functions, PascalCase for components
+- React functional components throughout
+- Async/await over `.then()` chains
+- Shared constants extracted to `config.js` and `data/` modules
 
 **Commits:**
-- **Commit after every coding session** - Always push changes to GitHub to track progress
-- Descriptive commit messages that explain WHAT changed (see WORK_LOG.md for format)
-- Reference ORCHESTRATION.md or docs when explaining game mechanics
-- Examples: `"Add attack roll UI to GamePage"`, `"Fix wild dice counting"`, `"Update WORK_LOG.md: completed spaceship routes"`
-- See [WORK_LOG.md](WORK_LOG.md#-git-workflow---always-commit-your-work) for detailed git workflow
+- Commit after every coding session
+- Descriptive messages: `"Add attack roll UI"`, `"Fix wild dice counting"`
+- See [WORK_LOG.md](WORK_LOG.md) for git workflow
 
-**Testing:**
-- Unit tests for roll logic and calculations
-- Integration tests for API routes
-- E2E tests for critical user flows (login, character creation, gameplay)
+## Tech Stack
 
-## Tech Stack (DECIDED)
+- **Frontend**: React (Vite) + plain JavaScript
+- **Backend**: Node.js + Express
+- **Database**: lowdb (JSON file-based)
+- **Communication**: Polling (3-5s intervals)
+- **Auth**: Plain user ID in localStorage
+- **Package manager**: npm workspaces (monorepo)
 
-- [x] Frontend: **React** (Vite) with plain JS (not TypeScript for simplicity)
-- [x] Backend: **Node.js/Express**
-- [x] Database: **lowdb** (JSON file-based, fine for small group)
-- [x] Real-time: Not yet (no WebSocket — TODO)
-- [x] Auth: Plain user ID in localStorage (TODO: upgrade to JWT)
-- [x] Package manager: npm (monorepo with frontend/ and backend/ workspaces)
+## Known Limitations
+
+- No WebSocket (polling-based)
+- No game sessions (global shared state)
+- No password hashing (plain text)
+- No JWT authentication
+- No input validation
+- lowdb not suitable for high traffic
 
 ## Future Considerations
 
-- Spectator mode for players watching sessions
-- Dice roll automation and macros
+- WebSocket for real-time communication
+- Game sessions to group players
+- JWT auth and password hashing
+- Input validation and sanitization
 - Character export/import
-- Game session recording/replay
 - Mobile app

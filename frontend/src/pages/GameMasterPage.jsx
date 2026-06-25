@@ -1,28 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ATTRIBUTE_DEFINITIONS, getAllSkills, getDicePool } from '../data/attributes';
-import { DIFFICULTY_TABLE } from '../data/attributes';
+import { API_URL } from '../config';
+import { ATTRIBUTE_DEFINITIONS, DIFFICULTY_TABLE } from '../data/attributes';
+import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import { rollPlainDice } from '../utils/dice';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const OUTCOME_LABELS = {
-  EXCEPTIONAL_SUCCESS: 'Exceptional Success',
-  SUCCESS: 'Success',
-  PARTIAL_SUCCESS: 'Partial Success',
-  FAIL: 'Fail',
-  CRITICAL_FAIL: 'Critical Fail',
-  PENDING_CHOICE: 'Choosing...',
-};
-
-const OUTCOME_COLORS = {
-  EXCEPTIONAL_SUCCESS: '#ffd60a',
-  SUCCESS: '#06d6a0',
-  PARTIAL_SUCCESS: '#f9a825',
-  FAIL: '#ef476f',
-  CRITICAL_FAIL: '#b71c1c',
-  PENDING_CHOICE: '#888',
-};
 
 const PRESET_KEY = 'gm-roll-presets';
 

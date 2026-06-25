@@ -1,71 +1,54 @@
 # D62e Frontend
 
-A React-based UI for the D62e TTRPG platform.
+React-based UI for the D62e TTRPG platform.
 
 ## Setup
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+npm run dev      # Development server (http://localhost:3000)
+npm run build    # Production build
+npm run preview  # Preview production build
 ```
-
-Development server runs on `http://localhost:3000` by default.
 
 ## Project Structure
 
 ```
 src/
 ├── pages/
-│   ├── LoginPage.jsx      # User login/registration
-│   ├── CharacterPage.jsx  # Character management
-│   ├── SpaceshipPage.jsx  # Spaceship management
-│   ├── GamePage.jsx       # Main gameplay interface
-│   └── GameMasterPage.jsx # Game Master controls
-├── App.jsx                # Main app component with navigation
-├── App.css                # Global styles
-└── main.jsx               # React entry point
+│   ├── LoginPage.jsx         # Register/login with display name + GM flag
+│   ├── CharacterPage.jsx     # Character sheet, edit mode, roll buttons, damage rolls
+│   ├── SpaceshipPage.jsx     # Ship stats, weapons, crew, game rules panels
+│   ├── GamePage.jsx          # Roll log + chat (interleaved), quick roll selector
+│   └── GameMasterPage.jsx    # Call for rolls, response tracking, difficulty table
+├── components/
+│   ├── RollModal.jsx         # Skill/attribute roll popup (setup + result phases)
+│   └── GMRollModal.jsx       # GM-initiated roll popup (setup + result + choice)
+├── data/
+│   ├── attributes.js         # Attribute/skill definitions, getDicePool()
+│   └── outcomes.js           # Shared outcome labels and colors
+├── utils/
+│   └── dice.js               # rollDice(), calculateTotal(), evaluateGMRollOutcome()
+├── config.js                 # Shared API_URL constant
+├── App.jsx                   # Root component, tab navigation, GM roll polling
+├── App.css                   # All styling (dark theme)
+└── main.jsx                  # React entry point
 ```
 
 ## Features
 
-- **Login/Registration**: Create account and authenticate
-- **Character Management**: Create, edit, and delete characters
-- **Gameplay**: Roll skills, view roll results in real-time
-- **Game Master Dashboard**: View all characters and recent rolls
-- **Dark Theme**: D&D-inspired dark color scheme
+- **Login/Registration** with display name and Game Master checkbox
+- **Character Sheet** — 7 attributes, 30+ skills, weapons, talents, flaws, perks, items, notes
+- **Roll Modal** — wild die mechanics, extra dice, Double Dice, Re-Roll, Double Down, Exceptional Success
+- **Damage Rolls** — plain d6 sum from weapon damage formula
+- **GM Roll Modal** — polls for GM-called rolls, 5-tier outcomes with Hero Point awards
+- **Roll Log / Chat** — interleaved rolls and messages with 3-5s polling
+- **Spacecraft** — stats, computed values, weapons, crew stations, game rules reference
+- **Dark Theme** — responsive design
 
-## Connecting to Backend
+## Configuration
 
-The frontend expects the backend API at:
-- Default: `http://localhost:5000/api`
-- Configurable via `VITE_API_URL` environment variable
-
-Create a `.env` file:
+Create `.env`:
 ```
 VITE_API_URL=http://localhost:5000/api
 ```
-
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-
-## Next Steps
-
-1. Connect all pages to backend endpoints
-2. Add WebSocket for real-time updates
-3. Implement spaceship management features
-4. Add character editing functionality
-5. Implement Game Master roll calls
-6. Add dice roll animations

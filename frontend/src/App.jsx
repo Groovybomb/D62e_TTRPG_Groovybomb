@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import { API_URL } from './config';
 import LoginPage from './pages/LoginPage';
 import CharacterPage from './pages/CharacterPage';
 import SpaceshipPage from './pages/SpaceshipPage';
 import GamePage from './pages/GamePage';
 import GameMasterPage from './pages/GameMasterPage';
 import GMRollModal from './components/GMRollModal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TABS = [
   { key: 'characters', label: 'Character Sheet' },
@@ -33,8 +32,8 @@ function App() {
 
   const fetchMyCharacters = async (userId) => {
     try {
-      const res = await axios.get(`${API_URL}/characters`);
-      setMyCharacters(res.data.filter(c => c.userId === userId));
+      const res = await axios.get(`${API_URL}/characters`, { params: { userId } });
+      setMyCharacters(res.data);
     } catch { /* ignore */ }
   };
 

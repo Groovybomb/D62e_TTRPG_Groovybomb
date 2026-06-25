@@ -1,146 +1,95 @@
 # D62e Backend
 
-A lightweight Node.js/Express backend using lowdb for flat-file data storage.
+Node.js/Express backend using lowdb for flat-file data storage.
 
 ## Setup
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
-
-# Start production server
-npm start
+npm run dev    # Development (auto-restart on changes)
+npm start      # Production
 ```
 
-Server runs on `http://localhost:5000` by default.
+Server runs on http://localhost:5000 by default.
 
 ## Project Structure
 
 ```
 src/
-├── server.js          # Express app setup
-├── db.js              # lowdb initialization
-├── utils.js           # Utility functions (dice rolling, ID generation, etc.)
+├── server.js          # Express app, middleware, route mounting
+├── db.js              # lowdb initialization with default schema
+├── utils.js           # ID generation, array find helpers
 └── routes/
-    ├── users.js       # User registration and login
-    ├── characters.js  # Character CRUD operations
-    └── rolls.js       # Dice roll mechanics
+    ├── users.js       # Register, login, user management
+    ├── characters.js  # Character CRUD with attribute/skill schema
+    ├── rolls.js       # Skill, attack, and damage roll storage
+    ├── spaceships.js  # Spacecraft CRUD
+    ├── messages.js    # Chat message storage
+    └── gmRolls.js     # GM roll request/response lifecycle
 ```
 
 ## Data Storage
 
-All data is stored in `data/db.json` as a single JSON file:
+All data persists in `data/db.json`:
 
 ```json
 {
-  "users": [...],
-  "characters": [...],
-  "rolls": [...],
-  "spaceships": [...],
-  "messages": [...],
-  "gameSessions": [...]
+  "users": [],
+  "characters": [],
+  "rolls": [],
+  "spaceships": [],
+  "messages": [],
+  "gmRollRequests": [],
+  "gmRollResponses": [],
+  "gameSessions": []
 }
 ```
 
 ## API Endpoints
 
 ### Users
-
-- `POST /api/users/register` - Create new user
-  ```json
-  { "username": "player1", "password": "secret" }
-  ```
-
-- `POST /api/users/login` - Authenticate user
-  ```json
-  { "username": "player1", "password": "secret" }
-  ```
-
-- `GET /api/users/:userId` - Get user info
-
-- `GET /api/users/:userId/characters` - Get user's characters
+- `POST /api/users/register` — Create user (username, password, displayName, isGM)
+- `POST /api/users/login` — Authenticate (username, password)
+- `GET /api/users/:userId` — Get user info
+- `PATCH /api/users/:userId` — Update user
+- `GET /api/users/:userId/characters` — Get user's characters
 
 ### Characters
-
-- `POST /api/characters` - Create new character
-  ```json
-  { "userId": "user-id", "name": "Ace Striker", "skills": {...} }
-  ```
-
-- `GET /api/characters` - Get all characters
-
-- `GET /api/characters/:characterId` - Get character details
-
-- `PATCH /api/characters/:characterId` - Update character
-  ```json
-  { "health": 8, "credits": 150 }
-  ```
-
-- `DELETE /api/characters/:characterId` - Delete character
+- `POST /api/characters` — Create character (userId, name)
+- `GET /api/characters?userId=X` — Get characters (optional userId filter)
+- `GET /api/characters/:id` — Get character
+- `PATCH /api/characters/:id` — Update character
+- `DELETE /api/characters/:id` — Delete character
 
 ### Rolls
+- `POST /api/rolls/skill` — Store skill roll (with wild die details)
+- `POST /api/rolls/attack` — Store attack roll
+- `POST /api/rolls/damage` — Store damage roll
+- `GET /api/rolls` — Get all rolls (newest first)
+- `GET /api/rolls/character/:id` — Get character's rolls
 
-- `POST /api/rolls/skill` - Execute skill roll
-  ```json
-  { "characterId": "char-id", "skill": "shooting", "diceCount": 3, "difficulty": 1 }
-  ```
+### Spaceships
+- `POST /api/spaceships` — Create spaceship (userId, name)
+- `GET /api/spaceships?userId=X` — Get spaceships (optional userId filter)
+- `GET /api/spaceships/:id` — Get spaceship
+- `PATCH /api/spaceships/:id` — Update spaceship
+- `DELETE /api/spaceships/:id` — Delete spaceship
 
-- `POST /api/rolls/attack` - Execute attack roll
-  ```json
-  { "attackerId": "char-id", "defenderId": "char-id", "diceCount": 3 }
-  ```
+### Messages
+- `GET /api/messages` — Get last 100 messages (newest first)
+- `POST /api/messages` — Send message (userId, author, text)
 
-- `POST /api/rolls/damage` - Execute damage roll
-  ```json
-  { "characterId": "char-id", "weaponName": "Laser Rifle", "diceCount": 2 }
-  ```
-
-- `GET /api/rolls` - Get all rolls
-
-- `GET /api/rolls/:characterId` - Get rolls for specific character
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-```
-BACKEND_PORT=5000
-NODE_ENV=development
-```
+### GM Rolls
+- `POST /api/gm-rolls` — GM creates roll request
+- `GET /api/gm-rolls/active?userId=X` — Player polls for pending requests
+- `POST /api/gm-rolls/:id/respond` — Player submits roll response
+- `PATCH /api/gm-rolls/:id/respond/:responseId` — Update response (outcome choice)
+- `GET /api/gm-rolls/:id/responses` — GM polls for responses
+- `PATCH /api/gm-rolls/:id` — Close/cancel request
+- `GET /api/gm-rolls` — Get recent requests
 
 ## Notes
 
-- **Passwords:** Currently stored in plain text. In production, use bcrypt or similar.
-- **Authentication:** No JWT tokens yet. Currently returns user info on login. Can be enhanced with token-based auth.
-- **Concurrency:** lowdb handles basic file locking, but isn't ideal for high-traffic scenarios. Fine for a small group of friends.
-- **Data Persistence:** All data persists in `data/db.json` between server restarts.
-
-## Quick Test
-
-```bash
-# Create a user
-curl -X POST http://localhost:5000/api/users/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"player1","password":"secret"}'
-
-# Create a character
-curl -X POST http://localhost:5000/api/characters \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"returned-user-id","name":"Ace Striker"}'
-
-# Roll a skill
-curl -X POST http://localhost:5000/api/rolls/skill \
-  -H "Content-Type: application/json" \
-  -d '{"characterId":"returned-character-id","skill":"shooting","diceCount":3}'
-```
-
-## Next Steps
-
-1. Connect React frontend to these endpoints
-2. Add WebSocket support for real-time rolls and chat
-3. Implement Game Master roll calls
-4. Add spaceship management routes
-5. Enhance authentication with JWT tokens
+- **Passwords** are stored in plain text — use bcrypt for production
+- **No JWT** — returns user info on login, stored in client localStorage
+- **lowdb** is fine for 2-4 players, not for high traffic

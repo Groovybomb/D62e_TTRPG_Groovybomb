@@ -4,31 +4,27 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Phase:** 8/10 — Chat + GM Roll System + Damage Rolls + Exceptional Success Complete (browser tested)
+**Version:** 1.0.0 — All core features implemented, refactored, and browser-tested.
 
 **What's Working:**
-- Login/register with display name
+- Login/register with display name and GM role
 - Full character sheet (7 attrs, 30+ skills, weapons, talents, perks, items)
-- **Roll modal with wild die system** — click Roll on any skill/attribute, modal opens, roll dice, see results
-- **Damage Roll buttons** — Roll button on each weapon's damage, plain d6 sum (no wild die)
-- **Exceptional Success doubling** — free dice doubling on skill, attribute, damage, and GM rolls (no HP cost)
-- Hero Points — spend on Double Dice or Re-Roll
-- Spacecraft sheet with stats and crew
-- **Roll Log / Chat tab** — real-time display (5s roll refresh, 3s chat refresh), interleaved rolls + messages
-- **Chat persistence** — messages saved to backend, survive page refresh
-- **GM Roll System** — GM picks skill/attribute, sets DC (static or dice roll), all players get popup to roll
-- **GM Roll outcomes** — 5 tiers (Exceptional Success, Success, Partial Success, Fail, Critical Fail) with auto HP awards
-- **Player choice scenarios** — wild die 6 (exceptional vs success), wild die 1 (partial vs fail)
-- Game Master tab with roll initiator, response tracking, difficulty table
-- Data persists in lowdb JSON file
+- Roll modal with wild die system (explodes on 6, complication on 1)
+- Damage roll buttons on weapons (plain d6 sum, no wild die)
+- Exceptional Success free doubling on all roll types
+- Hero Points (Double Dice, Re-Roll, Double Down)
+- Spacecraft sheet (stats, weapons, crew, game rules panels)
+- Roll Log / Chat tab (interleaved by timestamp, 3s polling)
+- GM Roll System (5-tier outcomes, auto HP awards)
+- Game Master tab (roll initiator, presets, response tracking, difficulty table)
+- Data persistence via lowdb
 
-**NOT Working Yet:**
-- WebSocket (polling-based, not true real-time)
-- Game sessions (all rolls in one global log)
-- Password hashing, JWT auth
-- Input validation
-
-See file sections below for detailed architecture, API, file inventory.
+**Known Limitations (v1):**
+- Polling-based (no WebSocket)
+- No game sessions (global shared state)
+- Plain-text passwords (no bcrypt)
+- No JWT auth (user ID in localStorage)
+- No input validation
 
 ---
 
@@ -248,6 +244,20 @@ Before committing, verify:
 - [x] Added `.exceptional-double-btn` CSS styles (green border/text, green hover fill)
 - [x] **Browser tested** — damage rolls, exceptional success on all modals, Roll Log display all verified
 
+### v1.0.0 Refactoring & Documentation
+- [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
+- [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
+- [x] **Server-side filtering** — added `?userId=` query param support to characters and spaceships routes, updated frontend to use params instead of fetching all + filtering client-side
+- [x] **Removed dead backend code** — deleted unused `rollD6`, `rollMultipleDice`, `countWildDice`, `countSuccesses` from `utils.js` (all dice rolling is client-side)
+- [x] **Fixed db.js initialization bug** — changed `if (!db.data[key])` to `if (db.data[key] === undefined)` to prevent skipping falsy-but-valid values
+- [x] **Fixed redundant no-op ternary** in GMRollModal — removed `hasChoice ? outcome : outcome` pattern
+- [x] **Removed unused imports** — cleaned up `getAllSkills`, `getDicePool`, duplicate `ATTRIBUTE_DEFINITIONS` imports
+- [x] **Removed unused dependency** — removed `xlsx` devDependency from root package.json
+- [x] **Version bumps** — all package.json files bumped to 1.0.0
+- [x] **Simplified .env.example** — removed unused JWT, WebSocket, database, session config vars
+- [x] **Full documentation rewrite** — README.md, QUICKSTART.md, backend/README.md, frontend/README.md, CLAUDE.md all updated for v1 accuracy
+- [x] **Browser tested** — all features verified working after refactoring, zero console errors
+
 ---
 
 ## 📋 Roll System Architecture (Phase 7)
@@ -372,58 +382,56 @@ The dice rolling system follows D6 Second Edition rules:
 
 ---
 
-## 📝 File Structure Reminder
+## 📝 File Structure
 
 ```
 D62e/
 ├── backend/
 │   ├── src/
-│   │   ├── server.js              ✅ Working
-│   │   ├── db.js                  ✅ Working
-│   │   ├── utils.js               ✅ Working
+│   │   ├── server.js
+│   │   ├── db.js
+│   │   ├── utils.js
 │   │   └── routes/
-│   │       ├── users.js           ✅ Working
-│   │       ├── characters.js       ✅ Working
-│   │       ├── rolls.js           ✅ Working
-│   │       ├── messages.js        ✅ Working (Phase 8)
-│   │       └── gmRolls.js         ✅ Working (Phase 8)
-│   ├── data/
-│   │   └── db.json                (auto-created)
-│   ├── .env                       ✅ Set
-│   ├── package.json               ✅ Ready
-│   └── README.md                  ✅ Done
+│   │       ├── users.js
+│   │       ├── characters.js
+│   │       ├── rolls.js
+│   │       ├── spaceships.js
+│   │       ├── messages.js
+│   │       └── gmRolls.js
+│   ├── data/db.json               (auto-created)
+│   ├── package.json
+│   └── README.md
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── LoginPage.jsx         ✅ Auth (register + login with displayName)
-│   │   │   ├── CharacterPage.jsx     ✅ Sheet view + Roll buttons on skills/attributes
-│   │   │   ├── GamePage.jsx          ✅ Roll Log/Chat, quick-roll dropdown, live refresh
-│   │   │   ├── GameMasterPage.jsx    ✅ All characters, difficulty table, rolls
-│   │   │   └── SpaceshipPage.jsx     ✅ Ship stats, weapons, crew, rules panels
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── CharacterPage.jsx
+│   │   │   ├── GamePage.jsx
+│   │   │   ├── GameMasterPage.jsx
+│   │   │   └── SpaceshipPage.jsx
 │   │   ├── components/
-│   │   │   ├── RollModal.jsx         ✅ Roll popup (setup + result phases)
-│   │   │   └── GMRollModal.jsx       ✅ GM roll popup (setup → result → choice) (Phase 8)
+│   │   │   ├── RollModal.jsx
+│   │   │   └── GMRollModal.jsx
 │   │   ├── data/
-│   │   │   └── attributes.js         ✅ Attribute/skill definitions, getDicePool()
+│   │   │   ├── attributes.js
+│   │   │   └── outcomes.js
 │   │   ├── utils/
-│   │   │   └── dice.js               ✅ rollDice(), wild die + exploding, calculateTotal()
-│   │   ├── App.jsx                   ✅ Nav tabs, route logic
-│   │   ├── App.css                   ✅ All styling (character, ship, modal, dice)
-│   │   └── main.jsx                  ✅ React entry point
-│   ├── .env                       ✅ Set
-│   ├── index.html                 ✅ Set
-│   ├── vite.config.js             ✅ Set
-│   ├── package.json               ✅ Ready
-│   └── README.md                  ✅ Done
-├── CLAUDE.md                      ✅ Done
-├── ORCHESTRATION.md               ✅ Done
-├── WORK_LOG.md                    ✅ This file
-├── GIT_WORKFLOW.md                ✅ Done
-├── QUICKSTART.md                  ✅ Done
-├── PROJECT_SETUP.md               ✅ Done
-├── .gitignore                     ✅ Done
-├── .env.example                   ✅ Done
-└── package.json                   ✅ Done
+│   │   │   └── dice.js
+│   │   ├── config.js
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   └── main.jsx
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── package.json
+│   └── README.md
+├── CLAUDE.md
+├── ORCHESTRATION.md
+├── WORK_LOG.md
+├── QUICKSTART.md
+├── .gitignore
+├── .env.example
+└── package.json
 ```
 
 ---
@@ -438,7 +446,7 @@ D62e/
 
 ### Characters
 - `POST /api/characters` — Create character (userId, name)
-- `GET /api/characters` — Get all characters (filtered by userId on frontend)
+- `GET /api/characters?userId=X` — Get characters (optional server-side userId filter)
 - `GET /api/characters/:characterId` — Get character sheet
 - `PATCH /api/characters/:characterId` — Update (attributes, skills, heroPoints, armor, weapons, talents, flaws, perks, items, notes)
 - `DELETE /api/characters/:characterId` — Delete character
@@ -465,7 +473,7 @@ D62e/
 
 ### Spaceships
 - `POST /api/spaceships` — Create ship (userId, name)
-- `GET /api/spaceships` — Get all spaceships
+- `GET /api/spaceships?userId=X` — Get spaceships (optional server-side userId filter)
 - `GET /api/spaceships/:id` — Get spaceship details
 - `PATCH /api/spaceships/:id` — Update (stats, weapons, crew, notes)
 - `DELETE /api/spaceships/:id` — Delete spaceship
@@ -549,6 +557,6 @@ Current db.json structure:
 
 ---
 
-**Last Updated:** 2026-06-25 (Phase 8b complete)
-**Last Work Done:** Damage roll buttons on weapons + Exceptional Success free doubling on all roll modals
-**Status:** BROWSER TESTED — all roll types verified working (skill, attribute, damage, GM rolls)
+**Last Updated:** 2026-06-25 (v1.0.0 release)
+**Last Work Done:** v1 refactoring — extracted shared constants, server-side filtering, removed dead code, full doc rewrite
+**Status:** v1.0.0 — all features implemented, refactored, browser-tested, documented

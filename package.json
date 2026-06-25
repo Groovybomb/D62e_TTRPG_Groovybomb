@@ -1,6 +1,6 @@
 {
   "name": "d62e-ttrpg-platform",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A web-based platform for playing D6 Second Edition TTRPG",
   "private": true,
   "keywords": [
@@ -32,7 +32,6 @@
     "test:backend": "cd backend && npm test"
   },
   "devDependencies": {
-    "concurrently": "^8.0.0",
-    "xlsx": "^0.18.5"
+    "concurrently": "^8.0.0"
   }
 }

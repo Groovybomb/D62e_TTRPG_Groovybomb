@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ATTRIBUTE_DEFINITIONS, getAllSkills, getDicePool } from '../data/attributes';
+import { API_URL } from '../config';
+import { ATTRIBUTE_DEFINITIONS, getDicePool } from '../data/attributes';
+import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import RollModal from '../components/RollModal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function GamePage({ userId, displayName }) {
   const [characters, setCharacters] = useState([]);
@@ -25,11 +25,13 @@ export default function GamePage({ userId, displayName }) {
 
   const fetchCharacters = async () => {
     try {
-      const res = await axios.get(`${API_URL}/characters`);
-      setAllCharacters(res.data);
-      const mine = res.data.filter(c => c.userId === userId);
-      setCharacters(mine);
-      if (mine.length > 0 && !selectedCharacter) setSelectedCharacter(mine[0]);
+      const [allRes, mineRes] = await Promise.all([
+        axios.get(`${API_URL}/characters`),
+        axios.get(`${API_URL}/characters`, { params: { userId } }),
+      ]);
+      setAllCharacters(allRes.data);
+      setCharacters(mineRes.data);
+      if (mineRes.data.length > 0 && !selectedCharacter) setSelectedCharacter(mineRes.data[0]);
     } catch { /* ignore */ }
   };
 
@@ -182,16 +184,8 @@ export default function GamePage({ userId, displayName }) {
             const wildDie = roll.wildDie;
 
             if (roll.rollType === 'GM_ROLL') {
-              const outcomeColor = roll.outcome === 'EXCEPTIONAL_SUCCESS' ? '#ffd60a'
-                : roll.outcome === 'SUCCESS' ? '#06d6a0'
-                : roll.outcome === 'PARTIAL_SUCCESS' ? '#f9a825'
-                : roll.outcome === 'CRITICAL_FAIL' ? '#b71c1c'
-                : roll.outcome === 'FAIL' ? '#ef476f' : '#888';
-              const outcomeLabel = roll.outcome === 'EXCEPTIONAL_SUCCESS' ? 'Exceptional Success'
-                : roll.outcome === 'SUCCESS' ? 'Success'
-                : roll.outcome === 'PARTIAL_SUCCESS' ? 'Partial Success'
-                : roll.outcome === 'CRITICAL_FAIL' ? 'Critical Fail'
-                : roll.outcome === 'FAIL' ? 'Fail' : roll.outcome;
+              const outcomeColor = OUTCOME_COLORS[roll.outcome] || '#888';
+              const outcomeLabel = OUTCOME_LABELS[roll.outcome] || roll.outcome;
 
               return (
                 <div key={roll.id} className="message system" style={{ borderLeft: `3px solid ${outcomeColor}` }}>

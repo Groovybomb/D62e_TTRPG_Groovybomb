@@ -26,7 +26,7 @@ await db.read();
 // Ensure all properties exist
 db.data ||= defaultData;
 Object.keys(defaultData).forEach(key => {
-  if (!db.data[key]) {
+  if (db.data[key] === undefined) {
     db.data[key] = defaultData[key];
   }
 });

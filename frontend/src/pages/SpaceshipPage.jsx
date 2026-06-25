@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_URL } from '../config';
 
 const STAT_DEFS = [
   { key: 'navicomp', label: 'Navicomp' },
@@ -32,10 +31,9 @@ export default function SpaceshipPage({ userId }) {
 
   const fetchShips = async () => {
     try {
-      const res = await axios.get(`${API_URL}/spaceships`);
-      const mine = res.data.filter(s => s.userId === userId);
-      setShips(mine);
-      if (mine.length > 0 && !selectedId) setSelectedId(mine[0].id);
+      const res = await axios.get(`${API_URL}/spaceships`, { params: { userId } });
+      setShips(res.data);
+      if (res.data.length > 0 && !selectedId) setSelectedId(res.data[0].id);
     } catch { setError('Failed to load spaceships'); }
   };
 

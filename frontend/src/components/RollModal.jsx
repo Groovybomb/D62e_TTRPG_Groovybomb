@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 import { rollDice, calculateTotal } from '../utils/dice';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function RollModal({ rollInfo, character, onClose, onHeroPointChange }) {
   const { label, attrLabel, attrDice, skillLabel, skillDice, baseDice } = rollInfo;

@@ -1,147 +1,41 @@
 # Project Setup Guide
 
-This document outlines the next steps to get the D62e platform development started.
+This document records the tech stack decisions and development phases completed for D62e v1.
 
-## Phase 1: Technology Stack Decision
-
-Before creating the frontend and backend, decide on:
+## Tech Stack (Decided)
 
 ### Frontend
-- [ ] **Framework:** React, Vue, Svelte, or other?
-- [ ] **Language:** TypeScript or JavaScript?
-- [ ] **Styling:** Tailwind, CSS Modules, Styled Components, or other?
-- [ ] **State Management:** Redux, Zustand, Pinia, or built-in hooks?
-- [ ] **UI Component Library:** Material-UI, Shadcn/ui, Chakra, or custom?
+- **Framework:** React (Vite)
+- **Language:** Plain JavaScript
+- **Styling:** Custom CSS (dark theme in App.css)
+- **State Management:** React hooks (useState, useEffect)
 
 ### Backend
-- [ ] **Language:** Node.js (Express, Fastify), Python (FastAPI, Django), Go, or other?
-- [ ] **Framework:** Specific framework choice
-- [ ] **Database:** PostgreSQL, MongoDB, or other?
-- [ ] **ORM/ODM:** Prisma, Sequelize, SQLAlchemy, Mongoose, or other?
+- **Language:** Node.js
+- **Framework:** Express
+- **Database:** lowdb (JSON file-based, `backend/data/db.json`)
+- **Utilities:** uuid for ID generation
 
-### Real-time Communication
-- [ ] **WebSocket Library:** Socket.io, native WebSockets, or other?
-- [ ] **Message Format:** JSON, Protocol Buffers, or other?
+### Communication
+- Polling-based (3-5 second intervals)
+- No WebSocket yet
 
 ### Authentication
-- [ ] **Method:** JWT, OAuth, Session-based, or other?
-- [ ] **Service:** Self-hosted or external provider (Auth0, Supabase)?
+- Plain user ID in localStorage
+- No JWT or OAuth yet
 
-## Phase 2: Project Structure Setup
+## Development Phases (All Complete)
 
-Once tech stack is decided:
+1. **Documentation & Structure** — project scaffolding, markdown docs, monorepo setup
+2. **Backend** — Express server, lowdb, user/character/roll/spaceship routes
+3. **Frontend** — React app, login, character sheet, game page, GM page
+4. **Display Name & Tabs** — user display names, tab redesign
+5. **Character Sheet** — full D62e character model (7 attributes, 30+ skills, weapons, etc.)
+6. **Spacecraft** — ship stats, weapons, crew stations, game rules panels
+7. **Roll System** — wild die mechanics, Hero Points, roll modal
+8. **Chat + GM Rolls** — chat persistence, GM roll calling, 5-tier outcomes, damage rolls
+9. **v1 Refactoring** — shared constants, server-side filtering, dead code removal, doc rewrite
 
-1. Create `frontend/` directory with chosen framework
-2. Create `backend/` directory with chosen framework
-3. Create `docs/` directory with:
-   - [ ] API.md - API endpoint documentation
-   - [ ] DATABASE.md - Database schema and relationships
-   - [ ] DEPLOYMENT.md - Deployment instructions
+## Setup Instructions
 
-## Phase 3: Core Backend Development
-
-Priority order:
-1. [ ] Database schema implementation
-2. [ ] User authentication system
-3. [ ] Roll mechanics engine (RollService)
-4. [ ] Character model and CRUD operations
-5. [ ] WebSocket setup for real-time updates
-6. [ ] Spaceship model and CRUD operations
-7. [ ] Game session management
-8. [ ] Game Master controls
-
-## Phase 4: Core Frontend Development
-
-Priority order:
-1. [ ] Login page and authentication flow
-2. [ ] Character creation and management page
-3. [ ] Spaceship page
-4. [ ] Main game interface with:
-   - [ ] Roll results display
-   - [ ] Chat window
-   - [ ] Roll log
-5. [ ] Game Master dashboard (if building GM role)
-
-## Phase 5: Integration & Testing
-
-1. [ ] Connect frontend to backend API
-2. [ ] Test authentication flow end-to-end
-3. [ ] Test roll mechanics with real data
-4. [ ] Test real-time updates via WebSocket
-5. [ ] Load testing for multiple concurrent players
-
-## Initial File Structure to Create
-
-```
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   ├── utils/
-│   ├── types/
-│   ├── styles/
-│   └── App.tsx
-├── public/
-├── package.json
-└── [config files: tsconfig.json, etc.]
-
-backend/
-├── src/
-│   ├── routes/
-│   ├── controllers/
-│   ├── models/
-│   ├── middleware/
-│   ├── services/
-│   ├── types/
-│   ├── config/
-│   └── server.ts
-├── package.json
-└── [config files: tsconfig.json, etc.]
-
-docs/
-├── API.md
-├── DATABASE.md
-└── DEPLOYMENT.md
-```
-
-## Quick Start Commands (Post-Setup)
-
-```bash
-# Copy environment template
-cp .env.example .env
-# Edit .env with your configuration
-
-# Install all dependencies (using monorepo workspace)
-npm install
-
-# Start development servers
-npm run dev
-
-# Run tests
-npm run test
-
-# Build for production
-npm run build
-```
-
-## Communication & Collaboration
-
-- **Commit after each work session** - Run `git add .` and `git commit -m "..."` before stopping work
-- Document decisions in relevant markdown files
-- Update ORCHESTRATION.md as game mechanics are finalized
-- Keep CLAUDE.md current as code structure evolves
-- Update WORK_LOG.md with completed items and next steps
-- Reference related files in comments/docs for context
-- See WORK_LOG.md for detailed git workflow and commit message format
-
-## What's Next?
-
-1. **Decide on tech stack** and update this document
-2. **Create frontend/ and backend/ directories** with initial project scaffolding
-3. **Set up database schema** - map out all tables/collections
-4. **Implement authentication** - users can login
-5. **Build roll system** - core game mechanics
-6. **Create game interface** - players can actually play
-
-Good luck! 🎲
+See [QUICKSTART.md](QUICKSTART.md) for how to run the application.

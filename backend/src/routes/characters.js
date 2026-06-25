@@ -45,9 +45,13 @@ router.post('/', async (req, res) => {
   res.status(201).json(newCharacter);
 });
 
-// GET /api/characters - Get all characters
+// GET /api/characters - Get all characters (optionally filter by ?userId=)
 router.get('/', async (req, res) => {
-  res.json(db.data.characters);
+  const { userId } = req.query;
+  const results = userId
+    ? db.data.characters.filter(c => c.userId === userId)
+    : db.data.characters;
+  res.json(results);
 });
 
 // GET /api/characters/:characterId - Get character details

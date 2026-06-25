@@ -44,9 +44,13 @@ router.post('/', async (req, res) => {
   res.status(201).json(ship);
 });
 
-// GET /api/spaceships - Get all spaceships
+// GET /api/spaceships - Get all spaceships (optionally filter by ?userId=)
 router.get('/', async (req, res) => {
-  res.json(db.data.spaceships);
+  const { userId } = req.query;
+  const results = userId
+    ? db.data.spaceships.filter(s => s.userId === userId)
+    : db.data.spaceships;
+  res.json(results);
 });
 
 // GET /api/spaceships/:id - Get spaceship details

@@ -1,27 +1,9 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 import { rollDice, calculateTotal, evaluateGMRollOutcome } from '../utils/dice';
 import { getDicePool } from '../data/attributes';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const OUTCOME_LABELS = {
-  EXCEPTIONAL_SUCCESS: 'Exceptional Success',
-  SUCCESS: 'Success',
-  PARTIAL_SUCCESS: 'Partial Success',
-  FAIL: 'Fail',
-  CRITICAL_FAIL: 'Critical Fail',
-  PENDING_CHOICE: 'Choose Outcome',
-};
-
-const OUTCOME_COLORS = {
-  EXCEPTIONAL_SUCCESS: '#ffd60a',
-  SUCCESS: '#06d6a0',
-  PARTIAL_SUCCESS: '#f9a825',
-  FAIL: '#ef476f',
-  CRITICAL_FAIL: '#b71c1c',
-  PENDING_CHOICE: '#06d6a0',
-};
+import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 
 export default function GMRollModal({ request, character, onClose, onHeroPointChange }) {
   const [phase, setPhase] = useState('setup');
@@ -80,7 +62,6 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
     setPhase('result');
 
     const hpDelta = evaluation.hasChoice ? 0 : evaluation.heroPointDelta;
-    const outcome = evaluation.hasChoice ? evaluation.outcome : evaluation.outcome;
 
     try {
       const res = await axios.post(`${API_URL}/gm-rolls/${request.id}/respond`, {
@@ -102,7 +83,7 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
         extraDice,
         rollFlag: flag,
         linkedResponseId: responseId,
-        outcome,
+        outcome: evaluation.outcome,
         outcomeChoice: null,
         heroPointDelta: hpDelta,
         neededExplosion: evaluation.neededExplosion,
