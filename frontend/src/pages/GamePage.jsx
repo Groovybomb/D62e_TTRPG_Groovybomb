@@ -5,7 +5,7 @@ import { ATTRIBUTE_DEFINITIONS, getDicePool } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import RollModal from '../components/RollModal';
 
-export default function GamePage({ userId, displayName }) {
+export default function GamePage({ userId, displayName, isGM }) {
   const [characters, setCharacters] = useState([]);
   const [allCharacters, setAllCharacters] = useState([]);
   const [selectedCharacter, setSelectedCharacter] = useState(null);
@@ -92,6 +92,18 @@ export default function GamePage({ userId, displayName }) {
     });
   };
 
+  const clearLog = async () => {
+    if (!window.confirm('Clear all rolls and chat messages? This cannot be undone.')) return;
+    try {
+      await Promise.all([
+        axios.delete(`${API_URL}/rolls`),
+        axios.delete(`${API_URL}/messages`),
+      ]);
+      setRolls([]);
+      setChatMessages([]);
+    } catch { /* ignore */ }
+  };
+
   const getCharName = (id) => allCharacters.find(c => c.id === id)?.name || 'Unknown';
 
   const combined = [
@@ -158,7 +170,10 @@ export default function GamePage({ userId, displayName }) {
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>Roll Log &amp; Chat</h2>
-          <button onClick={fetchRolls} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Refresh</button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={fetchRolls} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Refresh</button>
+{isGM && <button onClick={clearLog} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#ef476f' }}>Clear Log</button>}
+          </div>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#0f3460', border: '1px solid #444', borderRadius: '8px 8px 0 0', padding: '1rem' }}>

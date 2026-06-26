@@ -4,10 +4,11 @@ import { API_URL } from '../config';
 import { rollDice, calculateTotal } from '../utils/dice';
 
 export default function VehicleRollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice }) {
-  const { label, vehicleName, breakdownParts, baseDice, flatBonus = 0, flatBonusLabel } = rollInfo;
+  const { label, vehicleName, breakdownParts, baseDice, flatBonus = 0, flatBonusLabel, sizeBonus } = rollInfo;
 
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
+  const [sizeAdv, setSizeAdv] = useState(0);
   const [doubled, setDoubled] = useState(false);
   const [doubleSource, setDoubleSource] = useState(null);
   const [diceResults, setDiceResults] = useState([]);
@@ -15,10 +16,13 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
   const [rollFlag, setRollFlag] = useState(null);
   const [savedRollId, setSavedRollId] = useState(null);
 
-  const rawDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const sizeBonusDice = sizeBonus?.type === 'dice' ? sizeAdv * (sizeBonus?.rate || 1) : 0;
+  const sizeBonusFlat = sizeBonus?.type === 'flat' ? sizeAdv * (sizeBonus?.rate || 3) : 0;
+  const totalFlatBonus = flatBonus + sizeBonusFlat;
+  const rawDice = doubled ? (baseDice + extraDice + sizeBonusDice) * 2 : baseDice + extraDice + sizeBonusDice;
   const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
   const isCapped = maxDice && rawDice > maxDice;
-  const doubledPreview = maxDice ? Math.min((baseDice + extraDice) * 2, maxDice) : (baseDice + extraDice) * 2;
+  const doubledPreview = maxDice ? Math.min((baseDice + extraDice + sizeBonusDice) * 2, maxDice) : (baseDice + extraDice + sizeBonusDice) * 2;
   const heroPoints = character?.heroPoints || 0;
   const canDouble = !doubled && heroPoints > 0;
 
@@ -46,10 +50,10 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
 
     const results = rollDice(count);
     const { total: diceTotal, complication, removedDie } = calculateTotal(results);
-    const total = diceTotal + flatBonus;
+    const total = diceTotal + totalFlatBonus;
 
     setDiceResults(results);
-    setRollTotal({ total, diceTotal, complication, removedDie });
+    setRollTotal({ total, diceTotal, complication, removedDie, sizeBonusFlat });
     setRollFlag(flag);
     setPhase('result');
 
@@ -113,7 +117,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
               )}
               <span className="breakdown-plus">=</span>
               <span className="breakdown-total">
-                {baseDice}D6{flatBonus > 0 ? ` + ${flatBonus}` : ''}
+                {baseDice}D6{totalFlatBonus > 0 ? ` + ${totalFlatBonus}` : ''}
               </span>
             </div>
 
@@ -125,6 +129,22 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
               </div>
             </div>
+
+            {sizeBonus && (
+              <div className="extra-dice-row">
+                <label>{sizeBonus.label}:</label>
+                <div className="extra-dice-controls">
+                  <button type="button" onClick={() => setSizeAdv(Math.max(0, sizeAdv - 1))} className="dice-adjust-btn">-</button>
+                  <span className="extra-dice-value">{sizeAdv}</span>
+                  <button type="button" onClick={() => setSizeAdv(sizeAdv + 1)} className="dice-adjust-btn">+</button>
+                </div>
+                {sizeAdv > 0 && (
+                  <span style={{ color: '#06d6a0', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+                    {sizeBonus.type === 'dice' ? `+${sizeBonusDice}D` : `+${sizeBonusFlat}`}
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="double-section">
               {!doubled ? (
@@ -165,7 +185,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
             )}
 
             <button onClick={() => executeRoll(null)} className="roll-execute-btn" disabled={effectiveDice < 1}>
-              Roll {effectiveDice}D6{flatBonus > 0 ? ` + ${flatBonus}` : ''}
+              Roll {effectiveDice}D6{totalFlatBonus > 0 ? ` + ${totalFlatBonus}` : ''}
             </button>
           </div>
         )}
@@ -206,9 +226,12 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
             )}
 
             <div className="roll-total">
-              {flatBonus > 0 ? (
+              {(flatBonus > 0 || rollTotal?.sizeBonusFlat > 0) ? (
                 <>
-                  Dice: {rollTotal?.diceTotal} + {flatBonusLabel}: {flatBonus} ={' '}
+                  Dice: {rollTotal?.diceTotal}
+                  {flatBonus > 0 && <> + {flatBonusLabel}: {flatBonus}</>}
+                  {rollTotal?.sizeBonusFlat > 0 && <> + Size: {rollTotal.sizeBonusFlat}</>}
+                  {' = '}
                   <span className="total-number">{rollTotal?.total}</span>
                 </>
               ) : (

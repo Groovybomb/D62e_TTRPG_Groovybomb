@@ -109,4 +109,11 @@ router.get('/character/:characterId', async (req, res) => {
   res.json(rolls);
 });
 
+// DELETE /api/rolls - Clear all rolls
+router.delete('/', async (req, res) => {
+  db.data.rolls = [];
+  await db.write();
+  res.json({ message: 'All rolls cleared' });
+});
+
 export default router;

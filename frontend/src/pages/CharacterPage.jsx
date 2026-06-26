@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { ATTRIBUTE_DEFINITIONS, getDicePool } from '../data/attributes';
+import { ATTRIBUTE_DEFINITIONS, ADVANCED_SKILL_DEFINITIONS, getDicePool, getAdvancedDicePool } from '../data/attributes';
 import RollModal from '../components/RollModal';
 
 export default function CharacterPage({ userId, maxDice, refreshKey }) {
@@ -47,7 +47,11 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
 
   const startEdit = () => {
     const char = characters.find(c => c.id === selectedId);
-    setEditData(JSON.parse(JSON.stringify(char)));
+    const clone = JSON.parse(JSON.stringify(char));
+    if (!clone.advancedSkills) {
+      clone.advancedSkills = { jupiterDrive: 0, surgery: 0, perform: 0, cryptography: 0 };
+    }
+    setEditData(clone);
     setEditing(true);
   };
 
@@ -78,6 +82,14 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
           skills: { ...editData.attributes[attrKey].skills, [skillKey]: val },
         },
       },
+    });
+  };
+
+  const updateAdvancedSkill = (advKey, value) => {
+    const val = Math.max(0, parseInt(value) || 0);
+    setEditData({
+      ...editData,
+      advancedSkills: { ...editData.advancedSkills, [advKey]: val },
     });
   };
 
@@ -156,6 +168,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
           editing={editing}
           onAttrChange={updateAttrDice}
           onSkillChange={updateSkillDice}
+          onAdvancedSkillChange={updateAdvancedSkill}
           onFieldChange={(field, val) => setEditData({ ...editData, [field]: val })}
           onRoll={openRollModal}
           onDamageRoll={openDamageRoll}
@@ -185,7 +198,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
   );
 }
 
-function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onFieldChange, onRoll, onDamageRoll }) {
+function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvancedSkillChange, onFieldChange, onRoll, onDamageRoll }) {
   const dodge = (char.attributes.perception?.dice || 0) * 5;
   const parry = (char.attributes.agility?.dice || 0) * 5;
 
@@ -297,6 +310,60 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onFieldCha
             </div>
           );
         })}
+      </div>
+
+      {/* Advanced Skills */}
+      <div className="card" style={{ marginTop: '1rem' }}>
+        <h3>Advanced</h3>
+        <p style={{ color: '#888', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+          Cannot be used untrained. Roll = advanced skill + base skill + attribute.
+        </p>
+        <div className="skill-list">
+          {Object.entries(ADVANCED_SKILL_DEFINITIONS).map(([advKey, advDef]) => {
+            const advDice = char.advancedSkills?.[advKey] || 0;
+            const attr = char.attributes[advDef.baseAttribute];
+            const attrDice = attr?.dice || 0;
+            const baseSkillDice = attr?.skills?.[advDef.baseSkill] || 0;
+            const totalDice = advDice > 0 ? advDice + baseSkillDice + attrDice : 0;
+            const baseAttrDef = ATTRIBUTE_DEFINITIONS[advDef.baseAttribute];
+            const baseSkillLabel = baseAttrDef.skills[advDef.baseSkill];
+            return (
+              <div key={advKey} className="skill-row">
+                <span className="skill-name">
+                  {advDef.label}
+                  <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                    ({baseSkillLabel})
+                  </span>
+                </span>
+                {editing ? (
+                  <input type="number" min="0" value={advDice} onChange={e => onAdvancedSkillChange(advKey, e.target.value)} className="dice-input" />
+                ) : (
+                  <span className="skill-dice">{advDice > 0 ? advDice : '-'}</span>
+                )}
+                <span className="total-dice" title={advDice > 0 ? `${advDef.label} ${advDice}D + ${baseSkillLabel} ${baseSkillDice}D + ${baseAttrDef.label} ${attrDice}D` : 'Untrained'}>
+                  {advDice > 0 ? `${totalDice}D` : '-'}
+                </span>
+                {!editing && (
+                  <button
+                    className="roll-btn roll-btn-sm"
+                    disabled={advDice === 0}
+                    title={advDice === 0 ? 'Cannot use untrained' : `Roll ${advDef.label} (${totalDice}D6)`}
+                    onClick={() => advDice > 0 && onRoll({
+                      label: `${advDef.label} (${baseAttrDef.label})`,
+                      attrLabel: baseAttrDef.label,
+                      attrDice: attrDice,
+                      skillLabel: `${advDef.label} + ${baseSkillLabel}`,
+                      skillDice: advDice + baseSkillDice,
+                      baseDice: totalDice,
+                    })}
+                  >
+                    Roll
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Weapons */}

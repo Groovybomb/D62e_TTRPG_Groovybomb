@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.3.0 — Vehicle action rolls + spaceship→vehicle rename.
+**Version:** 1.4.0 — Advanced skills, vehicle attack action, size advantage bonuses.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -287,6 +287,40 @@ Before committing, verify:
 - [x] **Vehicle actions CSS** — action rows with label, description, dice breakdown, and Roll button
 - [x] **Browser tested** — Movement, Navigate, Evade (with flat defense bonus), Resist Damage, weapon damage rolls all verified working
 
+### v1.4.0: Advanced Skills + Jupiter Drive Navigation Fix (2026-06-26)
+- [x] **Advanced Skills system** — new skill category for skills that can't be used untrained and augment other skills
+  - [x] Four advanced skills: Jupiter Drive (Navigation), Surgery (Medicine), Perform (Persuasion), Cryptography (Computers)
+  - [x] Dice pool = advanced skill + base skill + base skill's attribute (e.g., Jupiter Drive 2 + Navigation 4 + Mechanical 2 = 8D)
+  - [x] Cannot roll if advanced skill is 0 (untrained) — Roll button disabled with tooltip
+  - [x] "Advanced" section on character sheet between attributes grid and weapons
+  - [x] Each skill shows its base skill in parentheses, skill dice, and total pool
+  - [x] Full edit mode support — number inputs for each advanced skill
+  - [x] Roll modal shows correct breakdown: attribute + (advanced + base skill) = total
+- [x] **Data model** — `advancedSkills` object added to character model with `jupiterDrive`, `surgery`, `perform`, `cryptography` keys (default 0)
+  - [x] `ADVANCED_SKILL_DEFINITIONS` in `attributes.js` with base attribute/skill references
+  - [x] `getAdvancedDicePool()` utility function
+  - [x] Backend: `advancedSkills` in default character template and PATCH allowed fields
+- [x] **Vehicle Navigate fix** — Navigate action now uses Jupiter Drive instead of plain Navigation
+  - [x] Pool = Jupiter Drive (advanced + Navigation + Mechanical) + Navicomp
+  - [x] Disabled with "Requires Jupiter Drive" note if crew member has 0 Jupiter Drive
+  - [x] Crew member stats display changed from "Navigation XD" to "Jupiter Drive XD"
+  - [x] Quick reference updated: "Jupiter Drive roll: Difficulty 15 (25 if rushed)"
+- [x] **Vehicle Attack action** — new rollable action using character's Gunnery skill (Perception attr + Gunnery skill)
+  - [x] Crew member stats display now shows "Gunnery XD | Jupiter Drive XD | Piloting XD | HP: X"
+- [x] **Size Advantage system** — adjustable +/- control on all vehicle roll modals, default 0, scales per size category
+  - [x] **Smaller Size Attack Bonus** — +1D per size category on Attack rolls
+  - [x] **Smaller Size Dodge Bonus** — +3 flat per size category on Evade rolls (added to Defense)
+  - [x] **Larger Size Resist Bonus** — +1D per size category on Resist Damage rolls
+  - [x] **Larger Size Damage Bonus** — +1D per size category on vehicle weapon damage rolls
+  - [x] Green indicator shows bonus value when size > 0 (e.g., "+2D" or "+6")
+  - [x] Dice bonuses participate in doubling; flat bonuses shown in result breakdown
+- [x] **Clear Log button (GM only)** — red "Clear Log" button on Roll Log / Chat tab clears all rolls and chat messages
+  - [x] `DELETE /api/rolls` and `DELETE /api/messages` endpoints added to backend
+  - [x] Confirmation dialog before clearing ("Clear all rolls and chat messages? This cannot be undone.")
+  - [x] Clears both backend data and local state immediately
+  - [x] Only visible to GM users (non-GM players see Refresh button only)
+- [x] **Browser tested** — Advanced skills, vehicle Attack, size bonuses (dice and flat types), Clear Log all verified working
+
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
 - [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
@@ -375,7 +409,8 @@ The dice rolling system follows D6 Second Edition rules:
 ✅ **Roll log** — shows all rolls with wild die details, flags, color-coded dice
 ✅ **Chat persistence** — messages saved to db, 3s polling, interleaved with rolls in Roll Log / Chat
 ✅ **GM Roll System** — GM calls for rolls, players get popup on any tab, 5-tier outcomes with auto HP
-✅ **Vehicle** — stats, weapons, crew, reference panels, **action rolls** (Movement, Navigate, Evade, Resist Damage), weapon damage rolls, crew member selector
+✅ **Advanced Skills** — Jupiter Drive, Surgery, Perform, Cryptography — untrained restriction, combined dice pools, character sheet section
+✅ **Vehicle** — stats, weapons, crew, reference panels, **action rolls** (Movement, Navigate via Jupiter Drive, Evade, Resist Damage), weapon damage rolls, crew member selector
 ✅ **Game Master tab** — roll initiator (static/dice DC), response tracking, difficulty table, recent rolls
 ✅ **Dark-themed UI** — responsive, modern, tab-based navigation
 ✅ All data persists in lowdb (backend/data/db.json)
@@ -501,10 +536,12 @@ D62e/
 - `POST /api/rolls/damage` — Save damage roll (characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag)
 - `GET /api/rolls` — Get all rolls (50 newest)
 - `GET /api/rolls/character/:characterId` — Get character's rolls
+- `DELETE /api/rolls` — Clear all rolls
 
 ### Messages
 - `GET /api/messages` — Get last 100 messages (newest first)
 - `POST /api/messages` — Send message (userId, author, text)
+- `DELETE /api/messages` — Clear all messages
 
 ### GM Rolls
 - `POST /api/gm-rolls` — GM creates roll request (skill, attribute, label, dcType, dcValue)
@@ -616,6 +653,6 @@ Current db.json structure:
 
 ---
 
-**Last Updated:** 2026-06-26 (v1.3.0 release)
-**Last Work Done:** Vehicle action rolls (Movement, Navigate, Evade, Resist) + weapon damage rolls + spaceship→vehicle rename
-**Status:** v1.3.0 — vehicle action rolls, defense formula fix, rename cleanup, browser-tested, documented
+**Last Updated:** 2026-06-26 (v1.4.0 release)
+**Last Work Done:** Advanced skills + vehicle Attack action + size advantage bonuses + clear log button
+**Status:** v1.4.0 — advanced skills, vehicle attack/size bonuses, Jupiter Drive navigation, clear log, browser-tested, documented

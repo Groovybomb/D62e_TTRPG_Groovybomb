@@ -32,4 +32,11 @@ router.post('/', async (req, res) => {
   res.status(201).json(message);
 });
 
+// DELETE /api/messages - Clear all messages
+router.delete('/', async (req, res) => {
+  db.data.messages = [];
+  await db.write();
+  res.json({ message: 'All messages cleared' });
+});
+
 export default router;

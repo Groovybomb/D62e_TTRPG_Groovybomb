@@ -77,6 +77,39 @@ export const DIFFICULTY_TABLE = [
   { dn: 40, label: 'Mythical' },
 ];
 
+export const ADVANCED_SKILL_DEFINITIONS = {
+  jupiterDrive: {
+    label: 'Jupiter Drive',
+    baseAttribute: 'mechanical',
+    baseSkill: 'navigation',
+  },
+  surgery: {
+    label: 'Surgery',
+    baseAttribute: 'knowledge',
+    baseSkill: 'medicine',
+  },
+  perform: {
+    label: 'Perform',
+    baseAttribute: 'charm',
+    baseSkill: 'persuasion',
+  },
+  cryptography: {
+    label: 'Cryptography',
+    baseAttribute: 'technical',
+    baseSkill: 'computers',
+  },
+};
+
+export function getAdvancedDicePool(character, advancedKey) {
+  const def = ADVANCED_SKILL_DEFINITIONS[advancedKey];
+  if (!def) return 0;
+  const advancedDice = character.advancedSkills?.[advancedKey] || 0;
+  if (advancedDice === 0) return 0;
+  const attr = character.attributes[def.baseAttribute];
+  if (!attr) return 0;
+  return advancedDice + (attr.skills[def.baseSkill] || 0) + (attr.dice || 0);
+}
+
 export function getAllSkills() {
   const skills = [];
   for (const [attrKey, attr] of Object.entries(ATTRIBUTE_DEFINITIONS)) {

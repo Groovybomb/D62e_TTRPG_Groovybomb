@@ -130,7 +130,7 @@ function App() {
           <VehiclePage userId={currentUser.id} maxDice={maxDice} />
         )}
         {currentPage === 'game' && currentUser && (
-          <GamePage userId={currentUser.id} displayName={currentUser.displayName} />
+          <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} />
         )}
         {currentPage === 'gm' && currentUser && currentUser.isGM && (
           <GameMasterPage userId={currentUser.id} displayName={currentUser.displayName} maxDice={maxDice} onMaxDiceChange={(val) => setMaxDice(val)} />

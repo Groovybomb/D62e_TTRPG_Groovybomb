@@ -111,14 +111,21 @@ export default function VehiclePage({ userId, maxDice }) {
   const updateField = (field, val) => setEditData({ ...editData, [field]: val });
 
   const getDefense = (stats) => (stats.hull || 0) * 5 + (stats.shield || 0);
-  const getNavigationDice = () => {
+  const getJupiterDriveDice = () => {
     if (!selectedChar) return 0;
+    const jd = selectedChar.advancedSkills?.jupiterDrive || 0;
+    if (jd === 0) return 0;
     const mech = selectedChar.attributes?.mechanical;
-    return (mech?.dice || 0) + (mech?.skills?.navigation || 0);
+    return jd + (mech?.dice || 0) + (mech?.skills?.navigation || 0);
   };
   const getPilotingSkillOnly = () => {
     if (!selectedChar) return 0;
     return selectedChar.attributes?.mechanical?.skills?.piloting || 0;
+  };
+  const getGunneryDice = () => {
+    if (!selectedChar) return 0;
+    const perc = selectedChar.attributes?.perception;
+    return (perc?.dice || 0) + (perc?.skills?.gunnery || 0);
   };
 
   const openMovementRoll = () => {
@@ -134,16 +141,28 @@ export default function VehiclePage({ userId, maxDice }) {
 
   const openNavigateRoll = () => {
     if (!vehicle || !selectedChar || editing) return;
-    const navDice = getNavigationDice();
+    const jdDice = getJupiterDriveDice();
     const navicomp = vehicle.stats.navicomp || 0;
     setVehicleRoll({
       label: 'Navigate',
       vehicleName: vehicle.name,
       breakdownParts: [
-        { label: 'Navigation', dice: navDice },
+        { label: 'Jupiter Drive', dice: jdDice },
         { label: 'Navicomp', dice: navicomp },
       ],
-      baseDice: navDice + navicomp,
+      baseDice: jdDice + navicomp,
+    });
+  };
+
+  const openAttackRoll = () => {
+    if (!vehicle || !selectedChar || editing) return;
+    const gunneryDice = getGunneryDice();
+    setVehicleRoll({
+      label: 'Attack',
+      vehicleName: vehicle.name,
+      breakdownParts: [{ label: 'Gunnery', dice: gunneryDice }],
+      baseDice: gunneryDice,
+      sizeBonus: { label: 'Smaller Size Attack Bonus', type: 'dice', rate: 1 },
     });
   };
 
@@ -162,6 +181,7 @@ export default function VehiclePage({ userId, maxDice }) {
       baseDice: piloting + maneuv,
       flatBonus: defense,
       flatBonusLabel: 'Defense',
+      sizeBonus: { label: 'Smaller Size Dodge Bonus', type: 'flat', rate: 3 },
     });
   };
 
@@ -177,6 +197,7 @@ export default function VehiclePage({ userId, maxDice }) {
         { label: 'Shield', dice: shield },
       ],
       baseDice: hull + shield,
+      sizeBonus: { label: 'Larger Size Resist Bonus', type: 'dice', rate: 1 },
     });
   };
 
@@ -236,7 +257,7 @@ export default function VehiclePage({ userId, maxDice }) {
           </select>
           {selectedChar && (
             <span style={{ color: '#888', fontSize: '0.85rem' }}>
-              Navigation {getNavigationDice()}D | Piloting {getPilotingSkillOnly()}D | HP: {selectedChar.heroPoints || 0}
+              Gunnery {getGunneryDice()}D | Jupiter Drive {getJupiterDriveDice()}D | Piloting {getPilotingSkillOnly()}D | HP: {selectedChar.heroPoints || 0}
             </span>
           )}
         </div>
@@ -298,10 +319,19 @@ export default function VehiclePage({ userId, maxDice }) {
                 />
                 <VehicleActionRow
                   label="Navigate"
-                  description="Navigation + Navicomp"
-                  dice={`${getNavigationDice() + (vehicle.stats.navicomp || 0)}D6`}
-                  detail={`Navigation ${getNavigationDice()}D + Navicomp ${vehicle.stats.navicomp || 0}D`}
+                  description="Jupiter Drive + Navicomp"
+                  dice={`${getJupiterDriveDice() + (vehicle.stats.navicomp || 0)}D6`}
+                  detail={`Jupiter Drive ${getJupiterDriveDice()}D + Navicomp ${vehicle.stats.navicomp || 0}D`}
                   onClick={openNavigateRoll}
+                  disabled={!selectedChar || getJupiterDriveDice() === 0}
+                  disabledNote={!selectedChar ? 'Select a crew member' : getJupiterDriveDice() === 0 ? 'Requires Jupiter Drive' : null}
+                />
+                <VehicleActionRow
+                  label="Attack"
+                  description="Gunnery skill"
+                  dice={`${getGunneryDice()}D6`}
+                  detail={`Gunnery ${getGunneryDice()}D`}
+                  onClick={openAttackRoll}
                   disabled={!selectedChar}
                   disabledNote={!selectedChar ? 'Select a crew member' : null}
                 />
@@ -372,7 +402,7 @@ export default function VehiclePage({ userId, maxDice }) {
             <div className="card">
               <h3>Navigation</h3>
               <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
-                <li>Navigation roll: Difficulty 15 (25 if rushed)</li>
+                <li>Jupiter Drive roll: Difficulty 15 (25 if rushed)</li>
                 <li>Then Computers roll: Difficulty 15</li>
                 <li><strong>Mishaps:</strong> 1D6 days off course, wrong planet, or interstellar collision (4D damage)</li>
               </ul>
@@ -530,16 +560,17 @@ function VehicleWeaponSection({ weapons, editing, onChange, onDamageRoll }) {
 function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHeroPointChange, maxDice }) {
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
+  const [sizeAdv, setSizeAdv] = useState(0);
   const [doubled, setDoubled] = useState(false);
   const [doubleSource, setDoubleSource] = useState(null);
   const [diceResults, setDiceResults] = useState([]);
   const [rollTotal, setRollTotal] = useState(null);
 
   const baseDice = damageInfo.diceCount || 2;
-  const rawDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const rawDice = doubled ? (baseDice + extraDice + sizeAdv) * 2 : baseDice + extraDice + sizeAdv;
   const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
   const isCapped = maxDice && rawDice > maxDice;
-  const doubledPreview = maxDice ? Math.min((baseDice + extraDice) * 2, maxDice) : (baseDice + extraDice) * 2;
+  const doubledPreview = maxDice ? Math.min((baseDice + extraDice + sizeAdv) * 2, maxDice) : (baseDice + extraDice + sizeAdv) * 2;
   const heroPoints = character?.heroPoints || 0;
 
   const handleDouble = () => {
@@ -618,6 +649,18 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
               </div>
+            </div>
+
+            <div className="extra-dice-row">
+              <label>Larger Size Damage Bonus:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setSizeAdv(Math.max(0, sizeAdv - 1))} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{sizeAdv}</span>
+                <button type="button" onClick={() => setSizeAdv(sizeAdv + 1)} className="dice-adjust-btn">+</button>
+              </div>
+              {sizeAdv > 0 && (
+                <span style={{ color: '#06d6a0', fontSize: '0.8rem', marginLeft: '0.5rem' }}>+{sizeAdv}D</span>
+              )}
             </div>
 
             <div className="double-section">
