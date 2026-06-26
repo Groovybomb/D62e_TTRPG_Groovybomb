@@ -14,7 +14,7 @@ Keeping it updated helps coordinate work and track project status at a glance.
 
 This document describes the structure, conventions, and key architectural decisions for the D62e TTRPG platform.
 
-**Current Build Status:** v1.1.0 — GM tab enhancements: max dice cap, character show/hide with skill breakdown, quick roll. Hero point sync fixes.
+**Current Build Status:** v1.2.0 — Decline GM rolls, spacecraft grid fix.
 
 ## v1 Feature Summary
 
@@ -96,7 +96,7 @@ D62e/
 - `rolls.js` — Store skill/attack/damage rolls, get rolls (newest first)
 - `spaceships.js` — CRUD with server-side `?userId=` filtering
 - `messages.js` — Get last 100 messages, post new message
-- `gmRolls.js` — Full GM roll lifecycle (create, poll active, respond, update outcome, close)
+- `gmRolls.js` — Full GM roll lifecycle (create, poll active, respond, decline, update outcome, close)
 - `settings.js` — Game-wide settings (GET/PATCH `/api/settings`); currently stores `maxDice`
 
 **Utilities:**

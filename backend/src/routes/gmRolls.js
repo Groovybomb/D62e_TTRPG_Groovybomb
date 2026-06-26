@@ -132,6 +132,47 @@ router.post('/:id/respond', async (req, res) => {
   res.status(201).json(response);
 });
 
+// POST /:id/decline - Player declines the roll request
+router.post('/:id/decline', async (req, res) => {
+  const request = findById(db.data.gmRollRequests, req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+
+  const { characterId, characterName, userId } = req.body;
+  if (!characterId || !userId) {
+    return res.status(400).json({ error: 'characterId and userId required' });
+  }
+
+  const now = new Date().toISOString();
+
+  const response = {
+    id: generateId(),
+    requestId: request.id,
+    characterId,
+    characterName: characterName || 'Unknown',
+    userId,
+    declined: true,
+    createdAt: now,
+  };
+
+  db.data.gmRollResponses.push(response);
+
+  const rollEntry = {
+    id: generateId(),
+    rollType: 'GM_ROLL_DECLINED',
+    characterId,
+    requestId: request.id,
+    skill: request.skillLabel || request.attributeLabel || request.label,
+    attribute: request.attributeLabel || '',
+    dcValue: request.dcValue,
+    createdAt: now,
+  };
+  db.data.rolls.push(rollEntry);
+
+  await db.write();
+
+  res.status(201).json(response);
+});
+
 // PATCH /:id/respond/:responseId - Update response (outcome choice)
 router.patch('/:id/respond/:responseId', async (req, res) => {
   const response = findById(db.data.gmRollResponses, req.params.responseId);

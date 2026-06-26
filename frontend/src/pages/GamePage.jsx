@@ -204,6 +204,18 @@ export default function GamePage({ userId, displayName }) {
               );
             }
 
+            if (roll.rollType === 'GM_ROLL_DECLINED') {
+              return (
+                <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #888' }}>
+                  <div className="message-author">{charName} <span style={{ color: '#888', fontSize: '0.8rem' }}>[GM Roll — Declined]</span></div>
+                  <div className="message-text">
+                    <strong>{roll.skill}</strong> — <span style={{ color: '#888', fontStyle: 'italic' }}>Declined</span>
+                  </div>
+                  <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
+                </div>
+              );
+            }
+
             if (roll.rollType === 'DAMAGE') {
               return (
                 <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #e94560' }}>

@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.1.0 — GM tab enhancements + hero point sync fixes.
+**Version:** 1.2.0 — Decline GM rolls + spacecraft grid fix.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -262,6 +262,12 @@ Before committing, verify:
 - [x] **Bug fix: stale hero points in GM roll modal** — App.jsx `myCharacters` now re-fetched every 3s via polling loop; edits made on character sheet reflect in the next GM roll modal without reload
 - [x] **Bug fix: character sheet not updating after GM roll** — added `characterRefreshKey` that increments on GM roll modal close, triggering CharacterPage to re-fetch; hero point changes from GM rolls now appear immediately
 
+### v1.2.0: Decline GM Rolls + Spacecraft Fix (2026-06-26)
+- [x] **Decline GM roll requests** — players can click X to close the GM roll modal without rolling; records a `GM_ROLL_DECLINED` entry in the roll log and a response in `gmRollResponses` (so the poll stops showing the request)
+- [x] **Decline endpoint** — `POST /api/gm-rolls/:id/decline` records the decline and adds roll log entry
+- [x] **Roll log display** — declined rolls show as `[GM Roll — Declined]` with gray styling and italic "Declined" text
+- [x] **Spacecraft stats grid fix** — widened grid minimum from 180px to 210px so "Maneuverability" label doesn't overflow into the value field
+
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
 - [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
@@ -484,6 +490,7 @@ D62e/
 - `POST /api/gm-rolls` — GM creates roll request (skill, attribute, label, dcType, dcValue)
 - `GET /api/gm-rolls/active?userId=X` — Player polls for pending requests (returns active requests player hasn't responded to)
 - `POST /api/gm-rolls/:id/respond` — Player submits roll response (also saves to rolls as GM_ROLL, updates character HP)
+- `POST /api/gm-rolls/:id/decline` — Player declines roll request (saves response + GM_ROLL_DECLINED to roll log)
 - `PATCH /api/gm-rolls/:id/respond/:responseId` — Update response for outcome choice (wild-6 or wild-1 scenarios)
 - `GET /api/gm-rolls/:id/responses` — GM polls for incoming responses
 - `PATCH /api/gm-rolls/:id` — GM closes/cancels request (sets status to "closed"/"cancelled")
@@ -575,6 +582,6 @@ Current db.json structure:
 
 ---
 
-**Last Updated:** 2026-06-25 (v1.1.0 release)
-**Last Work Done:** GM tab enhancements (max dice cap, character show/hide, quick roll) + hero point sync bug fixes
-**Status:** v1.1.0 — all v1 features plus GM tab improvements, browser-tested, documented
+**Last Updated:** 2026-06-26 (v1.2.0 release)
+**Last Work Done:** Decline GM roll requests (X button + roll log entry) + spacecraft stats grid width fix
+**Status:** v1.2.0 — decline GM rolls, spacecraft grid fix, browser-tested, documented

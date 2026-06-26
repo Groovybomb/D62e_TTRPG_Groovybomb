@@ -5,7 +5,7 @@ import { rollDice, calculateTotal, evaluateGMRollOutcome } from '../utils/dice';
 import { getDicePool } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 
-export default function GMRollModal({ request, character, onClose, onHeroPointChange, maxDice }) {
+export default function GMRollModal({ request, character, onClose, onHeroPointChange, maxDice, onDecline }) {
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
   const [doubled, setDoubled] = useState(false);
@@ -145,6 +145,18 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
     setPhase('done');
   };
 
+  const handleDecline = async () => {
+    try {
+      await axios.post(`${API_URL}/gm-rolls/${request.id}/decline`, {
+        characterId: character.id,
+        characterName: character.name,
+        userId: character.userId,
+      });
+    } catch { /* still close locally */ }
+    if (onDecline) onDecline();
+    onClose();
+  };
+
   const handleAccept = () => {
     onClose();
   };
@@ -152,6 +164,10 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
   return (
     <div className="modal-overlay">
       <div className="modal-content gm-roll-modal">
+        {phase === 'setup' && (
+          <button className="modal-close" onClick={handleDecline}>&times;</button>
+        )}
+
         <div className="gm-roll-banner">
           GM Roll Request
         </div>
