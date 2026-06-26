@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { rollDice, calculateTotal } from '../utils/dice';
 
-export default function RollModal({ rollInfo, character, onClose, onHeroPointChange }) {
+export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice }) {
   const { label, attrLabel, attrDice, skillLabel, skillDice, baseDice } = rollInfo;
 
   const [phase, setPhase] = useState('setup'); // 'setup' | 'result'
@@ -16,7 +16,10 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const [linkedRollId, setLinkedRollId] = useState(null);
   const [savedRollId, setSavedRollId] = useState(null);
 
-  const effectiveDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const rawDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
+  const isCapped = maxDice && rawDice > maxDice;
+  const doubledPreview = maxDice ? Math.min((baseDice + extraDice) * 2, maxDice) : (baseDice + extraDice) * 2;
   const heroPoints = character.heroPoints || 0;
 
   const canDouble = !doubled && heroPoints > 0;
@@ -126,10 +129,10 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
               {!doubled ? (
                 <>
                   <button onClick={handleDouble} disabled={!canDouble} className="double-btn">
-                    Double Dice ({effectiveDice * 2}D6) — costs 1 Hero Point
+                    Double Dice ({doubledPreview}D6) — costs 1 Hero Point
                   </button>
                   <button onClick={handleExceptionalDouble} className="double-btn exceptional-double-btn">
-                    Exceptional Success ({effectiveDice * 2}D6) — free
+                    Exceptional Success ({doubledPreview}D6) — free
                   </button>
                 </>
               ) : (
@@ -142,6 +145,12 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
                 <p className="no-hero-note">No Hero Points available to double</p>
               )}
             </div>
+
+            {isCapped && (
+              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+                Dice capped at {maxDice}D6 (would be {rawDice}D6)
+              </div>
+            )}
 
             <p className="roll-info-text">
               The first die is the <strong>Wild Die</strong>. If it rolls a 6, it explodes — roll again and add the result.
@@ -204,6 +213,10 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             </div>
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}
+
+            <div className="hero-points-display">
+              Hero Points: <strong>{character.heroPoints}</strong>
+            </div>
 
             {/* Action buttons */}
             <div className="result-actions">

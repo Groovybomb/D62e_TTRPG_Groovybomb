@@ -21,6 +21,8 @@ function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [myCharacters, setMyCharacters] = useState([]);
   const [activeGMRoll, setActiveGMRoll] = useState(null);
+  const [maxDice, setMaxDice] = useState(null);
+  const [characterRefreshKey, setCharacterRefreshKey] = useState(0);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -40,7 +42,15 @@ function App() {
   useEffect(() => {
     if (!currentUser) return;
     fetchMyCharacters(currentUser.id);
+    fetchSettings();
   }, [currentUser]);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/settings`);
+      setMaxDice(res.data.maxDice || null);
+    } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     if (!currentUser) return;
@@ -51,6 +61,8 @@ function App() {
           setActiveGMRoll(res.data[0]);
         }
       } catch { /* ignore */ }
+      fetchSettings();
+      fetchMyCharacters(currentUser.id);
     };
     poll();
     const interval = setInterval(poll, 3000);
@@ -69,6 +81,7 @@ function App() {
   const handleGMRollClose = () => {
     setActiveGMRoll(null);
     if (currentUser) fetchMyCharacters(currentUser.id);
+    setCharacterRefreshKey(k => k + 1);
   };
 
   const handleLogin = (user) => {
@@ -111,7 +124,7 @@ function App() {
           <LoginPage onLogin={handleLogin} />
         )}
         {currentPage === 'characters' && currentUser && (
-          <CharacterPage userId={currentUser.id} />
+          <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} />
         )}
         {currentPage === 'spaceships' && currentUser && (
           <SpaceshipPage userId={currentUser.id} />
@@ -120,7 +133,7 @@ function App() {
           <GamePage userId={currentUser.id} displayName={currentUser.displayName} />
         )}
         {currentPage === 'gm' && currentUser && currentUser.isGM && (
-          <GameMasterPage userId={currentUser.id} />
+          <GameMasterPage userId={currentUser.id} displayName={currentUser.displayName} maxDice={maxDice} onMaxDiceChange={(val) => setMaxDice(val)} />
         )}
       </main>
 
@@ -130,6 +143,7 @@ function App() {
           character={myCharacters[0]}
           onClose={handleGMRollClose}
           onHeroPointChange={handleGMRollHeroPointChange}
+          maxDice={maxDice}
         />
       )}
     </div>

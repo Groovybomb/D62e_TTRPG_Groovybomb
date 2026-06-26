@@ -14,7 +14,7 @@ Keeping it updated helps coordinate work and track project status at a glance.
 
 This document describes the structure, conventions, and key architectural decisions for the D62e TTRPG platform.
 
-**Current Build Status:** v1.0.0 — All core features implemented, refactored, and browser-tested.
+**Current Build Status:** v1.1.0 — GM tab enhancements: max dice cap, character show/hide with skill breakdown, quick roll. Hero point sync fixes.
 
 ## v1 Feature Summary
 
@@ -50,7 +50,7 @@ D62e/
 │
 ├── backend/
 │   ├── src/
-│   │   ├── routes/          # users, characters, rolls, spaceships, messages, gmRolls
+│   │   ├── routes/          # users, characters, rolls, spaceships, messages, gmRolls, settings
 │   │   ├── server.js        # Express app with middleware and routes
 │   │   ├── db.js            # lowdb initialization with default schema
 │   │   └── utils.js         # generateId(), findById(), findIndexById()
@@ -76,7 +76,7 @@ D62e/
 - `CharacterPage` — Character sheet with edit mode, roll buttons on every skill/attribute, damage rolls
 - `SpaceshipPage` — Ship stats, weapons, crew stations, game rules reference panels
 - `GamePage` — Roll log + chat (interleaved by timestamp), quick roll selector
-- `GameMasterPage` — Call for rolls (static/dice DC), response tracking, difficulty table, presets
+- `GameMasterPage` — Call for rolls (static/dice DC), response tracking, difficulty table, presets, max dice cap, character show/hide, quick roll
 
 **Components:**
 - `RollModal` — Skill/attribute roll popup (setup phase + result phase)
@@ -97,6 +97,7 @@ D62e/
 - `spaceships.js` — CRUD with server-side `?userId=` filtering
 - `messages.js` — Get last 100 messages, post new message
 - `gmRolls.js` — Full GM roll lifecycle (create, poll active, respond, update outcome, close)
+- `settings.js` — Game-wide settings (GET/PATCH `/api/settings`); currently stores `maxDice`
 
 **Utilities:**
 - `utils.js` — `generateId()` (uuid), `findById()`, `findIndexById()`
@@ -113,6 +114,7 @@ All data persists in `backend/data/db.json` (lowdb, auto-created on first run). 
 - `gmRollRequests` — GM-initiated roll calls (skill, DC, status)
 - `gmRollResponses` — player responses to GM roll calls
 - `gameSessions` — placeholder (not yet used)
+- `gameSettings` — global settings object (e.g., `maxDice`)
 
 ## Authentication
 

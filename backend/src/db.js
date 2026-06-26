@@ -15,6 +15,7 @@ const defaultData = {
   gmRollRequests: [],
   gmRollResponses: [],
   gameSessions: [],
+  gameSettings: { maxDice: null },
 };
 
 // Create and initialize database

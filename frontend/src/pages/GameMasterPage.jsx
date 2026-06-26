@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { ATTRIBUTE_DEFINITIONS, DIFFICULTY_TABLE } from '../data/attributes';
+import { ATTRIBUTE_DEFINITIONS, DIFFICULTY_TABLE, getDicePool } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import { rollPlainDice } from '../utils/dice';
 
 const PRESET_KEY = 'gm-roll-presets';
+const HIDDEN_CHARS_KEY = 'gm-hidden-characters';
 
-// TODO: Move presets to backend (gmRollPresets table) for multi-device sync and persistence
 function loadPresets() {
   try {
     return JSON.parse(localStorage.getItem(PRESET_KEY)) || [];
@@ -29,7 +29,13 @@ function savePreset(config) {
   return trimmed;
 }
 
-export default function GameMasterPage({ userId }) {
+function loadHiddenChars() {
+  try {
+    return JSON.parse(localStorage.getItem(HIDDEN_CHARS_KEY)) || [];
+  } catch { return []; }
+}
+
+export default function GameMasterPage({ userId, displayName, maxDice, onMaxDiceChange }) {
   const [characters, setCharacters] = useState([]);
   const [rolls, setRolls] = useState([]);
 
@@ -48,11 +54,26 @@ export default function GameMasterPage({ userId }) {
   // Recent roll presets
   const [presets, setPresets] = useState(() => loadPresets());
 
+  // Max dice cap
+  const [maxDiceInput, setMaxDiceInput] = useState(maxDice || '');
+
+  // Hidden characters
+  const [hiddenChars, setHiddenChars] = useState(() => loadHiddenChars());
+  const [expandedChars, setExpandedChars] = useState({});
+
+  // Generic roll
+  const [genericDiceCount, setGenericDiceCount] = useState(3);
+  const [genericResult, setGenericResult] = useState(null);
+
   useEffect(() => {
     fetchCharacters();
     fetchRolls();
     checkActiveRequest();
   }, []);
+
+  useEffect(() => {
+    setMaxDiceInput(maxDice || '');
+  }, [maxDice]);
 
   useEffect(() => {
     if (!activeRequest) return;
@@ -168,11 +189,106 @@ export default function GameMasterPage({ userId }) {
     return Object.values(byChar);
   };
 
+  // Max dice handlers
+  const handleMaxDiceSave = async () => {
+    const val = maxDiceInput === '' ? null : parseInt(maxDiceInput) || null;
+    try {
+      await axios.patch(`${API_URL}/settings`, { maxDice: val });
+      onMaxDiceChange(val);
+    } catch { /* ignore */ }
+  };
+
+  // Hidden character handlers
+  const toggleCharHidden = (charId) => {
+    const updated = hiddenChars.includes(charId)
+      ? hiddenChars.filter(id => id !== charId)
+      : [...hiddenChars, charId];
+    setHiddenChars(updated);
+    localStorage.setItem(HIDDEN_CHARS_KEY, JSON.stringify(updated));
+  };
+
+  const toggleCharExpanded = (charId) => {
+    setExpandedChars(prev => ({ ...prev, [charId]: !prev[charId] }));
+  };
+
+  const visibleChars = characters.filter(c => !hiddenChars.includes(c.id));
+  const hiddenCharsList = characters.filter(c => hiddenChars.includes(c.id));
+
+  const handleGenericRoll = async () => {
+    if (genericDiceCount < 1) return;
+    const results = rollPlainDice(genericDiceCount);
+    const total = results.reduce((a, b) => a + b, 0);
+    setGenericResult({ results, total });
+
+    const diceStr = results.join(', ');
+    const text = `[GM Roll] ${genericDiceCount}D6 → [${diceStr}] = ${total}`;
+
+    try {
+      await axios.post(`${API_URL}/messages`, {
+        userId,
+        author: displayName || 'Game Master',
+        text,
+      });
+    } catch { /* ignore */ }
+  };
+
   return (
     <div className="page" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
       {/* Left column */}
       <div>
         <h2>Game Master</h2>
+
+        {/* GM Settings Row: Max Dice + Generic Roll */}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          {/* Max Dice Cap */}
+          <div className="card" style={{ flex: 1 }}>
+            <h4 style={{ margin: '0 0 0.5rem', color: '#ffd60a', fontSize: '0.9rem' }}>Max Dice Cap</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="number"
+                value={maxDiceInput}
+                onChange={e => setMaxDiceInput(e.target.value)}
+                min={1}
+                placeholder="No limit"
+                style={{ width: '80px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+              />
+              <button onClick={handleMaxDiceSave} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Set</button>
+              {maxDice && (
+                <button onClick={async () => { setMaxDiceInput(''); onMaxDiceChange(null); try { await axios.patch(`${API_URL}/settings`, { maxDice: null }); } catch {} }} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#555' }}>Clear</button>
+              )}
+            </div>
+            {maxDice && <div style={{ fontSize: '0.8rem', color: '#ffd60a', marginTop: '0.25rem' }}>Active: {maxDice}D6 max</div>}
+          </div>
+
+          {/* Generic Roll */}
+          <div className="card" style={{ flex: 1 }}>
+            <h4 style={{ margin: '0 0 0.5rem', color: '#06d6a0', fontSize: '0.9rem' }}>Quick Roll</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button onClick={() => setGenericDiceCount(Math.max(1, genericDiceCount - 1))} className="dice-adjust-btn">-</button>
+              <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: '40px', textAlign: 'center' }}>{genericDiceCount}D6</span>
+              <button onClick={() => setGenericDiceCount(genericDiceCount + 1)} className="dice-adjust-btn">+</button>
+              <button onClick={handleGenericRoll} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', fontWeight: 700, fontSize: '0.85rem' }}>Roll</button>
+            </div>
+            {genericResult && (
+              <div style={{ marginTop: '0.4rem', padding: '0.4rem', backgroundColor: '#1a1a2e', borderRadius: '4px', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                  {genericResult.results.map((val, i) => (
+                    <span key={i} style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: '24px', height: '24px', borderRadius: '3px', fontSize: '0.8rem', fontWeight: 700,
+                      backgroundColor: '#0f3460',
+                      color: '#eee',
+                    }}>
+                      {val}
+                    </span>
+                  ))}
+                </div>
+                <span style={{ color: '#888' }}>Total: </span>
+                <strong style={{ color: '#ffd60a' }}>{genericResult.total}</strong>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* GM Roll Initiator */}
         <div className="card" style={{ borderColor: '#e94560', borderWidth: '2px' }}>
@@ -394,24 +510,109 @@ export default function GameMasterPage({ userId }) {
           </table>
         </div>
 
-        {/* All characters */}
+        {/* Characters section */}
         <div className="card">
-          <h3>All Characters ({characters.length})</h3>
-          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {characters.map(char => (
-              <div key={char.id} style={{ padding: '0.75rem 0', borderBottom: '1px solid #333' }}>
-                <strong style={{ color: '#e94560' }}>{char.name}</strong>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h3>Characters ({visibleChars.length}/{characters.length})</h3>
+          </div>
+
+          {/* Hidden characters toggle */}
+          {hiddenCharsList.length > 0 && (
+            <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#1a1a2e', borderRadius: '4px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.25rem' }}>Hidden ({hiddenCharsList.length}):</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {hiddenCharsList.map(char => (
+                  <button
+                    key={char.id}
+                    onClick={() => toggleCharHidden(char.id)}
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#16213e', border: '1px solid #444', borderRadius: '3px', color: '#888', cursor: 'pointer' }}
+                    title="Click to show"
+                  >
+                    {char.name} ↩
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Visible characters */}
+          <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+            {visibleChars.map(char => (
+              <div key={char.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #333' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => toggleCharExpanded(char.id)}
+                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: '#888', cursor: 'pointer' }}
+                    >
+                      {expandedChars[char.id] ? '▼' : '▶'}
+                    </button>
+                    <strong style={{ color: '#e94560' }}>{char.name}</strong>
+                  </div>
+                  <button
+                    onClick={() => toggleCharHidden(char.id)}
+                    style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: '#666', cursor: 'pointer' }}
+                    title="Hide character"
+                  >
+                    ✕
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#aaa', marginTop: '0.25rem' }}>
-                  <span>Hero Pts: {char.heroPoints}</span>
+                  <span>HP: {char.heroPoints}</span>
                   <span>Armor: {char.armor}</span>
                   <span>Dodge: {(char.attributes?.perception?.dice || 0) * 5}</span>
                   <span>Parry: {(char.attributes?.agility?.dice || 0) * 5}</span>
                 </div>
+                {/* Compressed attribute dice */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
-                  {char.attributes && Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attrDef]) => (
-                    <span key={attrKey}>{attrDef.label}: {char.attributes[attrKey]?.dice || 0}D</span>
+                  {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attrDef]) => (
+                    <span key={attrKey}>{attrDef.label}: {char.attributes?.[attrKey]?.dice || 0}D</span>
                   ))}
                 </div>
+
+                {/* Expanded: full skill breakdown */}
+                {expandedChars[char.id] && char.attributes && (
+                  <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#0a0a1a', borderRadius: '4px' }}>
+                    {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attrDef]) => {
+                      const attr = char.attributes[attrKey];
+                      if (!attr) return null;
+                      const skills = Object.entries(attrDef.skills)
+                        .map(([sk, sl]) => ({ key: sk, label: sl, dice: attr.skills?.[sk] || 0, total: (attr.dice || 0) + (attr.skills?.[sk] || 0) }))
+                        .filter(s => s.dice > 0);
+                      return (
+                        <div key={attrKey} style={{ marginBottom: '0.4rem' }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e94560' }}>
+                            {attrDef.label} ({attr.dice}D)
+                          </div>
+                          {skills.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingLeft: '0.5rem', fontSize: '0.75rem', color: '#aaa' }}>
+                              {skills.map(s => (
+                                <span key={s.key} style={{ backgroundColor: '#16213e', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
+                                  {s.label} +{s.dice}D = {s.total}D
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.75rem', color: '#555', paddingLeft: '0.5rem' }}>No trained skills</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {/* Weapons */}
+                    {char.weapons && char.weapons.length > 0 && (
+                      <div style={{ marginTop: '0.4rem', borderTop: '1px solid #333', paddingTop: '0.4rem' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffd60a' }}>Weapons</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#aaa' }}>
+                          {char.weapons.map((w, i) => (
+                            <span key={i} style={{ backgroundColor: '#16213e', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
+                              {w.name} ({w.damage})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

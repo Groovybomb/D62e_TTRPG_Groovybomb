@@ -1,6 +1,6 @@
 {
   "name": "d62e-ttrpg-platform",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A web-based platform for playing D6 Second Edition TTRPG",
   "private": true,
   "keywords": [

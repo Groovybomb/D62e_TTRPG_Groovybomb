@@ -5,7 +5,7 @@ import { rollDice, calculateTotal, evaluateGMRollOutcome } from '../utils/dice';
 import { getDicePool } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 
-export default function GMRollModal({ request, character, onClose, onHeroPointChange }) {
+export default function GMRollModal({ request, character, onClose, onHeroPointChange, maxDice }) {
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
   const [doubled, setDoubled] = useState(false);
@@ -23,7 +23,10 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
       ? (character.attributes?.[request.attribute]?.dice || 2)
       : 2;
 
-  const effectiveDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const rawDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
+  const isCapped = maxDice && rawDice > maxDice;
+  const doubledPreview = maxDice ? Math.min((baseDice + extraDice) * 2, maxDice) : (baseDice + extraDice) * 2;
   const heroPoints = character.heroPoints || 0;
 
   const handleDouble = () => {
@@ -186,10 +189,10 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
               {!doubled ? (
                 <>
                   <button onClick={handleDouble} disabled={heroPoints < 1} className="double-btn">
-                    Double Dice ({effectiveDice * 2}D6) — costs 1 Hero Point
+                    Double Dice ({doubledPreview}D6) — costs 1 Hero Point
                   </button>
                   <button onClick={handleExceptionalDouble} className="double-btn exceptional-double-btn">
-                    Exceptional Success ({effectiveDice * 2}D6) — free
+                    Exceptional Success ({doubledPreview}D6) — free
                   </button>
                 </>
               ) : (
@@ -199,6 +202,12 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
                 </div>
               )}
             </div>
+
+            {isCapped && (
+              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+                Dice capped at {maxDice}D6 (would be {rawDice}D6)
+              </div>
+            )}
 
             <div className="hero-points-display">
               Hero Points: <strong>{character.heroPoints}</strong>
@@ -315,6 +324,10 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
             )}
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}
+
+            <div className="hero-points-display">
+              Hero Points: <strong>{character.heroPoints}</strong>
+            </div>
 
             {/* Action buttons — only show during result phase before choice is made */}
             {phase === 'result' && (

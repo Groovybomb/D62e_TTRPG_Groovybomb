@@ -4,9 +4,18 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.0.0 — All core features implemented, refactored, and browser-tested.
+**Version:** 1.1.0 — GM tab enhancements + hero point sync fixes.
 
-**What's Working:**
+**What's Working (v1.1.0):**
+- Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
+- Character show/hide on GM tab (toggle visibility, persisted in localStorage)
+- Compressed character skill/attribute view on GM tab (expandable per character)
+- GM quick roll (plain d6 sum, posts to chat, no wild die)
+- Hero points shown on roll result page (both RollModal and GMRollModal)
+- Hero point sync: character data polled every 3s in App.jsx — edits reflect immediately in GM roll modals
+- Character sheet re-fetches after GM roll modal closes (hero point changes visible without manual refresh)
+
+**What's Working (v1.0.0):**
 - Login/register with display name and GM role
 - Full character sheet (7 attrs, 30+ skills, weapons, talents, perks, items)
 - Roll modal with wild die system (explodes on 6, complication on 1)
@@ -243,6 +252,15 @@ Before committing, verify:
   - [x] Doubled note shows "(Exceptional Success)" or "(Hero Point spent)" in result phase
 - [x] Added `.exceptional-double-btn` CSS styles (green border/text, green hover fill)
 - [x] **Browser tested** — damage rolls, exceptional success on all modals, Roll Log display all verified
+
+### v1.1.0: GM Tab Enhancements & Hero Point Fixes (2026-06-25)
+- [x] **Max Dice Cap** — GM can set a global cap on dice for any roll; stored server-side via new `/api/settings` endpoint; polled every 3s so all clients pick up changes without reload; cap applies in RollModal, GMRollModal, and DamageRollModal with yellow warning when capped; Double Dice preview respects cap
+- [x] **Character Show/Hide on GM tab** — each character has a hide (✕) button; hidden chars shown in a restore bar; visibility stored in localStorage (GM-local preference)
+- [x] **Compressed character view on GM tab** — all characters show attributes + dice at a glance; expandable per character to show all trained skills with totals and weapon list
+- [x] **GM Quick Roll** — plain d6 roller (no wild die) on GM tab; posts result to chat log; +/- dice count controls
+- [x] **Hero points on result page** — HP count shown in both RollModal and GMRollModal result phase (so player knows balance before choosing re-roll)
+- [x] **Bug fix: stale hero points in GM roll modal** — App.jsx `myCharacters` now re-fetched every 3s via polling loop; edits made on character sheet reflect in the next GM roll modal without reload
+- [x] **Bug fix: character sheet not updating after GM roll** — added `characterRefreshKey` that increments on GM roll modal close, triggering CharacterPage to re-fetch; hero point changes from GM rolls now appear immediately
 
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
@@ -557,6 +575,6 @@ Current db.json structure:
 
 ---
 
-**Last Updated:** 2026-06-25 (v1.0.0 release)
-**Last Work Done:** v1 refactoring — extracted shared constants, server-side filtering, removed dead code, full doc rewrite
-**Status:** v1.0.0 — all features implemented, refactored, browser-tested, documented
+**Last Updated:** 2026-06-25 (v1.1.0 release)
+**Last Work Done:** GM tab enhancements (max dice cap, character show/hide, quick roll) + hero point sync bug fixes
+**Status:** v1.1.0 — all v1 features plus GM tab improvements, browser-tested, documented

@@ -4,7 +4,7 @@ import { API_URL } from '../config';
 import { ATTRIBUTE_DEFINITIONS, getDicePool } from '../data/attributes';
 import RollModal from '../components/RollModal';
 
-export default function CharacterPage({ userId }) {
+export default function CharacterPage({ userId, maxDice, refreshKey }) {
   const [characters, setCharacters] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -15,7 +15,7 @@ export default function CharacterPage({ userId }) {
   const [rollModal, setRollModal] = useState(null);
   const [damageRoll, setDamageRoll] = useState(null);
 
-  useEffect(() => { fetchCharacters(); }, [userId]);
+  useEffect(() => { fetchCharacters(); }, [userId, refreshKey]);
 
   const fetchCharacters = async () => {
     try {
@@ -168,6 +168,7 @@ export default function CharacterPage({ userId }) {
           character={char}
           onClose={() => setRollModal(null)}
           onHeroPointChange={handleHeroPointChange}
+          maxDice={maxDice}
         />
       )}
 
@@ -177,6 +178,7 @@ export default function CharacterPage({ userId }) {
           character={char}
           onClose={() => setDamageRoll(null)}
           onHeroPointChange={handleHeroPointChange}
+          maxDice={maxDice}
         />
       )}
     </div>
@@ -435,7 +437,7 @@ function ListSection({ title, items, editing, onChange, fields }) {
   );
 }
 
-function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange }) {
+function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, maxDice }) {
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
   const [doubled, setDoubled] = useState(false);
@@ -444,7 +446,10 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange }) 
   const [rollTotal, setRollTotal] = useState(null);
 
   const baseDice = damageInfo.diceCount || 2;
-  const effectiveDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const rawDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
+  const isCapped = maxDice && rawDice > maxDice;
+  const doubledPreview = maxDice ? Math.min((baseDice + extraDice) * 2, maxDice) : (baseDice + extraDice) * 2;
   const heroPoints = character.heroPoints || 0;
 
   const handleDouble = () => {
@@ -540,10 +545,10 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange }) 
               {!doubled ? (
                 <>
                   <button onClick={handleDouble} disabled={heroPoints < 1} className="double-btn">
-                    Double Dice ({effectiveDice * 2}D6) — costs 1 Hero Point
+                    Double Dice ({doubledPreview}D6) — costs 1 Hero Point
                   </button>
                   <button onClick={handleExceptionalDouble} className="double-btn exceptional-double-btn">
-                    Exceptional Success ({effectiveDice * 2}D6) — free
+                    Exceptional Success ({doubledPreview}D6) — free
                   </button>
                 </>
               ) : (
@@ -553,6 +558,12 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange }) 
                 </div>
               )}
             </div>
+
+            {isCapped && (
+              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+                Dice capped at {maxDice}D6 (would be {rawDice}D6)
+              </div>
+            )}
 
             <div className="hero-points-display">
               Hero Points: <strong>{character.heroPoints}</strong>
