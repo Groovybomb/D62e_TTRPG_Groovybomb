@@ -18,7 +18,7 @@ src/
 ├── pages/
 │   ├── LoginPage.jsx         # Register/login with display name + GM flag
 │   ├── CharacterPage.jsx     # Character sheet, edit mode, roll buttons, damage rolls
-│   ├── SpaceshipPage.jsx     # Ship stats, weapons, crew, game rules panels
+│   ├── VehiclePage.jsx       # Vehicle stats, weapons, crew, game rules panels
 │   ├── GamePage.jsx          # Roll log + chat (interleaved), quick roll selector
 │   └── GameMasterPage.jsx    # Call for rolls, response tracking, difficulty table
 ├── components/
@@ -43,7 +43,7 @@ src/
 - **Damage Rolls** — plain d6 sum from weapon damage formula
 - **GM Roll Modal** — polls for GM-called rolls, 5-tier outcomes with Hero Point awards
 - **Roll Log / Chat** — interleaved rolls and messages with 3-5s polling
-- **Spacecraft** — stats, computed values, weapons, crew stations, game rules reference
+- **Vehicle** — stats, computed values, weapons, crew stations, game rules reference
 - **Dark Theme** — responsive design
 
 ## Configuration

@@ -4,14 +4,14 @@ import './App.css';
 import { API_URL } from './config';
 import LoginPage from './pages/LoginPage';
 import CharacterPage from './pages/CharacterPage';
-import SpaceshipPage from './pages/SpaceshipPage';
+import VehiclePage from './pages/VehiclePage';
 import GamePage from './pages/GamePage';
 import GameMasterPage from './pages/GameMasterPage';
 import GMRollModal from './components/GMRollModal';
 
 const TABS = [
   { key: 'characters', label: 'Character Sheet' },
-  { key: 'spaceships', label: 'Spacecraft' },
+  { key: 'vehicles', label: 'Vehicle' },
   { key: 'game', label: 'Roll Log / Chat' },
   { key: 'gm', label: 'Game Master' },
 ];
@@ -126,8 +126,8 @@ function App() {
         {currentPage === 'characters' && currentUser && (
           <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} />
         )}
-        {currentPage === 'spaceships' && currentUser && (
-          <SpaceshipPage userId={currentUser.id} />
+        {currentPage === 'vehicles' && currentUser && (
+          <VehiclePage userId={currentUser.id} maxDice={maxDice} />
         )}
         {currentPage === 'game' && currentUser && (
           <GamePage userId={currentUser.id} displayName={currentUser.displayName} />

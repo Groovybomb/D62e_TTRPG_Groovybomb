@@ -442,15 +442,15 @@ button:disabled {
   margin-top: 1rem;
 }
 
-/* Spaceship stats grid */
-.ship-stats-grid {
+/* Vehicle stats grid */
+.vehicle-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-.ship-stat-block {
+.vehicle-stat-block {
   background-color: #16213e;
   border: 1px solid #444;
   border-radius: 8px;
@@ -510,6 +510,58 @@ button:disabled {
   border-radius: 4px;
   text-align: center;
   font-size: 0.9rem;
+}
+
+/* Vehicle actions */
+.vehicle-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vehicle-action-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  background-color: #0f3460;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+.vehicle-action-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.vehicle-action-label {
+  font-weight: 700;
+  color: #e94560;
+  font-size: 0.95rem;
+}
+
+.vehicle-action-desc {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.vehicle-action-dice {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.vehicle-action-detail {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.vehicle-action-total {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #06d6a0;
 }
 
 /* Roll buttons on character sheet */

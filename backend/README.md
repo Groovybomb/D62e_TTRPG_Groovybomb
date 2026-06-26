@@ -23,7 +23,7 @@ src/
     ├── users.js       # Register, login, user management
     ├── characters.js  # Character CRUD with attribute/skill schema
     ├── rolls.js       # Skill, attack, and damage roll storage
-    ├── spaceships.js  # Spacecraft CRUD
+    ├── vehicles.js    # Vehicle CRUD
     ├── messages.js    # Chat message storage
     └── gmRolls.js     # GM roll request/response lifecycle
 ```
@@ -37,7 +37,7 @@ All data persists in `data/db.json`:
   "users": [],
   "characters": [],
   "rolls": [],
-  "spaceships": [],
+  "vehicles": [],
   "messages": [],
   "gmRollRequests": [],
   "gmRollResponses": [],
@@ -68,12 +68,12 @@ All data persists in `data/db.json`:
 - `GET /api/rolls` — Get all rolls (newest first)
 - `GET /api/rolls/character/:id` — Get character's rolls
 
-### Spaceships
-- `POST /api/spaceships` — Create spaceship (userId, name)
-- `GET /api/spaceships?userId=X` — Get spaceships (optional userId filter)
-- `GET /api/spaceships/:id` — Get spaceship
-- `PATCH /api/spaceships/:id` — Update spaceship
-- `DELETE /api/spaceships/:id` — Delete spaceship
+### Vehicles
+- `POST /api/vehicles` — Create vehicle (userId, name)
+- `GET /api/vehicles?userId=X` — Get vehicles (optional userId filter)
+- `GET /api/vehicles/:id` — Get vehicle
+- `PATCH /api/vehicles/:id` — Update vehicle
+- `DELETE /api/vehicles/:id` — Delete vehicle
 
 ### Messages
 - `GET /api/messages` — Get last 100 messages (newest first)

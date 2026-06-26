@@ -9,7 +9,7 @@ const dbPath = join(__dirname, '../data/db.json');
 const defaultData = {
   users: [],
   characters: [],
-  spaceships: [],
+  vehicles: [],
   rolls: [],
   messages: [],
   gmRollRequests: [],

@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.2.0 — Decline GM rolls + spacecraft grid fix.
+**Version:** 1.3.0 — Vehicle action rolls + spaceship→vehicle rename.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -22,7 +22,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 - Damage roll buttons on weapons (plain d6 sum, no wild die)
 - Exceptional Success free doubling on all roll types
 - Hero Points (Double Dice, Re-Roll, Double Down)
-- Spacecraft sheet (stats, weapons, crew, game rules panels)
+- Vehicle sheet (stats, weapons, crew, game rules panels)
 - Roll Log / Chat tab (interleaved by timestamp, 3s polling)
 - GM Roll System (5-tier outcomes, auto HP awards)
 - Game Master tab (roll initiator, presets, response tracking, difficulty table)
@@ -72,7 +72,7 @@ git commit -m "Brief description of what you changed"
 # - "Add character editing UI to frontend"
 # - "Implement JWT authentication in backend"
 # - "Fix wild dice calculation in rolls"
-# - "Update WORK_LOG.md: completed spaceship routes"
+# - "Update WORK_LOG.md: completed vehicle routes"
 
 # 4. Push to GitHub
 git push
@@ -148,7 +148,7 @@ Before committing, verify:
 - [x] Created frontend/src/pages/CharacterPage.jsx - Character management
 - [x] Created frontend/src/pages/GamePage.jsx - Gameplay with roll mechanics
 - [x] Created frontend/src/pages/GameMasterPage.jsx - GM controls and roll log
-- [x] Created frontend/src/pages/SpaceshipPage.jsx - Placeholder for later
+- [x] Created frontend/src/pages/VehiclePage.jsx - Placeholder for later
 - [x] Created frontend/.env with API URL configuration
 - [x] Created frontend/README.md with setup and features
 
@@ -156,7 +156,7 @@ Before committing, verify:
 - [x] Added displayName field to user registration (backend + frontend)
 - [x] Login returns displayName; navbar shows displayName
 - [x] Added PATCH /api/users/:userId endpoint for updating display name
-- [x] Renamed tabs: Character Sheet, Spacecraft, Roll Log / Chat, Game Master
+- [x] Renamed tabs: Character Sheet, Vehicle, Roll Log / Chat, Game Master
 
 ### Phase 5: Character Sheet Redesign (based on player Excel sheet)
 - [x] Rebuilt character model with 7 attributes: Agility, Brawn, Knowledge, Perception, Charm, Mechanical, Technical
@@ -175,18 +175,18 @@ Before committing, verify:
 - [x] Added character sheet CSS (attribute blocks, skill rows, dice badges, weapon table)
 - [x] Added db.json to .gitignore (local test data)
 
-### Phase 6: Spacecraft System (based on player Excel Starship sheet)
-- [x] Created backend/src/routes/spaceships.js - Full CRUD for spaceships
-- [x] Registered spaceship routes in server.js
-- [x] Ship stats: Navicomp, Maneuverability, Engines, Hull, Shield
+### Phase 6: Vehicle System (based on player Excel Starship sheet)
+- [x] Created backend/src/routes/vehicles.js - Full CRUD for vehicles
+- [x] Registered vehicle routes in server.js
+- [x] Vehicle stats: Navicomp, Maneuverability, Engines, Hull, Shield
 - [x] Computed stats: Defense (Hull x5), Resist Damage (Hull + Shield), Evasion Bonus (Piloting + Maneuverability)
-- [x] Ship weapons table (qty, name, damage, notes)
+- [x] Vehicle weapons table (qty, name, damage, notes)
 - [x] Crew stations: Captain (moving), Helm (evading), Tactical (attacking), Operations (resist damage), Engineer (repairs)
-- [x] Quick reference panels: Navigation rules, Starship Combat, Damage & Repair, Crew Roles
-- [x] Ship notes field
+- [x] Quick reference panels: Navigation rules, Vehicle Combat, Damage & Repair, Crew Roles
+- [x] Vehicle notes field
 - [x] Full edit mode with save/cancel
-- [x] Ship selector bar with New/Edit/Delete
-- [x] Added spaceship CSS (stats grid, computed stats, crew grid)
+- [x] Vehicle selector bar with New/Edit/Delete
+- [x] Added vehicle CSS (stats grid, computed stats, crew grid)
 
 ### Phase 7: Roll System Overhaul — Wild Die, Exploding Dice, Re-Roll & Double Down
 - [x] Created frontend/src/utils/dice.js — dice rolling with wild die and exploding 6s
@@ -262,16 +262,35 @@ Before committing, verify:
 - [x] **Bug fix: stale hero points in GM roll modal** — App.jsx `myCharacters` now re-fetched every 3s via polling loop; edits made on character sheet reflect in the next GM roll modal without reload
 - [x] **Bug fix: character sheet not updating after GM roll** — added `characterRefreshKey` that increments on GM roll modal close, triggering CharacterPage to re-fetch; hero point changes from GM rolls now appear immediately
 
-### v1.2.0: Decline GM Rolls + Spacecraft Fix (2026-06-26)
+### v1.2.0: Decline GM Rolls + Vehicle Fix (2026-06-26)
 - [x] **Decline GM roll requests** — players can click X to close the GM roll modal without rolling; records a `GM_ROLL_DECLINED` entry in the roll log and a response in `gmRollResponses` (so the poll stops showing the request)
 - [x] **Decline endpoint** — `POST /api/gm-rolls/:id/decline` records the decline and adds roll log entry
 - [x] **Roll log display** — declined rolls show as `[GM Roll — Declined]` with gray styling and italic "Declined" text
-- [x] **Spacecraft stats grid fix** — widened grid minimum from 180px to 210px so "Maneuverability" label doesn't overflow into the value field
+- [x] **Vehicle stats grid fix** — widened grid minimum from 180px to 210px so "Maneuverability" label doesn't overflow into the value field
+
+### v1.3.0: Vehicle Action Rolls + Rename (2026-06-26)
+- [x] **Spaceship→Vehicle rename** — all references to "spaceship/spacecraft/ship" changed to "vehicle" across code, CSS classes, database schema, routes, and documentation
+  - [x] `spaceships.js` route → `vehicles.js`, CSS `ship-*` → `vehicle-*`, db.json key `spaceships` → `vehicles`
+  - [x] Deleted old `SpaceshipPage.jsx` and `spaceships.js` files
+  - [x] Updated ORCHESTRATION.md, README.md, backend/README.md, frontend/README.md
+- [x] **Vehicle Action Rolls** — four rollable vehicle actions with wild die mechanics:
+  - [x] **Movement** — Engines dice only (e.g., Engines 2 → 2D6 wild die roll)
+  - [x] **Navigate** — Character's full Navigation dice pool + vehicle Navicomp dice
+  - [x] **Evade** — Character's Piloting skill only (NOT attribute) + Maneuverability dice + Defense as flat bonus added to total
+  - [x] **Resist Damage** — Hull + Shield dice combined (wild die roll)
+- [x] **Vehicle Weapon Damage Rolls** — Roll button on each weapon in the weapons table; plain d6 sum (no wild die), same as character weapon damage
+- [x] **VehicleRollModal** — new component (`frontend/src/components/VehicleRollModal.jsx`) for vehicle action rolls with flexible `breakdownParts` array, flat bonus support, wild die mechanics, hero point integration (Double Dice, Re-Roll, Double Down, Exceptional Success)
+- [x] **VehicleDamageModal** — inline damage modal in VehiclePage for vehicle weapon damage (plain d6, no wild die)
+- [x] **Crew Member selector** — character dropdown on Vehicle page; shows Navigation pool, Piloting skill, and Hero Points; needed for Navigate and Evade rolls
+- [x] **Defense formula fix** — changed from `Hull × 5` to `Hull × 5 + Shield` (e.g., hull=2, shield=1 → defense=11)
+- [x] **maxDice prop** — passed from App.jsx to VehiclePage so GM dice cap applies to vehicle rolls
+- [x] **Vehicle actions CSS** — action rows with label, description, dice breakdown, and Roll button
+- [x] **Browser tested** — Movement, Navigate, Evade (with flat defense bonus), Resist Damage, weapon damage rolls all verified working
 
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
 - [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
-- [x] **Server-side filtering** — added `?userId=` query param support to characters and spaceships routes, updated frontend to use params instead of fetching all + filtering client-side
+- [x] **Server-side filtering** — added `?userId=` query param support to characters and vehicles routes, updated frontend to use params instead of fetching all + filtering client-side
 - [x] **Removed dead backend code** — deleted unused `rollD6`, `rollMultipleDice`, `countWildDice`, `countSuccesses` from `utils.js` (all dice rolling is client-side)
 - [x] **Fixed db.js initialization bug** — changed `if (!db.data[key])` to `if (db.data[key] === undefined)` to prevent skipping falsy-but-valid values
 - [x] **Fixed redundant no-op ternary** in GMRollModal — removed `hasChoice ? outcome : outcome` pattern
@@ -356,7 +375,7 @@ The dice rolling system follows D6 Second Edition rules:
 ✅ **Roll log** — shows all rolls with wild die details, flags, color-coded dice
 ✅ **Chat persistence** — messages saved to db, 3s polling, interleaved with rolls in Roll Log / Chat
 ✅ **GM Roll System** — GM calls for rolls, players get popup on any tab, 5-tier outcomes with auto HP
-✅ **Spacecraft** — stats (Navicomp, Maneuverability, Engines, Hull, Shield), weapons, crew, reference panels
+✅ **Vehicle** — stats, weapons, crew, reference panels, **action rolls** (Movement, Navigate, Evade, Resist Damage), weapon damage rolls, crew member selector
 ✅ **Game Master tab** — roll initiator (static/dice DC), response tracking, difficulty table, recent rolls
 ✅ **Dark-themed UI** — responsive, modern, tab-based navigation
 ✅ All data persists in lowdb (backend/data/db.json)
@@ -419,7 +438,7 @@ D62e/
 │   │       ├── users.js
 │   │       ├── characters.js
 │   │       ├── rolls.js
-│   │       ├── spaceships.js
+│   │       ├── vehicles.js
 │   │       ├── messages.js
 │   │       └── gmRolls.js
 │   ├── data/db.json               (auto-created)
@@ -432,10 +451,11 @@ D62e/
 │   │   │   ├── CharacterPage.jsx
 │   │   │   ├── GamePage.jsx
 │   │   │   ├── GameMasterPage.jsx
-│   │   │   └── SpaceshipPage.jsx
+│   │   │   └── VehiclePage.jsx
 │   │   ├── components/
 │   │   │   ├── RollModal.jsx
-│   │   │   └── GMRollModal.jsx
+│   │   │   ├── GMRollModal.jsx
+│   │   │   └── VehicleRollModal.jsx
 │   │   ├── data/
 │   │   │   ├── attributes.js
 │   │   │   └── outcomes.js
@@ -496,12 +516,12 @@ D62e/
 - `PATCH /api/gm-rolls/:id` — GM closes/cancels request (sets status to "closed"/"cancelled")
 - `GET /api/gm-rolls` — Returns last 50 GM roll requests for history
 
-### Spaceships
-- `POST /api/spaceships` — Create ship (userId, name)
-- `GET /api/spaceships?userId=X` — Get spaceships (optional server-side userId filter)
-- `GET /api/spaceships/:id` — Get spaceship details
-- `PATCH /api/spaceships/:id` — Update (stats, weapons, crew, notes)
-- `DELETE /api/spaceships/:id` — Delete spaceship
+### Vehicles
+- `POST /api/vehicles` — Create vehicle (userId, name)
+- `GET /api/vehicles?userId=X` — Get vehicles (optional server-side userId filter)
+- `GET /api/vehicles/:id` — Get vehicle details
+- `PATCH /api/vehicles/:id` — Update (stats, weapons, crew, notes)
+- `DELETE /api/vehicles/:id` — Delete vehicle
 
 ---
 
@@ -519,7 +539,7 @@ Current db.json structure:
   "rolls": [
     { "id", "characterId", "rollType", "skill", "attribute", "diceCount", "diceRolled", "wildDie", "total", "complication", "doubled", "extraDice", "rollFlag", "linkedRollId", "dcValue", "outcome", "heroPointDelta", "createdAt" }
   ],
-  "spaceships": [
+  "vehicles": [
     { "id", "userId", "name", "stats", "weapons", "crew", "notes", "createdAt", "updatedAt" }
   ],
   "messages": [
@@ -549,7 +569,7 @@ Current db.json structure:
 - [x] Roll modal: setup → roll → result flow works
 - [x] Roll appears in Roll Log / Chat tab
 - [x] Chat messages persist and display alongside rolls
-- [x] Spacecraft page loads
+- [x] Vehicle page loads
 
 ### GM Roll System (Verified 2026-06-25)
 - [x] GM can select skill/attribute from dropdown
@@ -570,6 +590,20 @@ Current db.json structure:
 - [ ] Critical Fail scenario (total ≤ DC + wild 1) — not yet hit randomly
 - [ ] Re-Roll in GM roll modal — not tested (would need HP)
 
+### Vehicle Action Rolls (Verified 2026-06-26)
+- [x] Vehicle page loads with vehicle selector and crew member selector
+- [x] Crew member shows Navigation pool, Piloting skill, and Hero Points
+- [x] Movement roll: Engines dice only, wild die mechanics
+- [x] Navigate roll: character Navigation pool + vehicle Navicomp dice
+- [x] Evade roll: Piloting skill only + Maneuverability + Defense flat bonus in total
+- [x] Resist Damage roll: Hull + Shield dice combined
+- [x] Weapon damage roll: plain d6 sum, no wild die (Roll button in weapons table)
+- [x] Defense computed stat: Hull × 5 + Shield (verified hull=1, shield=1 → 6)
+- [x] Wild die exploding works in vehicle rolls (verified explosion on Movement roll)
+- [x] Complication works in vehicle rolls (verified wild-1 on Evade roll)
+- [x] Flat bonus correctly added to dice total in Evade result display
+- [x] Hero point options (Double Dice, Re-Roll, Double Down, Exceptional Success) all present
+
 ### Damage Rolls & Exceptional Success (Verified 2026-06-25)
 - [x] Roll button visible next to weapon damage on Character Sheet
 - [x] Damage modal opens with correct dice count (parsed from formula)
@@ -582,6 +616,6 @@ Current db.json structure:
 
 ---
 
-**Last Updated:** 2026-06-26 (v1.2.0 release)
-**Last Work Done:** Decline GM roll requests (X button + roll log entry) + spacecraft stats grid width fix
-**Status:** v1.2.0 — decline GM rolls, spacecraft grid fix, browser-tested, documented
+**Last Updated:** 2026-06-26 (v1.3.0 release)
+**Last Work Done:** Vehicle action rolls (Movement, Navigate, Evade, Resist) + weapon damage rolls + spaceship→vehicle rename
+**Status:** v1.3.0 — vehicle action rolls, defense formula fix, rename cleanup, browser-tested, documented

@@ -152,7 +152,7 @@ If implementing turn-based combat:
 - Experience points earned through gameplay
 - Skill improvements
 - Character progression system
-- Spaceship upgrades
+- Vehicle upgrades
 
 ## Platform Implementation
 

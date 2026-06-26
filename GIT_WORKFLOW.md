@@ -26,7 +26,7 @@ git commit -m "Add character editing form to frontend"
 git commit -m "Implement skill roll mechanic in backend"
 git commit -m "Fix wild dice calculation in rolls.js"
 git commit -m "Create WebSocket handler for real-time updates"
-git commit -m "Update WORK_LOG.md: completed spaceship routes"
+git commit -m "Update WORK_LOG.md: completed vehicle routes"
 git commit -m "Add password hashing with bcrypt"
 git commit -m "Refactor RollService for clarity"
 ```

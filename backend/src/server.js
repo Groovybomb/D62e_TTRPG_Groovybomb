@@ -3,7 +3,7 @@ import cors from 'cors';
 import userRoutes from './routes/users.js';
 import characterRoutes from './routes/characters.js';
 import rollRoutes from './routes/rolls.js';
-import spaceshipRoutes from './routes/spaceships.js';
+import vehicleRoutes from './routes/vehicles.js';
 import messageRoutes from './routes/messages.js';
 import gmRollRoutes from './routes/gmRolls.js';
 import settingsRoutes from './routes/settings.js';
@@ -30,7 +30,7 @@ app.get('/health', (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/characters', characterRoutes);
 app.use('/api/rolls', rollRoutes);
-app.use('/api/spaceships', spaceshipRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/gm-rolls', gmRollRoutes);
 app.use('/api/settings', settingsRoutes);

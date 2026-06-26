@@ -1,6 +1,6 @@
 # D62e TTRPG Platform
 
-A web-based platform for playing D6 Second Edition, a tabletop role-playing game. Players manage characters, control spaceships, roll dice with wild die mechanics, chat in real-time, and a Game Master orchestrates gameplay with called rolls and outcome tracking.
+A web-based platform for playing D6 Second Edition, a tabletop role-playing game. Players manage characters, control vehicles, roll dice with wild die mechanics, chat in real-time, and a Game Master orchestrates gameplay with called rolls and outcome tracking.
 
 ## Features
 
@@ -13,9 +13,9 @@ A web-based platform for playing D6 Second Edition, a tabletop role-playing game
   - Double Down: free re-roll with risk
 - **Damage Rolls**: Roll weapon damage directly from character sheet
 - **GM Roll System**: GM calls for rolls, all players get popup, 5-tier outcomes with auto Hero Point awards
-- **Spacecraft**: Ship stats, weapons, crew stations, game rules reference panels
+- **Vehicle**: Vehicle stats, weapons, crew stations, game rules reference panels
 - **Roll Log / Chat**: Real-time display of rolls and chat messages, interleaved by timestamp
-- **Dark Theme**: Responsive UI with 4 tabs (Character Sheet, Spacecraft, Roll Log/Chat, Game Master)
+- **Dark Theme**: Responsive UI with 4 tabs (Character Sheet, Vehicle, Roll Log/Chat, Game Master)
 
 ## Tech Stack
 
@@ -52,13 +52,13 @@ D62e/
 │   │       ├── users.js        # Auth (register/login)
 │   │       ├── characters.js   # Character CRUD
 │   │       ├── rolls.js        # Skill/attack/damage rolls
-│   │       ├── spaceships.js   # Spacecraft CRUD
+│   │       ├── vehicles.js     # Vehicle CRUD
 │   │       ├── messages.js     # Chat messages
 │   │       └── gmRolls.js      # GM roll lifecycle
 │   └── data/db.json            # Auto-created data file
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/              # LoginPage, CharacterPage, SpaceshipPage, GamePage, GameMasterPage
+│   │   ├── pages/              # LoginPage, CharacterPage, VehiclePage, GamePage, GameMasterPage
 │   │   ├── components/         # RollModal, GMRollModal
 │   │   ├── data/               # Attribute definitions, outcome constants
 │   │   ├── utils/              # Dice rolling logic
