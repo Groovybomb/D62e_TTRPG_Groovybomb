@@ -2,9 +2,12 @@ import { useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { rollDice, calculateTotal } from '../utils/dice';
+import { getWoundPenalty } from '../data/wounds';
+import { getRollHints } from '../data/characterOptions';
 
 export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice }) {
-  const { label, attrLabel, attrDice, skillLabel, skillDice, baseDice } = rollInfo;
+  const { label, attrKey, attrLabel, attrDice, skillKey, skillLabel, skillDice, baseDice } = rollInfo;
+  const rollHints = getRollHints(character, attrKey, skillKey);
 
   const [phase, setPhase] = useState('setup'); // 'setup' | 'result'
   const [extraDice, setExtraDice] = useState(0);
@@ -16,10 +19,14 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const [linkedRollId, setLinkedRollId] = useState(null);
   const [savedRollId, setSavedRollId] = useState(null);
 
-  const rawDice = doubled ? (baseDice + extraDice) * 2 : baseDice + extraDice;
+  const { penalty: woundPenalty, reasons: woundReasons, canAct } = getWoundPenalty(character);
+  const applyWoundPenalty = !rollInfo.skipWoundPenalty;
+  const effectivePenalty = applyWoundPenalty ? woundPenalty : 0;
+  const penalizedBase = Math.max(1, baseDice - effectivePenalty);
+  const rawDice = doubled ? (penalizedBase + extraDice) * 2 : penalizedBase + extraDice;
   const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
   const isCapped = maxDice && rawDice > maxDice;
-  const doubledPreview = maxDice ? Math.min((baseDice + extraDice) * 2, maxDice) : (baseDice + extraDice) * 2;
+  const doubledPreview = maxDice ? Math.min((penalizedBase + extraDice) * 2, maxDice) : (penalizedBase + extraDice) * 2;
   const heroPoints = character.heroPoints || 0;
 
   const canDouble = !doubled && heroPoints > 0;
@@ -114,11 +121,24 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
               <span className="breakdown-total">{baseDice}D6</span>
             </div>
 
+            {!canAct && (
+              <div className="wound-cant-act-notice">
+                Character cannot normally act in this state — check with your GM before rolling
+              </div>
+            )}
+
+            {applyWoundPenalty && woundPenalty > 0 && (
+              <div className="wound-penalty-notice">
+                <span className="wound-penalty-icon">!</span>
+                &minus;{woundPenalty}D wound penalty ({woundReasons.join(', ')}) — base reduced to {penalizedBase}D
+              </div>
+            )}
+
             {/* Extra dice */}
             <div className="extra-dice-row">
               <label>Extra Dice:</label>
               <div className="extra-dice-controls">
-                <button type="button" onClick={() => setExtraDice(Math.max(0, extraDice - 1))} className="dice-adjust-btn">-</button>
+                <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
               </div>
@@ -149,6 +169,17 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             {isCapped && (
               <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
+              </div>
+            )}
+
+            {rollHints.length > 0 && (
+              <div style={{ marginBottom: '0.5rem' }}>
+                {rollHints.map((h, i) => (
+                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#ef476f' : '#06d6a0'}` }}>
+                    <strong style={{ color: h.isWarning ? '#ef476f' : '#06d6a0' }}>{h.source}: {h.name}</strong>
+                    <span style={{ color: '#ccc', marginLeft: '0.4rem' }}>{h.note}</span>
+                  </div>
+                ))}
               </div>
             )}
 

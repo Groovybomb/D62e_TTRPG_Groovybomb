@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { ATTRIBUTE_DEFINITIONS, DIFFICULTY_TABLE, getDicePool } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import { rollPlainDice } from '../utils/dice';
 
+function useDebounce(fn, delay) {
+  const timer = useRef(null);
+  return useCallback((...args) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => fn(...args), delay);
+  }, [fn, delay]);
+}
+
 const PRESET_KEY = 'gm-roll-presets';
 const HIDDEN_CHARS_KEY = 'gm-hidden-characters';
+const INITIATIVE_KEY = 'gm-initiative-tracker';
 
 function loadPresets() {
   try {
@@ -37,7 +46,6 @@ function loadHiddenChars() {
 
 export default function GameMasterPage({ userId, displayName, maxDice, onMaxDiceChange }) {
   const [characters, setCharacters] = useState([]);
-  const [rolls, setRolls] = useState([]);
 
   // GM Roll Initiator state
   const [selectedSkill, setSelectedSkill] = useState('');
@@ -50,6 +58,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
   // Active request state
   const [activeRequest, setActiveRequest] = useState(null);
   const [responses, setResponses] = useState([]);
+  const [isInitiativeRoll, setIsInitiativeRoll] = useState(false);
 
   // Recent roll presets
   const [presets, setPresets] = useState(() => loadPresets());
@@ -65,10 +74,113 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
   const [genericDiceCount, setGenericDiceCount] = useState(3);
   const [genericResult, setGenericResult] = useState(null);
 
+  // Initiative Tracker
+  const [initEntries, setInitEntries] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(INITIATIVE_KEY)) || []; } catch { return []; }
+  });
+  const [initActive, setInitActive] = useState(-1);
+  const [initNewName, setInitNewName] = useState('');
+  const [initNewRoll, setInitNewRoll] = useState('');
+  const [initEditId, setInitEditId] = useState(null);
+  const [initEditName, setInitEditName] = useState('');
+  const [initEditRoll, setInitEditRoll] = useState('');
+
+  const saveInitEntries = (entries) => {
+    setInitEntries(entries);
+    localStorage.setItem(INITIATIVE_KEY, JSON.stringify(entries));
+  };
+
+  const addInitEntry = () => {
+    if (!initNewName.trim()) return;
+    const roll = parseInt(initNewRoll) || 0;
+    const entry = { id: Date.now().toString(), name: initNewName.trim(), roll };
+    const updated = [...initEntries, entry].sort((a, b) => b.roll - a.roll);
+    saveInitEntries(updated);
+    setInitNewName('');
+    setInitNewRoll('');
+    if (initActive >= 0) {
+      const activeId = initEntries[initActive]?.id;
+      const newIdx = updated.findIndex(e => e.id === activeId);
+      setInitActive(newIdx >= 0 ? newIdx : -1);
+    }
+  };
+
+  const removeInitEntry = (id) => {
+    const activeId = initEntries[initActive]?.id;
+    const updated = initEntries.filter(e => e.id !== id);
+    saveInitEntries(updated);
+    if (updated.length === 0) { setInitActive(-1); return; }
+    if (activeId === id) { setInitActive(Math.min(initActive, updated.length - 1)); return; }
+    const newIdx = updated.findIndex(e => e.id === activeId);
+    setInitActive(newIdx >= 0 ? newIdx : -1);
+  };
+
+  const moveInitEntry = (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= initEntries.length) return;
+    const updated = [...initEntries];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    saveInitEntries(updated);
+    if (initActive === index) setInitActive(target);
+    else if (initActive === target) setInitActive(index);
+  };
+
+  const startEditInit = (entry) => {
+    setInitEditId(entry.id);
+    setInitEditName(entry.name);
+    setInitEditRoll(String(entry.roll));
+  };
+
+  const saveEditInit = () => {
+    const updated = initEntries.map(e => e.id === initEditId ? { ...e, name: initEditName.trim() || e.name, roll: parseInt(initEditRoll) || 0 } : e);
+    saveInitEntries(updated);
+    setInitEditId(null);
+  };
+
+  const nextTurn = () => {
+    if (initEntries.length === 0) return;
+    setInitActive(prev => prev >= initEntries.length - 1 ? 0 : prev + 1);
+  };
+
+  const prevTurn = () => {
+    if (initEntries.length === 0) return;
+    setInitActive(prev => prev <= 0 ? initEntries.length - 1 : prev - 1);
+  };
+
+  const clearInitiative = () => {
+    saveInitEntries([]);
+    setInitActive(-1);
+  };
+
+  const callForInitiativeRoll = async () => {
+    if (activeRequest) return;
+    try {
+      const res = await axios.post(`${API_URL}/gm-rolls`, {
+        gmUserId: userId,
+        skill: null,
+        skillLabel: null,
+        attribute: 'perception',
+        attributeLabel: 'Perception',
+        label: 'Initiative (Perception)',
+        dcType: 'static',
+        dcValue: 0,
+        dcDiceCount: null,
+        dcDiceResults: null,
+      });
+      setActiveRequest(res.data);
+      setResponses([]);
+      setIsInitiativeRoll(true);
+    } catch { /* ignore */ }
+  };
+
+  // GM Notes
+  const [gmNotes, setGmNotes] = useState('');
+  const [notesSaved, setNotesSaved] = useState(true);
+
   useEffect(() => {
     fetchCharacters();
-    fetchRolls();
     checkActiveRequest();
+    fetchGmNotes();
   }, []);
 
   useEffect(() => {
@@ -82,17 +194,37 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
     return () => clearInterval(interval);
   }, [activeRequest]);
 
+  useEffect(() => {
+    if (!isInitiativeRoll || responses.length === 0) return;
+    const byChar = {};
+    for (const r of responses) {
+      if (!byChar[r.characterId] || new Date(r.createdAt) > new Date(byChar[r.characterId].createdAt)) {
+        byChar[r.characterId] = r;
+      }
+    }
+    const latest = Object.values(byChar);
+    let updated = [...initEntries];
+    for (const r of latest) {
+      const existing = updated.findIndex(e => e.charId === r.characterId);
+      if (existing >= 0) {
+        updated[existing] = { ...updated[existing], name: r.characterName, roll: r.total };
+      } else {
+        updated.push({ id: Date.now().toString() + r.characterId, charId: r.characterId, name: r.characterName, roll: r.total });
+      }
+    }
+    updated.sort((a, b) => b.roll - a.roll);
+    saveInitEntries(updated);
+    if (initActive >= 0) {
+      const activeId = initEntries[initActive]?.id;
+      const newIdx = updated.findIndex(e => e.id === activeId);
+      setInitActive(newIdx >= 0 ? newIdx : -1);
+    }
+  }, [responses, isInitiativeRoll]);
+
   const fetchCharacters = async () => {
     try {
       const res = await axios.get(`${API_URL}/characters`);
       setCharacters(res.data);
-    } catch { /* ignore */ }
-  };
-
-  const fetchRolls = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/rolls`);
-      setRolls(res.data.slice(0, 30));
     } catch { /* ignore */ }
   };
 
@@ -102,6 +234,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
       const active = res.data.find(r => r.status === 'active');
       if (active) {
         setActiveRequest(active);
+        if (active.label === 'Initiative (Perception)') setIsInitiativeRoll(true);
       }
     } catch { /* ignore */ }
   };
@@ -163,6 +296,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
       });
       setActiveRequest(res.data);
       setResponses([]);
+      setIsInitiativeRoll(false);
 
       const preset = { selectedSkill, label, dcType, staticDC: dcType === 'static' ? dcValue : 15, dcDiceCount: dcType === 'dice' ? dcDiceCount : 4 };
       setPresets(savePreset(preset));
@@ -175,7 +309,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
       await axios.patch(`${API_URL}/gm-rolls/${activeRequest.id}`, { status: 'closed' });
       setActiveRequest(null);
       setResponses([]);
-      fetchRolls();
+      setIsInitiativeRoll(false);
     } catch { /* ignore */ }
   };
 
@@ -230,6 +364,29 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
         text,
       });
     } catch { /* ignore */ }
+  };
+
+  const fetchGmNotes = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/settings`);
+      setGmNotes(res.data.gmNotes || '');
+    } catch { /* ignore */ }
+  };
+
+  const saveGmNotes = useCallback(async (text) => {
+    try {
+      await axios.patch(`${API_URL}/settings`, { gmNotes: text });
+      setNotesSaved(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  const debouncedSaveNotes = useDebounce(saveGmNotes, 800);
+
+  const handleNotesChange = (e) => {
+    const text = e.target.value;
+    setGmNotes(text);
+    setNotesSaved(false);
+    debouncedSaveNotes(text);
   };
 
   return (
@@ -619,76 +776,193 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
         </div>
       </div>
 
-      {/* Right: Recent Rolls */}
+      {/* Right: Initiative Tracker */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2>Recent Rolls</h2>
-          <button onClick={fetchRolls} style={{ padding: '0.5rem 1rem' }}>Refresh</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <h2 style={{ margin: 0 }}>Initiative Tracker</h2>
+          <button
+            onClick={callForInitiativeRoll}
+            disabled={!!activeRequest}
+            style={{ padding: '0.4rem 0.8rem', backgroundColor: activeRequest ? '#555' : '#ffd60a', color: '#1a1a2e', fontWeight: 700, fontSize: '0.85rem', borderRadius: '4px', border: 'none', cursor: activeRequest ? 'not-allowed' : 'pointer' }}
+          >
+            Roll Initiative
+          </button>
         </div>
 
-        <div style={{ height: '700px', overflowY: 'auto', backgroundColor: '#0f3460', border: '1px solid #444', borderRadius: '8px', padding: '1rem' }}>
-          {rolls.length === 0 && (
-            <p style={{ color: '#888', textAlign: 'center', marginTop: '2rem' }}>No rolls yet.</p>
+        {/* Add entry */}
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={initNewName}
+              onChange={e => setInitNewName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addInitEntry()}
+              placeholder="Name (player or NPC)"
+              style={{ flex: 2, minWidth: '120px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+            />
+            <input
+              type="number"
+              value={initNewRoll}
+              onChange={e => setInitNewRoll(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addInitEntry()}
+              placeholder="Roll"
+              style={{ width: '70px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+            />
+            <button onClick={addInitEntry} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', fontWeight: 700 }}>Add</button>
+          </div>
+        </div>
+
+        {/* Turn controls */}
+        {initEntries.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+            <button onClick={prevTurn} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#16213e', border: '1px solid #444', color: '#eee', borderRadius: '4px' }}>Prev</button>
+            <button onClick={nextTurn} style={{ flex: 1, padding: '0.5rem', backgroundColor: '#e94560', fontWeight: 700, fontSize: '1rem', borderRadius: '4px', border: 'none', color: '#eee', cursor: 'pointer' }}>
+              Next Turn
+            </button>
+            <button onClick={() => setInitActive(-1)} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#16213e', border: '1px solid #444', color: '#888', borderRadius: '4px' }}>Reset</button>
+            <button onClick={clearInitiative} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#ef476f', borderRadius: '4px', border: 'none', color: '#eee', cursor: 'pointer' }}>Clear</button>
+          </div>
+        )}
+
+        {/* Initiative list */}
+        <div style={{ backgroundColor: '#0f3460', border: '1px solid #444', borderRadius: '8px', overflow: 'hidden' }}>
+          {initEntries.length === 0 && (
+            <p style={{ color: '#888', textAlign: 'center', padding: '2rem' }}>No initiative entries. Add characters and NPCs above.</p>
           )}
-
-          {rolls.map(roll => {
-            const charName = characters.find(c => c.id === roll.characterId)?.name || roll.characterId;
-
-            if (roll.rollType === 'GM_ROLL') {
-              return (
-                <div key={roll.id} className="roll-result" style={{ borderLeft: `3px solid ${OUTCOME_COLORS[roll.outcome] || '#888'}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong>{charName}</strong>
-                    <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                      {new Date(roll.createdAt).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <div>
-                    {roll.skill} — <strong>{roll.total}</strong> vs DC <strong>{roll.dcValue}</strong>
-                    {' '}
-                    <span style={{ color: OUTCOME_COLORS[roll.outcome] || '#888', fontWeight: 700 }}>
-                      {OUTCOME_LABELS[roll.outcome] || roll.outcome}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#aaa' }}>
-                    Dice: [{roll.diceRolled?.join(', ')}]
-                    {roll.complication && <span style={{ color: '#ef476f' }}> COMPLICATION</span>}
-                    {roll.heroPointDelta > 0 && <span style={{ color: '#06d6a0' }}> +{roll.heroPointDelta} HP</span>}
-                  </div>
-                </div>
-              );
-            }
-
-            const resultClass = roll.resultLevel === 'CRITICAL_SUCCESS' ? 'critical'
-              : (roll.resultLevel === 'SUCCESS' || roll.resultLevel === 'PARTIAL') ? 'success'
-              : 'failure';
-
+          {initEntries.map((entry, idx) => {
+            const isActive = idx === initActive;
+            const isEditing = initEditId === entry.id;
             return (
-              <div key={roll.id} className={`roll-result ${resultClass}`}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <strong>{charName}</strong>
-                  <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                    {new Date(roll.createdAt).toLocaleTimeString()}
-                  </span>
-                </div>
-                {roll.rollType === 'SKILL' && (
+              <div
+                key={entry.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.75rem',
+                  backgroundColor: isActive ? '#06d6a020' : 'transparent',
+                  borderLeft: isActive ? '4px solid #06d6a0' : '4px solid transparent',
+                  borderBottom: idx < initEntries.length - 1 ? '1px solid #333' : 'none',
+                  transition: 'background-color 0.2s',
+                }}
+              >
+                {/* Turn marker */}
+                <span style={{ width: '20px', textAlign: 'center', fontSize: '0.9rem', color: isActive ? '#06d6a0' : 'transparent', fontWeight: 700 }}>
+                  {isActive ? '▶' : ''}
+                </span>
+
+                {isEditing ? (
                   <>
-                    <div>{roll.skill} — <strong style={{ color: resultClass === 'critical' ? '#ffd60a' : resultClass === 'success' ? '#06d6a0' : '#ef476f' }}>{roll.total}</strong></div>
-                    <div style={{ fontSize: '0.85rem', color: '#aaa' }}>
-                      Dice: [{roll.diceRolled?.join(', ')}]
-                      {roll.complication && <span style={{ color: '#ef476f' }}> COMPLICATION</span>}
+                    <input
+                      type="text"
+                      value={initEditName}
+                      onChange={e => setInitEditName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && saveEditInit()}
+                      style={{ flex: 1, padding: '0.3rem', backgroundColor: '#16213e', color: '#eee', border: '1px solid #555', borderRadius: '3px' }}
+                    />
+                    <input
+                      type="number"
+                      value={initEditRoll}
+                      onChange={e => setInitEditRoll(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && saveEditInit()}
+                      style={{ width: '55px', padding: '0.3rem', backgroundColor: '#16213e', color: '#ffd60a', border: '1px solid #555', borderRadius: '3px', textAlign: 'center' }}
+                    />
+                    <button onClick={saveEditInit} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', border: 'none', borderRadius: '3px' }}>OK</button>
+                    <button onClick={() => setInitEditId(null)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#555', border: 'none', borderRadius: '3px', color: '#eee' }}>X</button>
+                  </>
+                ) : (
+                  <>
+                    {/* Name */}
+                    <span style={{ flex: 1, fontWeight: isActive ? 700 : 400, color: isActive ? '#06d6a0' : '#eee', fontSize: '0.95rem' }}>
+                      {entry.name}
+                    </span>
+
+                    {/* Roll value */}
+                    <span style={{ fontWeight: 700, color: '#ffd60a', fontSize: '1rem', minWidth: '30px', textAlign: 'center' }}>
+                      {entry.roll}
+                    </span>
+
+                    {/* Controls */}
+                    <div style={{ display: 'flex', gap: '0.2rem' }}>
+                      <button onClick={() => moveInitEntry(idx, -1)} disabled={idx === 0} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: idx === 0 ? '#333' : '#888', cursor: idx === 0 ? 'default' : 'pointer' }} title="Move up">&#9650;</button>
+                      <button onClick={() => moveInitEntry(idx, 1)} disabled={idx === initEntries.length - 1} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: idx === initEntries.length - 1 ? '#333' : '#888', cursor: idx === initEntries.length - 1 ? 'default' : 'pointer' }} title="Move down">&#9660;</button>
+                      <button onClick={() => startEditInit(entry)} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: '#888', cursor: 'pointer' }} title="Edit">&#9998;</button>
+                      <button onClick={() => removeInitEntry(entry.id)} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #ef476f', borderRadius: '3px', color: '#ef476f', cursor: 'pointer' }} title="Remove">&#10005;</button>
                     </div>
                   </>
-                )}
-                {roll.rollType === 'ATTACK' && (
-                  <div>Attack: {roll.attackHits ? 'HIT' : 'MISS'}</div>
-                )}
-                {roll.rollType === 'DAMAGE' && (
-                  <div>Damage: {roll.total} ({roll.weaponName})</div>
                 )}
               </div>
             );
           })}
+        </div>
+
+        {/* GM Notes */}
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h3>GM Notes</h3>
+            <span style={{ fontSize: '0.75rem', color: notesSaved ? '#06d6a0' : '#ffd60a' }}>
+              {notesSaved ? 'Saved' : 'Saving...'}
+            </span>
+          </div>
+          <textarea
+            value={gmNotes}
+            onChange={handleNotesChange}
+            placeholder="Track chase progress, encounter notes, session reminders..."
+            rows={8}
+            style={{
+              width: '100%',
+              backgroundColor: '#0f3460',
+              color: '#eee',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              padding: '0.5rem',
+              resize: 'vertical',
+              fontSize: '0.9rem',
+              lineHeight: '1.5',
+            }}
+          />
+        </div>
+
+        {/* Hacking Reference */}
+        <div className="card" style={{ marginTop: '1rem', borderColor: '#555' }}>
+          <h3 style={{ color: '#888' }}>Hacking Reference</h3>
+          <p style={{ color: '#aaa', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+            Skill: <strong style={{ color: '#eee' }}>Computers</strong> vs. target&apos;s <strong style={{ color: '#eee' }}>Firewall</strong> (Technical &times; 5 for player devices).
+          </p>
+          <table className="weapon-table" style={{ fontSize: '0.82rem' }}>
+            <thead><tr><th>Result</th><th>Outcome</th></tr></thead>
+            <tbody>
+              <tr><td style={{ color: '#ef476f', fontWeight: 700 }}>Fail by 10+</td><td>Identity revealed &mdash; traced immediately, counter-attack possible</td></tr>
+              <tr><td style={{ color: '#ef476f', fontWeight: 700 }}>Fail by 5-9</td><td>Traced &mdash; location pinpointed, target alerted</td></tr>
+              <tr><td style={{ color: '#e94560', fontWeight: 700 }}>Fail by 1-4</td><td>Locked out &mdash; cannot retry this session</td></tr>
+              <tr><td style={{ color: '#06d6a0', fontWeight: 700 }}>Beat DC</td><td>Access gained &mdash; can read/copy data</td></tr>
+              <tr><td style={{ color: '#06d6a0', fontWeight: 700 }}>Beat DC by 5+</td><td>Full control &mdash; lock/unlock doors, fry equipment, plant false data</td></tr>
+              <tr><td style={{ color: '#06d6a0', fontWeight: 700 }}>Beat DC by 10+</td><td>Ghost access &mdash; no logs, backdoor installed for future use</td></tr>
+            </tbody>
+          </table>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#666' }}>
+            Firewall examples: Personal device 10 &bull; Corporate terminal 20 &bull; Military system 30 &bull; AI core 40
+          </div>
+        </div>
+
+        {/* Environmental Hazards Reference */}
+        <div className="card" style={{ marginTop: '1rem', borderColor: '#555' }}>
+          <h3 style={{ color: '#888' }}>Environmental Hazards</h3>
+          <p style={{ color: '#aaa', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+            Skill: <strong style={{ color: '#eee' }}>Stamina</strong> (Brawn) at the listed interval. Failure causes wound escalation.
+          </p>
+          <table className="weapon-table" style={{ fontSize: '0.82rem' }}>
+            <thead><tr><th>Hazard</th><th>Difficulty</th><th>Interval</th><th>Damage / Effect</th></tr></thead>
+            <tbody>
+              <tr><td style={{ fontWeight: 700, color: '#ffd60a' }}>Extreme Heat</td><td>15</td><td>Every 10 min</td><td>Fail: +1 wound level. Protective gear gives +2D.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#4cc9f0' }}>Extreme Cold</td><td>15</td><td>Every 10 min</td><td>Fail: +1 wound level. Cold weather gear gives +1D.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#4cc9f0' }}>Drowning</td><td>5, +5 each round</td><td>Every round</td><td>Fail: Incapacitated, then Mortally Wounded next round.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#06d6a0' }}>Toxic Gas / Poison</td><td>15-25</td><td>Per exposure</td><td>Fail: 3D-5D damage (resisted by Stamina). Gas mask gives +2D.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#e94560' }}>Vacuum / Decompression</td><td>20</td><td>Every round</td><td>Fail: +1 wound level. Enviro-suit required. Without suit: automatic 4D damage/round.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#e94560' }}>Fire / Burns</td><td>&mdash;</td><td>Per exposure</td><td>Light fire 2D, heavy fire 4D, inferno 6D damage. Stamina to resist.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#ffd60a' }}>Radiation</td><td>20</td><td>Every hour</td><td>Fail: +1 wound level. Cumulative; protective shielding required.</td></tr>
+            </tbody>
+          </table>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#666' }}>
+            Wound penalties from hazard damage stack normally. Characters at Incapacitated+ cannot act without help.
+          </div>
         </div>
       </div>
     </div>

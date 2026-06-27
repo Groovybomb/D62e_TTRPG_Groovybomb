@@ -13,6 +13,7 @@ export const ATTRIBUTE_DEFINITIONS = {
     skills: {
       athletics: 'Athletics',
       intimidation: 'Intimidation',
+      resistance: 'Resistance',
       stamina: 'Stamina',
       throwing: 'Throwing',
     },
@@ -120,10 +121,18 @@ export function getAllSkills() {
   return skills;
 }
 
+export const SPECIAL_SKILLS = {
+  resistance: { sourceField: 'armor', sourceLabel: 'Armor', skipWoundPenalty: true },
+};
+
 export function getDicePool(character, attrKey, skillKey) {
   const attr = character.attributes[attrKey];
   if (!attr) return 0;
   const attrDice = attr.dice || 0;
+  const special = SPECIAL_SKILLS[skillKey];
+  if (special) {
+    return attrDice + (character[special.sourceField] || 0);
+  }
   const skillDice = attr.skills[skillKey] || 0;
   return attrDice + skillDice;
 }

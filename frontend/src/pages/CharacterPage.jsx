@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { ATTRIBUTE_DEFINITIONS, ADVANCED_SKILL_DEFINITIONS, getDicePool, getAdvancedDicePool } from '../data/attributes';
+import { ATTRIBUTE_DEFINITIONS, ADVANCED_SKILL_DEFINITIONS, SPECIAL_SKILLS, getDicePool, getAdvancedDicePool } from '../data/attributes';
+import { WOUND_LEVELS, STUN_STATES, getWoundPenalty } from '../data/wounds';
+import { TALENTS, PERKS, FLAWS, CYBERNETICS, ITEMS, getRollHints } from '../data/characterOptions';
 import RollModal from '../components/RollModal';
 
-export default function CharacterPage({ userId, maxDice, refreshKey }) {
+export default function CharacterPage({ userId, maxDice, refreshKey, selectedCharacterId, onSelectCharacter }) {
   const [characters, setCharacters] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(selectedCharacterId || null);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -21,7 +23,11 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
     try {
       const res = await axios.get(`${API_URL}/characters`, { params: { userId } });
       setCharacters(res.data);
-      if (res.data.length > 0 && !selectedId) setSelectedId(res.data[0].id);
+      if (res.data.length > 0 && !selectedId) {
+        const initial = res.data[0].id;
+        setSelectedId(initial);
+        onSelectCharacter?.(initial);
+      }
     } catch { setError('Failed to load characters'); }
   };
 
@@ -31,6 +37,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
       const res = await axios.post(`${API_URL}/characters`, { userId, name: newName });
       setCharacters([...characters, res.data]);
       setSelectedId(res.data.id);
+      onSelectCharacter?.(res.data.id);
       setNewName('');
       setShowCreate(false);
     } catch { setError('Failed to create character'); }
@@ -41,7 +48,11 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
       await axios.delete(`${API_URL}/characters/${id}`);
       const updated = characters.filter(c => c.id !== id);
       setCharacters(updated);
-      if (selectedId === id) setSelectedId(updated[0]?.id || null);
+      if (selectedId === id) {
+        const newId = updated[0]?.id || null;
+        setSelectedId(newId);
+        onSelectCharacter?.(newId);
+      }
     } catch { setError('Failed to delete character'); }
   };
 
@@ -107,10 +118,18 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
 
   const handleHeroPointChange = async (newPoints) => {
     if (!char) return;
-    const updated = { ...char, heroPoints: newPoints };
     try {
       await axios.patch(`${API_URL}/characters/${char.id}`, { heroPoints: newPoints });
       setCharacters(characters.map(c => c.id === char.id ? { ...c, heroPoints: newPoints } : c));
+    } catch { /* ignore */ }
+  };
+
+  const handleWoundChange = async (field, value) => {
+    if (!char) return;
+    try {
+      await axios.patch(`${API_URL}/characters/${char.id}`, { [field]: value });
+      setCharacters(characters.map(c => c.id === char.id ? { ...c, [field]: value } : c));
+      if (editing) setEditData(prev => prev ? { ...prev, [field]: value } : prev);
     } catch { /* ignore */ }
   };
 
@@ -124,7 +143,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
         {characters.length > 0 && (
           <select
             value={selectedId || ''}
-            onChange={(e) => { setSelectedId(e.target.value); setEditing(false); }}
+            onChange={(e) => { setSelectedId(e.target.value); onSelectCharacter?.(e.target.value); setEditing(false); }}
             className="select-input"
           >
             {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -172,6 +191,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
           onFieldChange={(field, val) => setEditData({ ...editData, [field]: val })}
           onRoll={openRollModal}
           onDamageRoll={openDamageRoll}
+          onWoundChange={handleWoundChange}
         />
       )}
 
@@ -198,9 +218,17 @@ export default function CharacterPage({ userId, maxDice, refreshKey }) {
   );
 }
 
-function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvancedSkillChange, onFieldChange, onRoll, onDamageRoll }) {
-  const dodge = (char.attributes.perception?.dice || 0) * 5;
-  const parry = (char.attributes.agility?.dice || 0) * 5;
+function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvancedSkillChange, onFieldChange, onRoll, onDamageRoll, onWoundChange }) {
+  const isProne = (char.stunState || 'none') === 'prone';
+  const baseDodge = (char.attributes.perception?.dice || 0) * 5;
+  const baseParry = (char.attributes.agility?.dice || 0) * 5;
+  const dodge = isProne ? baseDodge + 10 : baseDodge;
+  const parry = isProne ? Math.min(baseParry, 10) : baseParry;
+
+  const acrobatics = char.attributes.agility?.skills?.acrobatics || 0;
+  const melee = char.attributes.agility?.skills?.melee || 0;
+  const fullDefDodge = baseDodge + (acrobatics * 5);
+  const fullDefParry = baseParry + (melee * 5);
 
   return (
     <div className="character-sheet">
@@ -224,22 +252,78 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
               <span className="stat-label">Armor</span>
               {editing
                 ? <input type="number" value={char.armor} onChange={e => onFieldChange('armor', parseInt(e.target.value) || 0)} className="stat-input" />
-                : <span className="stat-value">{char.armor}</span>}
+                : <span className="stat-value">{char.armor}D</span>}
             </div>
           </div>
           <div className="sheet-stat-row">
             <div className="sheet-stat">
-              <span className="stat-label">Dodge</span>
-              <span className="stat-value computed">{dodge}</span>
-              <span className="stat-note">Perception &times; 5</span>
+              <span className="stat-label">Dodge{isProne ? ' (Prone)' : ''}</span>
+              <span className="stat-value computed" style={isProne ? { color: '#ff8c00' } : {}}>{dodge}</span>
+              <span className="stat-note">{isProne ? `Base ${baseDodge} + 10 ranged` : 'Perception × 5'}</span>
             </div>
             <div className="sheet-stat">
-              <span className="stat-label">Parry</span>
-              <span className="stat-value computed">{parry}</span>
-              <span className="stat-note">Agility &times; 5</span>
+              <span className="stat-label">Parry{isProne ? ' (Prone)' : ''}</span>
+              <span className="stat-value computed" style={isProne ? { color: '#ff8c00' } : {}}>{parry}</span>
+              <span className="stat-note">{isProne ? `Max 10 vs melee` : 'Agility × 5'}</span>
             </div>
           </div>
+          {(fullDefDodge > baseDodge || fullDefParry > baseParry) && !isProne && (
+            <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.25rem' }}>
+              Full Defense: Dodge {fullDefDodge} (+Acrobatics {acrobatics}D) &bull; Parry {fullDefParry} (+Melee {melee}D)
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Wound Tracker */}
+      <div className="wound-tracker">
+        <div className="wound-track-section">
+          <span className="wound-track-label">Wound Level</span>
+          <div className="wound-track-buttons">
+            {WOUND_LEVELS.map(wl => (
+              <button
+                key={wl.key}
+                className={`wound-state-btn ${(char.woundLevel || 'healthy') === wl.key ? 'active' : ''}`}
+                style={(char.woundLevel || 'healthy') === wl.key ? { color: wl.color, borderColor: wl.color, backgroundColor: wl.color + '20' } : {}}
+                onClick={() => onWoundChange('woundLevel', wl.key)}
+              >
+                {wl.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="wound-track-section">
+          <span className="wound-track-label">Condition</span>
+          <div className="wound-track-buttons">
+            {STUN_STATES.map(ss => (
+              <button
+                key={ss.key}
+                className={`wound-state-btn ${(char.stunState || 'none') === ss.key ? 'active' : ''}`}
+                style={(char.stunState || 'none') === ss.key ? { color: ss.color, borderColor: ss.color, backgroundColor: ss.color + '20' } : {}}
+                onClick={() => onWoundChange('stunState', ss.key)}
+              >
+                {ss.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {(() => {
+          const { penalty, reasons, canAct } = getWoundPenalty(char);
+          return (
+            <>
+              {penalty > 0 && (
+                <div className="wound-penalty-summary">
+                  Penalty: &minus;{penalty}D to all skill &amp; attribute rolls ({reasons.join(', ')})
+                </div>
+              )}
+              {!canAct && (
+                <div className="wound-cant-act">
+                  Character cannot normally act in this state
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Attributes and Skills grid */}
@@ -261,8 +345,10 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                       title={`Roll ${attrDef.label} (${attr.dice}D6)`}
                       onClick={() => onRoll({
                         label: attrDef.label,
+                        attrKey,
                         attrLabel: attrDef.label,
                         attrDice: attr.dice,
+                        skillKey: null,
                         skillLabel: null,
                         skillDice: 0,
                         baseDice: attr.dice,
@@ -275,17 +361,26 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
               </div>
               <div className="skill-list">
                 {Object.entries(attrDef.skills).map(([skillKey, skillLabel]) => {
-                  const skillDice = attr.skills[skillKey] || 0;
+                  const special = SPECIAL_SKILLS[skillKey];
+                  const skillDice = special
+                    ? (char[special.sourceField] || 0)
+                    : (attr.skills[skillKey] || 0);
                   const totalDice = attr.dice + skillDice;
+                  const displayLabel = special ? special.sourceLabel : skillLabel;
                   return (
                     <div key={skillKey} className="skill-row">
-                      <span className="skill-name">{skillLabel}</span>
-                      {editing ? (
+                      <span className="skill-name">
+                        {skillLabel}
+                        {special && <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '0.35rem' }}>({special.sourceLabel})</span>}
+                      </span>
+                      {special ? (
+                        <span className="skill-dice" title={`From ${special.sourceLabel}`}>{skillDice > 0 ? skillDice : '-'}</span>
+                      ) : editing ? (
                         <input type="number" min="0" value={skillDice} onChange={e => onSkillChange(attrKey, skillKey, e.target.value)} className="dice-input" />
                       ) : (
                         <span className="skill-dice">{skillDice > 0 ? skillDice : '-'}</span>
                       )}
-                      <span className="total-dice" title={`${attrDef.label} ${attr.dice}D + ${skillLabel} ${skillDice}D`}>
+                      <span className="total-dice" title={`${attrDef.label} ${attr.dice}D + ${displayLabel} ${skillDice}D`}>
                         {totalDice}D
                       </span>
                       {!editing && (
@@ -293,11 +388,14 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                           className="roll-btn roll-btn-sm"
                           onClick={() => onRoll({
                             label: `${skillLabel} (${attrDef.label})`,
+                            attrKey,
                             attrLabel: attrDef.label,
                             attrDice: attr.dice,
-                            skillLabel,
+                            skillKey,
+                            skillLabel: displayLabel,
                             skillDice,
                             baseDice: totalDice,
+                            ...(special?.skipWoundPenalty && { skipWoundPenalty: true }),
                           })}
                         >
                           Roll
@@ -369,12 +467,13 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
       {/* Weapons */}
       <WeaponSection weapons={char.weapons || []} editing={editing} onChange={w => onFieldChange('weapons', w)} character={char} onDamageRoll={onDamageRoll} />
 
-      {/* Talents, Flaws, Perks, Items in a grid */}
+      {/* Talents, Flaws, Perks, Cybernetics, Items in a grid */}
       <div className="extras-grid">
-        <ListSection title="Talents" items={char.talents || []} editing={editing} onChange={v => onFieldChange('talents', v)} fields={['name', 'rank', 'description']} />
-        <ListSection title="Flaws" items={char.flaws || []} editing={editing} onChange={v => onFieldChange('flaws', v)} fields={['name', 'rank', 'description']} />
-        <ListSection title="Perks" items={char.perks || []} editing={editing} onChange={v => onFieldChange('perks', v)} fields={['name', 'description']} />
-        <ListSection title="Items" items={char.items || []} editing={editing} onChange={v => onFieldChange('items', v)} fields={['name', 'description']} />
+        <ListSection title="Talents" items={char.talents || []} editing={editing} onChange={v => onFieldChange('talents', v)} fields={['name', 'rank', 'description']} referenceData={TALENTS} />
+        <ListSection title="Flaws" items={char.flaws || []} editing={editing} onChange={v => onFieldChange('flaws', v)} fields={['name', 'rank', 'description']} referenceData={FLAWS} />
+        <ListSection title="Perks" items={char.perks || []} editing={editing} onChange={v => onFieldChange('perks', v)} fields={['name', 'rank', 'description']} referenceData={PERKS} />
+        <ListSection title="Cybernetics" items={char.cybernetics || []} editing={editing} onChange={v => onFieldChange('cybernetics', v)} fields={['name', 'rank', 'description']} referenceData={CYBERNETICS} />
+        <ListSection title="Items" items={char.items || []} editing={editing} onChange={v => onFieldChange('items', v)} fields={['name', 'description']} referenceData={ITEMS} referenceGrouped={true} onArmorUpdate={(val) => onFieldChange('armor', val)} currentArmor={char.armor} />
       </div>
 
       {/* Notes */}
@@ -384,6 +483,29 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
           ? <textarea value={char.notes || ''} onChange={e => onFieldChange('notes', e.target.value)} rows={4} style={{ width: '100%', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px', padding: '0.5rem', resize: 'vertical' }} />
           : <p style={{ color: '#aaa', whiteSpace: 'pre-wrap' }}>{char.notes || 'No notes.'}</p>}
       </div>
+
+      {/* Dice Modifier Reminders */}
+      {!editing && (
+        <div className="card" style={{ marginTop: '1rem', borderColor: '#555' }}>
+          <h3 style={{ color: '#888' }}>Dice Modifier Reminders</h3>
+          <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
+            <li><strong style={{ color: '#e94560' }}>Running</strong> &mdash; &minus;1D to all actions this round (use Extra Dice: &minus;1)</li>
+            <li><strong style={{ color: '#e94560' }}>Multi-Action</strong> &mdash; &minus;1D per extra action this round (use Extra Dice: &minus;1 per extra action)</li>
+            <li><strong style={{ color: '#06d6a0' }}>Preparing / Aiming</strong> &mdash; spend a full round to gain +1D on the next action (use Extra Dice: +1)</li>
+            <li><strong style={{ color: '#06d6a0' }}>Full Defense</strong> &mdash; sacrifice all actions to add Melee to Parry and Acrobatics to Dodge for the round</li>
+          </ul>
+          <h4 style={{ color: '#888', marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Scale Bonuses (Person vs. Vehicle)</h4>
+          <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
+            <li><strong style={{ color: '#06d6a0' }}>Smaller Size Attack Bonus</strong> &mdash; +1D per size category (use Extra Dice)</li>
+            <li><strong style={{ color: '#06d6a0' }}>Smaller Size Dodge Bonus</strong> &mdash; +3 per size category (add to Dodge, not dice)</li>
+            <li><strong style={{ color: '#e94560' }}>Larger Size Damage Bonus</strong> &mdash; +1D per size category to damage (use Extra Dice on damage roll)</li>
+            <li><strong style={{ color: '#e94560' }}>Larger Size Resist Bonus</strong> &mdash; +1D per size category to resist damage (use Extra Dice)</li>
+          </ul>
+          <div style={{ color: '#666', fontSize: '0.78rem', marginTop: '0.35rem', paddingLeft: '1.2rem' }}>
+            Scale tiers: Person (+0) &rarr; Speeder (+1) &rarr; Tank (+2) &rarr; Light Freighter (+3) &rarr; Heavy Freighter (+4) &rarr; Capital Ship (+5)
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -466,40 +588,117 @@ function WeaponSection({ weapons, editing, onChange, character, onDamageRoll }) 
   );
 }
 
-function ListSection({ title, items, editing, onChange, fields }) {
+function ListSection({ title, items, editing, onChange, fields, referenceData, referenceGrouped, onArmorUpdate, currentArmor }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [expandedEffect, setExpandedEffect] = useState({});
+  const [armorPrompt, setArmorPrompt] = useState(null);
+
+  const isGrouped = referenceGrouped && referenceData && !Array.isArray(referenceData);
+  const flatRef = isGrouped ? Object.values(referenceData).flat() : referenceData;
+
   const addItem = () => {
     const blank = {};
     fields.forEach(f => blank[f] = '');
     onChange([...items, blank]);
   };
+  const addFromReference = (ref) => {
+    const entry = { name: ref.name, description: ref.description || ref.effect || '' };
+    if (fields.includes('rank') && ref.rank) entry.rank = '1';
+    else if (fields.includes('rank')) entry.rank = '';
+    onChange([...items, entry]);
+    setShowPicker(false);
+    if (ref.armorValue != null && onArmorUpdate && ref.armorValue !== currentArmor) {
+      setArmorPrompt({ name: ref.name, value: ref.armorValue });
+    }
+  };
   const removeItem = (i) => onChange(items.filter((_, idx) => idx !== i));
   const updateItem = (i, field, value) => onChange(items.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+
+  const getRefEffect = (name) => {
+    if (!flatRef) return null;
+    const ref = flatRef.find(r => r.name.toLowerCase() === name?.toLowerCase());
+    return ref?.effect || null;
+  };
 
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <h3>{title}</h3>
-        {editing && <button onClick={addItem} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Add</button>}
+        {editing && (
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            {referenceData && <button onClick={() => setShowPicker(!showPicker)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', backgroundColor: showPicker ? '#e94560' : '#06d6a0', color: '#1a1a2e', fontWeight: 600 }}>{showPicker ? 'Cancel' : '+ Book'}</button>}
+            <button onClick={addItem} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Custom</button>
+          </div>
+        )}
       </div>
-      {items.length === 0 && <p style={{ color: '#888' }}>None.</p>}
-      {items.map((item, i) => (
-        <div key={i} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: '#0f3460', borderRadius: '4px', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {editing ? (
-            <>
-              {fields.map(f => (
-                <input key={f} value={item[f] || ''} onChange={e => updateItem(i, f, e.target.value)} placeholder={f.charAt(0).toUpperCase() + f.slice(1)} style={{ flex: f === 'description' ? 2 : 1, minWidth: '60px', padding: '0.3rem', backgroundColor: '#16213e', color: '#eee', border: '1px solid #444', borderRadius: '3px' }} />
-              ))}
-              <button onClick={() => removeItem(i)} style={{ background: '#ef476f', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button>
-            </>
+      {editing && showPicker && referenceData && (
+        <div style={{ marginBottom: '0.75rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #444', borderRadius: '4px', background: '#16213e' }}>
+          {isGrouped ? (
+            Object.entries(referenceData).map(([category, refs]) => (
+              <div key={category}>
+                <div style={{ padding: '0.3rem 0.6rem', background: '#1a1a2e', color: '#ffd60a', fontSize: '0.8rem', fontWeight: 700, position: 'sticky', top: 0 }}>{category}</div>
+                {refs.map((ref, i) => (
+                  <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.35rem 0.6rem 0.35rem 1rem', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '0.85rem' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#0f3460'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                    <strong style={{ color: '#06d6a0' }}>{ref.name}</strong>
+                    <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>{ref.description}</span>
+                  </div>
+                ))}
+              </div>
+            ))
           ) : (
-            <span>
-              <strong>{item.name}</strong>
-              {item.rank && <span style={{ color: '#e94560' }}> (Rank {item.rank})</span>}
-              {item.description && <span style={{ color: '#aaa' }}> — {item.description}</span>}
-            </span>
+            flatRef.map((ref, i) => (
+              <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.4rem 0.6rem', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '0.85rem' }}
+                onMouseOver={e => e.currentTarget.style.background = '#0f3460'}
+                onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                <strong style={{ color: '#06d6a0' }}>{ref.name}</strong>
+                {ref.cost != null && <span style={{ color: '#ffd60a', marginLeft: '0.5rem' }}>({ref.cost} pts{ref.rank ? '/rank' : ''})</span>}
+                <div style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '0.15rem' }}>{ref.effect}</div>
+              </div>
+            ))
           )}
         </div>
-      ))}
+      )}
+      {armorPrompt && (
+        <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: '#1a2e1a', border: '1px solid #06d6a0', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.85rem', color: '#ccc' }}>Set armor to <strong style={{ color: '#06d6a0' }}>{armorPrompt.value}D</strong> for {armorPrompt.name}?</span>
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <button onClick={() => { onArmorUpdate(armorPrompt.value); setArmorPrompt(null); }} style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', fontWeight: 600, border: 'none', borderRadius: '3px' }}>Yes</button>
+            <button onClick={() => setArmorPrompt(null)} style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#555', color: '#eee', border: 'none', borderRadius: '3px' }}>No</button>
+          </div>
+        </div>
+      )}
+      {items.length === 0 && !showPicker && !armorPrompt && <p style={{ color: '#888' }}>None.</p>}
+      {items.map((item, i) => {
+        const refEffect = getRefEffect(item.name);
+        const isExpanded = expandedEffect[i];
+        return (
+          <div key={i} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: '#0f3460', borderRadius: '4px' }}>
+            {editing ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                {fields.map(f => (
+                  <input key={f} value={item[f] || ''} onChange={e => updateItem(i, f, e.target.value)} placeholder={f.charAt(0).toUpperCase() + f.slice(1)} style={{ flex: f === 'description' ? 2 : f === 'rank' ? 0 : 1, width: f === 'rank' ? '50px' : undefined, minWidth: f === 'rank' ? '50px' : '60px', padding: '0.3rem', backgroundColor: '#16213e', color: '#eee', border: '1px solid #444', borderRadius: '3px' }} />
+                ))}
+                <button onClick={() => removeItem(i)} style={{ background: '#ef476f', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button>
+              </div>
+            ) : (
+              <div>
+                <span style={{ cursor: refEffect ? 'pointer' : 'default' }} onClick={() => refEffect && setExpandedEffect(prev => ({ ...prev, [i]: !prev[i] }))}>
+                  <strong>{item.name}</strong>
+                  {item.rank && <span style={{ color: '#e94560' }}> (Rank {item.rank})</span>}
+                  {item.description && !refEffect && <span style={{ color: '#aaa' }}> — {item.description}</span>}
+                  {refEffect && <span style={{ color: '#555', marginLeft: '0.4rem', fontSize: '0.8rem' }}>{isExpanded ? '▾' : '▸'}</span>}
+                </span>
+                {refEffect && isExpanded && (
+                  <div style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '0.3rem', paddingLeft: '0.5rem', borderLeft: '2px solid #e94560' }}>{refEffect}</div>
+                )}
+                {!refEffect && !item.description && <span style={{ color: '#666' }}> (custom)</span>}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -602,7 +801,7 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
             <div className="extra-dice-row">
               <label>Extra Dice:</label>
               <div className="extra-dice-controls">
-                <button type="button" onClick={() => setExtraDice(Math.max(0, extraDice - 1))} className="dice-adjust-btn">-</button>
+                <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
               </div>

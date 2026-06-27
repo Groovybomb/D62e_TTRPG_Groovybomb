@@ -447,6 +447,52 @@ The dice rolling system follows D6 Second Edition rules:
 
 ---
 
+## 📖 Game Rules Gap Analysis (Rulebook Review — Space Campaign)
+
+Items identified from D6 Second Edition rulebook that are missing from the app. Magic and superhero modules excluded (not used in this campaign).
+
+### Combat Mechanics
+- [x] **Wound State Tracking** — Wound level (Healthy/Wounded/Incapacitated/Mortally Wounded/Dead) + condition (Clear/Staggered/Stunned). Wounded = −1D, Staggered = −1D, stackable to −2D. Penalty auto-applied in RollModal and GMRollModal with clear notice. Incapacitated+ shows "cannot act" warning. Persisted server-side, interactive outside edit mode.
+- [x] **Brawn Resistance Roll** — Added "Resistance" skill under Brawn. Pool = Brawn + Armor dice. Armor displayed as die code (e.g., "3D"). Wound penalty exempt per rulebook. Works in both player RollModal and GM-initiated rolls.
+- [x] **Vehicle/Starship Wound Tracking** — Vehicles have 5-state wound track (Undamaged/Light/Heavy/Severe/Destroyed) with clickable buttons like character wounds. Light=−1D, Heavy=−2D, Severe=−3D + "cannot operate" warning. Penalty applied to all vehicle action rolls (Movement, Navigate, Attack, Evade, Resist Damage) with clear notice in roll modal. Repair rolls exempt from penalty. Persisted server-side.
+- [x] **Repair Rolls for Vehicles & Ships** — Repair action added to Vehicle Actions using crew member's Mechanical + Use/Repair skill. Wild die roll via VehicleRollModal. Crew member stats display now shows Repair dice.
+- [ ] **Attack Roll vs. Defense Structured Flow** — Attacker rolls weapon skill vs. static defense (Dodge = Perception×5, Parry = Agility×5); if attacker beats defense, damage is rolled. Currently no structured attack-then-damage flow in the UI.
+- [x] **In-Round Condition Flags** — Running applies −1D to all actions. Handled via Extra Dice counter (supports negative values) + reminder text at bottom of character sheet. No dedicated tracking UI needed.
+- [x] **Preparing/Aiming Bonus** — Spending a full round aiming grants +1D to next action. Handled via Extra Dice counter (+1) + reminder text at bottom of character sheet.
+- [x] **Multi-Action Penalty** — −1D per extra action in a round. Handled via Extra Dice counter (−1 per extra action) + reminder text at bottom of character sheet.
+- [x] **Initiative Tracker** — GM tab has full initiative tracker: add characters/NPCs with Perception roll values, auto-sorts highest first, active turn marker (green highlight) cycles through list with Next/Prev buttons and wraps around, GM can reorder (move up/down), edit names/rolls inline, and remove entries. "Roll Initiative" button broadcasts a straight Perception roll to all players via the GM Roll system (DC 0); player responses automatically populate the tracker with character names and totals, sorted by roll. Persisted in localStorage. Replaced the Recent Rolls panel (available in Roll Log tab).
+- [x] **Prone Status & Defense Adjustment** — Prone added as a condition in the wound tracker. When active, Dodge becomes base + 10 (harder to hit at range), Parry capped at 10 (easier to hit in melee). Values update in real-time on the character sheet header with orange styling and explanatory notes.
+- [x] **Full Defense Stance** — Character sheet shows Full Defense values below Dodge/Parry when the character has Acrobatics or Melee skills. Displays "Full Defense: Dodge X (+Acrobatics YD) · Parry X (+Melee YD)". Also added as a reminder in the Dice Modifier Reminders section.
+
+### Character Advancement
+- [ ] **Skill Specialization System** — Narrow specialization within a skill grants +1D when applicable. Max specializations = skill rating. No specialization tracking on character sheet.
+- [x] **Perks/Flaws/Talents/Cybernetics Reference System** — All four sections on character sheet now support selecting entries from the D6 2e rulebook via a scrollable picker ("+ Book" button) with names, costs, and mechanical effects pre-filled. Players can also add custom entries ("+ Custom" button). In view mode, clicking an entry with a known rulebook match expands to show its mechanical effect. Cybernetics section added using superhero powers from the rulebook, re-flavored as cybernetic implants/cyborg attachments. Data stored in `frontend/src/data/characterOptions.js`.
+- [x] **Item Reference Lists** — Items section on character sheet now has a "+ Book" button with grouped category picker (Armor, Blaster Weapons, Energy Weapons, Laser Weapons, Melee Weapons, Gear & Equipment). Each item includes name and stats/effects from the rulebook. `ListSection` component updated to handle both flat arrays and grouped objects via `referenceGrouped` prop. Category headers are sticky within the scrollable picker.
+- [x] **Roll Hints / Dice Modifier Reminders** — When opening a roll modal (RollModal or GMRollModal), the system checks the character's talents, perks, flaws, and cybernetics against the reference data for matching hints. Hints are matched by attribute key or skill key (with `'any'` wildcard for universal effects like Good Luck). Positive hints (talents/perks/cybernetics) show in green; warning hints (flaws) show in red. Each hint displays the source type, entry name (with rank if applicable), and a reminder note (e.g., "Talent: Youthful Appearance — +1D/rank to social rolls"). Implemented via `getRollHints()` in `characterOptions.js`.
+
+### Starship / Space Operations
+- [ ] **Crew Requirement & Undercrew Penalty** — Each ship has a minimum crew count. Every missing crew member applies −1D to all ship-related rolls. No crew requirement or penalty system.
+- [ ] **Interstellar Jump Two-Roll Sequence** — Navigation roll (Difficulty 15) to plot the course, then Computers roll (Difficulty 15) to execute; Wild Die 1 on the Computers roll triggers a Mishap. Currently jump navigation uses a single generic roll.
+- [x] **Starship Scale vs. Personal Scale** — Scale bonuses added to the Dice Modifier Reminders section on the character sheet: Smaller Size Attack Bonus (+1D), Smaller Size Dodge Bonus (+3), Larger Size Damage Bonus (+1D), Larger Size Resist Bonus (+1D). Scale tiers listed: Person → Speeder → Tank → Light Freighter → Heavy Freighter → Capital Ship. Players use Extra Dice to apply.
+
+### Equipment & Items
+- [ ] **Ammo Tracking** — Ammo field is a free-text box; rules call for decrementing a numeric counter per shot. No numeric decrement mechanic.
+- [x] **Science Fiction Equipment Reference** — Item reference lists added to character sheet with grouped categories: Armor (6), Blaster Weapons (3), Energy Weapons (2), Laser Weapons (2), Melee Weapons (3), Gear & Equipment (12). Selectable via "+ Book" picker with pre-filled names and stats.
+- [x] **Armor as Die Code** — Armor now displays as "3D" on character sheet header. Used as dice in the Resistance skill pool (Brawn + Armor). Existing numeric field works as die code.
+
+### GM Tools
+- [ ] **NPC/Foe Management** — GM needs a way to create/track NPCs with stats, wound states, and roll against them. No NPC sheet or management system.
+- [ ] **Opposed Rolls (live)** — Player vs. player or player vs. NPC opposed rolls where both sides roll simultaneously and results are compared. Currently no live opposed roll flow.
+- [x] **Environmental Hazard Tracking** — Environmental Hazards reference table added to GM tab with 7 hazard types (Extreme Heat, Cold, Drowning, Toxic Gas, Vacuum, Fire, Radiation), each with difficulty, interval, and damage/effect details. Color-coded hazard names.
+
+### Advanced Modules (Space Campaign Applicable)
+- [ ] **Psionics** — Three standalone skills: Kinesis, Perceive, Reform; each has a list of powers requiring a roll to activate. Not implemented.
+- [ ] **Cyberpunk/Cyberware** — Cyberware declared as Talents, limited by Knowledge die code, can be hacked. No cyberware distinction or Knowledge-based limit.
+- [x] **Hacking** — Hacking Reference table added to GM tab with Computers vs. Firewall rules, 6-tier result table (Fail by 10+ through Beat DC by 10+), color-coded outcomes, and Firewall difficulty examples (Personal 10, Corporate 20, Military 30, AI Core 40).
+- [x] **Chase Mechanics** — Handled via GM Roll requests (opposed rolls each round) + GM Notes textarea for tracking distance/progress. No dedicated chase UI needed.
+
+---
+
 ## 🐛 Known Issues / Limitations
 
 - **Passwords plain text** — stored unhashed in db.json; use bcrypt for production
@@ -493,7 +539,10 @@ D62e/
 │   │   │   └── VehicleRollModal.jsx
 │   │   ├── data/
 │   │   │   ├── attributes.js
-│   │   │   └── outcomes.js
+│   │   │   ├── characterOptions.js
+│   │   │   ├── outcomes.js
+│   │   │   ├── vehicleWounds.js
+│   │   │   └── wounds.js
 │   │   ├── utils/
 │   │   │   └── dice.js
 │   │   ├── config.js
@@ -653,6 +702,6 @@ Current db.json structure:
 
 ---
 
-**Last Updated:** 2026-06-26 (v1.4.0 release)
-**Last Work Done:** Advanced skills + vehicle Attack action + size advantage bonuses + clear log button
-**Status:** v1.4.0 — advanced skills, vehicle attack/size bonuses, Jupiter Drive navigation, clear log, browser-tested, documented
+**Last Updated:** 2026-06-27
+**Last Work Done:** Armor auto-update, prone condition, full defense, scale bonuses, hacking table, environmental hazards
+**Status:** v1.4.0 + wound tracking + GM Notes + Resistance + vehicle wounds + dice modifier reminders + initiative tracker + perks/flaws/talents/cybernetics + item references + roll hints + prone/full defense + scale bonuses + hacking + environmental hazards

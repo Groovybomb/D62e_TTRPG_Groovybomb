@@ -82,9 +82,19 @@ All CSS lives in `frontend/src/App.css` — single file, dark theme. No CSS modu
 - Backend uses ES modules (`"type": "module"` in package.json)
 - Auth is plain user ID in localStorage — no JWT, no password hashing
 
+## Token Usage Guidelines
+
+When implementing new features, prefer lightweight approaches that reduce Claude Code token consumption without impacting functionality:
+
+- **UI hints over complex state machines** — For per-round modifiers (running penalty, multi-action penalty, aiming bonus), use reminder text and the existing Extra Dice counter (which supports negative values) instead of building dedicated tracking UIs with backend persistence. Players adjust the counter as needed.
+- **Reuse existing controls** — Before adding a new input/button/modal, check if an existing one can serve the purpose (e.g., Extra Dice covers any temporary dice modifier).
+- **Skip backend work when client-only suffices** — Ephemeral per-round state doesn't need API endpoints or database fields. Only persist state that must survive a page refresh or be visible to other users.
+- **Batch related changes** — Group small related items into a single implementation pass rather than separate feature branches.
+
 ## Key References
 
 - [ORCHESTRATION.md](ORCHESTRATION.md) — D6 2e game rules as implemented
 - [WORK_LOG.md](WORK_LOG.md) — Development history, known issues, next steps
 - [QUICKSTART.md](QUICKSTART.md) — Setup instructions
 - [backend/README.md](backend/README.md) — API endpoint reference
+- [D6_System_2e_Rulebook.txt](D6_System_2e_Rulebook.txt) — Full D6 Second Edition rulebook extracted as plain text (5340 lines). Use this as the authoritative source when implementing or verifying game mechanics. Magic and superhero modules are present but not used in this campaign.

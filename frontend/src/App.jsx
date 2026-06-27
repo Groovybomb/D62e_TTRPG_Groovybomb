@@ -20,6 +20,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('login');
   const [myCharacters, setMyCharacters] = useState([]);
+  const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const [activeGMRoll, setActiveGMRoll] = useState(null);
   const [maxDice, setMaxDice] = useState(null);
   const [characterRefreshKey, setCharacterRefreshKey] = useState(0);
@@ -69,8 +70,10 @@ function App() {
     return () => clearInterval(interval);
   }, [currentUser, activeGMRoll]);
 
+  const selectedCharacter = myCharacters.find(c => c.id === selectedCharacterId) || myCharacters[0] || null;
+
   const handleGMRollHeroPointChange = async (newPoints) => {
-    const char = myCharacters[0];
+    const char = selectedCharacter;
     if (!char) return;
     try {
       await axios.patch(`${API_URL}/characters/${char.id}`, { heroPoints: newPoints });
@@ -124,7 +127,7 @@ function App() {
           <LoginPage onLogin={handleLogin} />
         )}
         {currentPage === 'characters' && currentUser && (
-          <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} />
+          <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} selectedCharacterId={selectedCharacterId} onSelectCharacter={setSelectedCharacterId} />
         )}
         {currentPage === 'vehicles' && currentUser && (
           <VehiclePage userId={currentUser.id} maxDice={maxDice} />
@@ -137,10 +140,10 @@ function App() {
         )}
       </main>
 
-      {activeGMRoll && myCharacters.length > 0 && (
+      {activeGMRoll && selectedCharacter && (
         <GMRollModal
           request={activeGMRoll}
-          character={myCharacters[0]}
+          character={selectedCharacter}
           onClose={handleGMRollClose}
           onHeroPointChange={handleGMRollHeroPointChange}
           maxDice={maxDice}

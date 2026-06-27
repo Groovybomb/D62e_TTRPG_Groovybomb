@@ -24,6 +24,7 @@ function defaultVehicle(userId, name) {
       operations: '',
       engineer: '',
     },
+    woundLevel: 'undamaged',
     notes: '',
     createdAt: new Date().toISOString(),
   };
@@ -66,7 +67,7 @@ router.patch('/:id', async (req, res) => {
   if (index === -1) return res.status(404).json({ error: 'Vehicle not found' });
 
   const vehicle = db.data.vehicles[index];
-  const allowed = ['name', 'stats', 'weapons', 'crew', 'notes'];
+  const allowed = ['name', 'stats', 'weapons', 'crew', 'woundLevel', 'notes'];
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) {

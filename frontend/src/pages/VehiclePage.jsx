@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import VehicleRollModal from '../components/VehicleRollModal';
+import { VEHICLE_WOUND_LEVELS, getVehicleWoundPenalty } from '../data/vehicleWounds';
 
 const STAT_DEFS = [
   { key: 'navicomp', label: 'Navicomp' },
@@ -128,6 +129,26 @@ export default function VehiclePage({ userId, maxDice }) {
     return (perc?.dice || 0) + (perc?.skills?.gunnery || 0);
   };
 
+  const getRepairDice = () => {
+    if (!selectedChar) return 0;
+    const mech = selectedChar.attributes?.mechanical;
+    return (mech?.dice || 0) + (mech?.skills?.useRepairMech || 0);
+  };
+
+  const handleWoundChange = async (value) => {
+    if (!vehicle) return;
+    try {
+      await axios.patch(`${API_URL}/vehicles/${vehicle.id}`, { woundLevel: value });
+      setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, woundLevel: value } : v));
+      if (editing) setEditData(prev => prev ? { ...prev, woundLevel: value } : prev);
+    } catch { /* ignore */ }
+  };
+
+  const vwp = vehicle ? getVehicleWoundPenalty(vehicle) : { penalty: 0, label: 'Undamaged', canOperate: true };
+  const woundRollProps = vwp.penalty > 0 || !vwp.canOperate
+    ? { woundPenalty: vwp.penalty, woundLabel: `${vwp.label} Damage`, canOperate: vwp.canOperate }
+    : {};
+
   const openMovementRoll = () => {
     if (!vehicle || editing) return;
     const engines = vehicle.stats.engines || 0;
@@ -136,6 +157,7 @@ export default function VehiclePage({ userId, maxDice }) {
       vehicleName: vehicle.name,
       breakdownParts: [{ label: 'Engines', dice: engines }],
       baseDice: engines,
+      ...woundRollProps,
     });
   };
 
@@ -151,6 +173,7 @@ export default function VehiclePage({ userId, maxDice }) {
         { label: 'Navicomp', dice: navicomp },
       ],
       baseDice: jdDice + navicomp,
+      ...woundRollProps,
     });
   };
 
@@ -163,6 +186,7 @@ export default function VehiclePage({ userId, maxDice }) {
       breakdownParts: [{ label: 'Gunnery', dice: gunneryDice }],
       baseDice: gunneryDice,
       sizeBonus: { label: 'Smaller Size Attack Bonus', type: 'dice', rate: 1 },
+      ...woundRollProps,
     });
   };
 
@@ -182,6 +206,7 @@ export default function VehiclePage({ userId, maxDice }) {
       flatBonus: defense,
       flatBonusLabel: 'Defense',
       sizeBonus: { label: 'Smaller Size Dodge Bonus', type: 'flat', rate: 3 },
+      ...woundRollProps,
     });
   };
 
@@ -198,6 +223,18 @@ export default function VehiclePage({ userId, maxDice }) {
       ],
       baseDice: hull + shield,
       sizeBonus: { label: 'Larger Size Resist Bonus', type: 'dice', rate: 1 },
+      ...woundRollProps,
+    });
+  };
+
+  const openRepairRoll = () => {
+    if (!vehicle || !selectedChar || editing) return;
+    const repairDice = getRepairDice();
+    setVehicleRoll({
+      label: 'Repair',
+      vehicleName: vehicle.name,
+      breakdownParts: [{ label: 'Mech. Use/Repair', dice: repairDice }],
+      baseDice: repairDice,
     });
   };
 
@@ -257,7 +294,7 @@ export default function VehiclePage({ userId, maxDice }) {
           </select>
           {selectedChar && (
             <span style={{ color: '#888', fontSize: '0.85rem' }}>
-              Gunnery {getGunneryDice()}D | Jupiter Drive {getJupiterDriveDice()}D | Piloting {getPilotingSkillOnly()}D | HP: {selectedChar.heroPoints || 0}
+              Gunnery {getGunneryDice()}D | Jupiter Drive {getJupiterDriveDice()}D | Piloting {getPilotingSkillOnly()}D | Repair {getRepairDice()}D | HP: {selectedChar.heroPoints || 0}
             </span>
           )}
         </div>
@@ -302,6 +339,35 @@ export default function VehiclePage({ userId, maxDice }) {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Vehicle Wound Tracker */}
+          <div className="wound-tracker">
+            <div className="wound-track-section">
+              <span className="wound-track-label">Damage State</span>
+              <div className="wound-track-buttons">
+                {VEHICLE_WOUND_LEVELS.map(wl => (
+                  <button
+                    key={wl.key}
+                    className={`wound-state-btn ${(vehicle.woundLevel || 'undamaged') === wl.key ? 'active' : ''}`}
+                    style={(vehicle.woundLevel || 'undamaged') === wl.key ? { color: wl.color, borderColor: wl.color, backgroundColor: wl.color + '20' } : {}}
+                    onClick={() => handleWoundChange(wl.key)}
+                  >
+                    {wl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {vwp.penalty > 0 && (
+              <div className="wound-penalty-summary">
+                Penalty: &minus;{vwp.penalty}D to all vehicle action rolls ({vwp.label} Damage)
+              </div>
+            )}
+            {!vwp.canOperate && (
+              <div className="wound-cant-act">
+                Vehicle cannot normally operate in this state
+              </div>
+            )}
           </div>
 
           {/* Vehicle Actions */}
@@ -351,6 +417,15 @@ export default function VehiclePage({ userId, maxDice }) {
                   detail={`Hull ${vehicle.stats.hull || 0}D + Shield ${vehicle.stats.shield || 0}D`}
                   onClick={openResistRoll}
                   disabled={!(vehicle.stats.hull || vehicle.stats.shield)}
+                />
+                <VehicleActionRow
+                  label="Repair"
+                  description="Mechanical Use/Repair skill"
+                  dice={`${getRepairDice()}D6`}
+                  detail={`Mech. Use/Repair ${getRepairDice()}D`}
+                  onClick={openRepairRoll}
+                  disabled={!selectedChar}
+                  disabledNote={!selectedChar ? 'Select a crew member' : null}
                 />
               </div>
             </div>
@@ -645,7 +720,7 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
             <div className="extra-dice-row">
               <label>Extra Dice:</label>
               <div className="extra-dice-controls">
-                <button type="button" onClick={() => setExtraDice(Math.max(0, extraDice - 1))} className="dice-adjust-btn">-</button>
+                <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
               </div>

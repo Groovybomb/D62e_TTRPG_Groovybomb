@@ -4,7 +4,7 @@ import { API_URL } from '../config';
 import { rollDice, calculateTotal } from '../utils/dice';
 
 export default function VehicleRollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice }) {
-  const { label, vehicleName, breakdownParts, baseDice, flatBonus = 0, flatBonusLabel, sizeBonus } = rollInfo;
+  const { label, vehicleName, breakdownParts, baseDice, flatBonus = 0, flatBonusLabel, sizeBonus, woundPenalty = 0, woundLabel, canOperate = true } = rollInfo;
 
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
@@ -16,13 +16,14 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
   const [rollFlag, setRollFlag] = useState(null);
   const [savedRollId, setSavedRollId] = useState(null);
 
+  const penalizedBase = Math.max(1, baseDice - woundPenalty);
   const sizeBonusDice = sizeBonus?.type === 'dice' ? sizeAdv * (sizeBonus?.rate || 1) : 0;
   const sizeBonusFlat = sizeBonus?.type === 'flat' ? sizeAdv * (sizeBonus?.rate || 3) : 0;
   const totalFlatBonus = flatBonus + sizeBonusFlat;
-  const rawDice = doubled ? (baseDice + extraDice + sizeBonusDice) * 2 : baseDice + extraDice + sizeBonusDice;
+  const rawDice = doubled ? (penalizedBase + extraDice + sizeBonusDice) * 2 : penalizedBase + extraDice + sizeBonusDice;
   const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
   const isCapped = maxDice && rawDice > maxDice;
-  const doubledPreview = maxDice ? Math.min((baseDice + extraDice + sizeBonusDice) * 2, maxDice) : (baseDice + extraDice + sizeBonusDice) * 2;
+  const doubledPreview = maxDice ? Math.min((penalizedBase + extraDice + sizeBonusDice) * 2, maxDice) : (penalizedBase + extraDice + sizeBonusDice) * 2;
   const heroPoints = character?.heroPoints || 0;
   const canDouble = !doubled && heroPoints > 0;
 
@@ -121,10 +122,23 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
               </span>
             </div>
 
+            {!canOperate && (
+              <div className="wound-cant-act-notice">
+                Vehicle cannot normally operate in this state — check with your GM before rolling
+              </div>
+            )}
+
+            {woundPenalty > 0 && (
+              <div className="wound-penalty-notice">
+                <span className="wound-penalty-icon">!</span>
+                &minus;{woundPenalty}D damage penalty ({woundLabel}) — base reduced to {penalizedBase}D
+              </div>
+            )}
+
             <div className="extra-dice-row">
               <label>Extra Dice:</label>
               <div className="extra-dice-controls">
-                <button type="button" onClick={() => setExtraDice(Math.max(0, extraDice - 1))} className="dice-adjust-btn">-</button>
+                <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
               </div>

@@ -21,10 +21,13 @@ function defaultCharacter(userId, name) {
       technical: { dice: 2, skills: { computers: 0, demolition: 0, upgrade: 0, useRepairTech: 0 } },
     },
     advancedSkills: { jupiterDrive: 0, surgery: 0, perform: 0, cryptography: 0 },
+    woundLevel: 'healthy',
+    stunState: 'none',
     weapons: [],
     talents: [],
     flaws: [],
     perks: [],
+    cybernetics: [],
     items: [],
     notes: '',
     createdAt: new Date().toISOString(),
@@ -75,7 +78,7 @@ router.patch('/:characterId', async (req, res) => {
   }
 
   const character = db.data.characters[index];
-  const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'weapons', 'talents', 'flaws', 'perks', 'items', 'notes'];
+  const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'woundLevel', 'stunState', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items', 'notes'];
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
