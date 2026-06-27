@@ -812,8 +812,9 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ borderColor: '#e94560' }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ borderColor: '#e94560' }} onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>&times;</button>
         <div style={{ padding: '0.75rem', borderBottom: '1px solid #e94560', marginBottom: '1rem', color: '#e94560', fontWeight: 700 }}>
           DAMAGE ROLL — {damageInfo.weaponName}
         </div>
