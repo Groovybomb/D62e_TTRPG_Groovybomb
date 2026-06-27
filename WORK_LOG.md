@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.4.0 — Advanced skills, vehicle attack action, size advantage bonuses.
+**Version:** 1.5.0 — NPC/Foe Management, initiative API, duplicate characters.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -321,6 +321,26 @@ Before committing, verify:
   - [x] Only visible to GM users (non-GM players see Refresh button only)
 - [x] **Browser tested** — Advanced skills, vehicle Attack, size bonuses (dice and flat types), Clear Log all verified working
 
+### v1.5.0: NPC/Foe Management (2026-06-27)
+- [x] **NPC Character Sheets** — GM's "Characters" tab becomes "NPCs" when logged in as GM; creates characters with `isNPC: true` flag
+  - [x] Backend: `POST /api/characters` accepts `isNPC`, `GET` supports `?isNPC=true/false` query filter, `PATCH` allows `isNPC` field
+  - [x] Same full character sheet structure (attributes, skills, weapons, wounds, etc.)
+  - [x] GM roll prompts (Call for Roll, Initiative) do NOT prompt NPC characters
+- [x] **NPC Vehicles** — GM's "Vehicles" tab becomes "NPC Vehicles"; vehicles created with `isNPC: true`
+  - [x] Backend: same `isNPC` support on vehicles routes (POST, GET filter, PATCH)
+- [x] **Duplicate Button** — yellow "Duplicate" button on character selector bar; clones all character data (attributes, skills, weapons, talents, etc.) via POST + PATCH pattern
+- [x] **Initiative Button** — cyan "Initiative" button on character sheet; rolls Perception dice (wild die rules) and POSTs result to `/api/initiative` endpoint
+  - [x] New `backend/src/routes/initiative.js` — full CRUD: POST (add entry), GET (sorted by total desc), DELETE all, DELETE by id
+  - [x] Registered in `backend/src/server.js`
+  - [x] GM tab polls `/api/initiative` every 5s, merges API entries into localStorage initiative tracker
+  - [x] Initiative entries show `[NPC]` tag in orange when `entry.isNPC` is true
+- [x] **[NPC] Tags in Roll Log** — skill rolls, damage rolls, and GM rolls display orange `[NPC]` badge when the rolling character has `isNPC: true`
+  - [x] `characterName` and `isNPC` fields added to roll POST endpoints
+  - [x] GamePage resolves NPC status from roll data or character lookup
+- [x] **GM Tab Filtering** — character overview on GM tab filters to `isNPC=false` (only player characters); response count excludes NPCs
+- [x] **Dynamic Tab Labels** — `getTabs(isGM)` function replaces static TABS constant; GM sees "NPCs" / "NPC Vehicles" instead of "Characters" / "Vehicles"
+- [x] **Browser tested** — NPC creation, duplicate, initiative posting, GM tab filtering, [NPC] tags in roll log, tab labels all verified
+
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
 - [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
@@ -481,7 +501,7 @@ Items identified from D6 Second Edition rulebook that are missing from the app. 
 - [x] **Armor as Die Code** — Armor now displays as "3D" on character sheet header. Used as dice in the Resistance skill pool (Brawn + Armor). Existing numeric field works as die code.
 
 ### GM Tools
-- [ ] **NPC/Foe Management** — GM needs a way to create/track NPCs with stats, wound states, and roll against them. No NPC sheet or management system.
+- [x] **NPC/Foe Management** — GM's Characters/Vehicles tabs become NPC tabs with `isNPC` flag. Full character sheet for NPCs with duplicate button, initiative button (posts to API tracker), [NPC] tags in roll log. GM roll prompts exclude NPCs. GM tab overview filtered to player characters only.
 - [ ] **Opposed Rolls (live)** — Player vs. player or player vs. NPC opposed rolls where both sides roll simultaneously and results are compared. Currently no live opposed roll flow.
 - [x] **Environmental Hazard Tracking** — Environmental Hazards reference table added to GM tab with 7 hazard types (Extreme Heat, Cold, Drowning, Toxic Gas, Vacuum, Fire, Radiation), each with difficulty, interval, and damage/effect details. Color-coded hazard names.
 
@@ -521,7 +541,8 @@ D62e/
 │   │       ├── rolls.js
 │   │       ├── vehicles.js
 │   │       ├── messages.js
-│   │       └── gmRolls.js
+│   │       ├── gmRolls.js
+│   │       └── initiative.js
 │   ├── data/db.json               (auto-created)
 │   ├── package.json
 │   └── README.md
@@ -573,8 +594,8 @@ D62e/
 - `PATCH /api/users/:userId` — Update displayName (or other fields)
 
 ### Characters
-- `POST /api/characters` — Create character (userId, name)
-- `GET /api/characters?userId=X` — Get characters (optional server-side userId filter)
+- `POST /api/characters` — Create character (userId, name, isNPC)
+- `GET /api/characters?userId=X&isNPC=true/false` — Get characters (optional server-side userId and isNPC filters)
 - `GET /api/characters/:characterId` — Get character sheet
 - `PATCH /api/characters/:characterId` — Update (attributes, skills, heroPoints, armor, weapons, talents, flaws, perks, items, notes)
 - `DELETE /api/characters/:characterId` — Delete character
@@ -603,11 +624,17 @@ D62e/
 - `GET /api/gm-rolls` — Returns last 50 GM roll requests for history
 
 ### Vehicles
-- `POST /api/vehicles` — Create vehicle (userId, name)
-- `GET /api/vehicles?userId=X` — Get vehicles (optional server-side userId filter)
+- `POST /api/vehicles` — Create vehicle (userId, name, isNPC)
+- `GET /api/vehicles?userId=X&isNPC=true/false` — Get vehicles (optional server-side userId and isNPC filters)
 - `GET /api/vehicles/:id` — Get vehicle details
-- `PATCH /api/vehicles/:id` — Update (stats, weapons, crew, notes)
+- `PATCH /api/vehicles/:id` — Update (stats, weapons, crew, notes, isNPC)
 - `DELETE /api/vehicles/:id` — Delete vehicle
+
+### Initiative
+- `POST /api/initiative` — Add initiative entry (characterId, characterName, total, diceResults, isNPC, isVehicle)
+- `GET /api/initiative` — Get all entries sorted by total descending
+- `DELETE /api/initiative` — Clear all entries
+- `DELETE /api/initiative/:id` — Remove single entry
 
 ---
 
@@ -620,13 +647,13 @@ Current db.json structure:
     { "id", "username", "password", "displayName", "createdAt" }
   ],
   "characters": [
-    { "id", "userId", "name", "attributes", "heroPoints", "armor", "weapons", "talents", "flaws", "perks", "items", "notes", "createdAt", "updatedAt" }
+    { "id", "userId", "name", "isNPC", "attributes", "heroPoints", "armor", "weapons", "talents", "flaws", "perks", "items", "notes", "createdAt", "updatedAt" }
   ],
   "rolls": [
     { "id", "characterId", "rollType", "skill", "attribute", "diceCount", "diceRolled", "wildDie", "total", "complication", "doubled", "extraDice", "rollFlag", "linkedRollId", "dcValue", "outcome", "heroPointDelta", "createdAt" }
   ],
   "vehicles": [
-    { "id", "userId", "name", "stats", "weapons", "crew", "notes", "createdAt", "updatedAt" }
+    { "id", "userId", "name", "isNPC", "stats", "weapons", "crew", "notes", "createdAt", "updatedAt" }
   ],
   "messages": [
     { "id", "userId", "author", "text", "createdAt" }
@@ -636,6 +663,9 @@ Current db.json structure:
   ],
   "gmRollResponses": [
     { "id", "requestId", "characterId", "characterName", "userId", "diceCount", "diceRolled", "wildDie", "total", "complication", "outcome", "heroPointDelta", "rollFlag", "createdAt" }
+  ],
+  "initiative": [
+    { "id", "characterId", "characterName", "total", "diceResults", "isNPC", "isVehicle", "createdAt" }
   ],
   "gameSessions": []
 }
@@ -700,8 +730,18 @@ Current db.json structure:
 - [x] Exceptional Success button on skill/attribute roll modal — works, free doubling
 - [x] Exceptional Success button on GM roll modal — works, free doubling
 
+### NPC Management (Verified 2026-06-27)
+- [x] GM tabs show "NPCs" and "NPC Vehicles" labels
+- [x] NPC creation sets `isNPC: true` on character
+- [x] Duplicate button clones all character data to new NPC
+- [x] Initiative button rolls Perception dice and posts to `/api/initiative`
+- [x] GM tab character overview only shows player characters (isNPC=false)
+- [x] Initiative tracker receives API entries with [NPC] tag in orange
+- [x] Roll log shows [NPC] tags on skill, damage, and GM rolls for NPC characters
+- [x] GM Roll prompts do not appear for NPC characters (filtered in App.jsx)
+
 ---
 
 **Last Updated:** 2026-06-27
-**Last Work Done:** Armor auto-update, prone condition, full defense, scale bonuses, hacking table, environmental hazards
-**Status:** v1.4.0 + wound tracking + GM Notes + Resistance + vehicle wounds + dice modifier reminders + initiative tracker + perks/flaws/talents/cybernetics + item references + roll hints + prone/full defense + scale bonuses + hacking + environmental hazards
+**Last Work Done:** NPC/Foe Management — GM NPC tabs, duplicate, initiative API, [NPC] roll tags
+**Status:** v1.5.0 + all prior features + NPC management + initiative API

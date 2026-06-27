@@ -43,7 +43,10 @@ router.post('/', async (req, res) => {
   }
 
   const newCharacter = defaultCharacter(userId, name);
-  if (isNPC) newCharacter.isNPC = true;
+  if (isNPC) {
+    newCharacter.isNPC = true;
+    newCharacter.heroPoints = 0;
+  }
   db.data.characters.push(newCharacter);
   await db.write();
 

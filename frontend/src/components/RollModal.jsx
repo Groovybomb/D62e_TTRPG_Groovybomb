@@ -5,7 +5,7 @@ import { rollDice, calculateTotal } from '../utils/dice';
 import { getWoundPenalty } from '../data/wounds';
 import { getRollHints } from '../data/characterOptions';
 
-export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice, isNPC }) {
+export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice, isNPC, onRollComplete }) {
   const { label, attrKey, attrLabel, attrDice, skillKey, skillLabel, skillDice, baseDice } = rollInfo;
   const rollHints = getRollHints(character, attrKey, skillKey);
 
@@ -89,6 +89,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
       });
       setSavedRollId(res.data.id);
     } catch { /* roll still shows locally */ }
+    if (onRollComplete) onRollComplete(total, results.map(d => d.value));
   };
 
   const handleReroll = () => {

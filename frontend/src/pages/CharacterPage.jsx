@@ -152,22 +152,34 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
     } catch { setError('Failed to duplicate'); }
   };
 
-  const handleInitiativeRoll = async () => {
+  const handleInitiativeRoll = () => {
     if (!char) return;
-    const { rollDice, calculateTotal } = await import('../utils/dice');
-    const percDice = char.attributes?.perception?.dice || 2;
-    const results = rollDice(percDice);
-    const { total } = calculateTotal(results);
+    const percAttr = char.attributes?.perception;
+    const percDice = percAttr?.dice || 2;
+    setRollModal({
+      label: 'Initiative (Perception)',
+      attrKey: 'perception',
+      attrLabel: 'Perception',
+      attrDice: percDice,
+      skillKey: null,
+      skillLabel: null,
+      skillDice: 0,
+      baseDice: percDice,
+      isInitiative: true,
+    });
+  };
+
+  const handleInitiativeComplete = async (total, diceValues) => {
+    if (!char) return;
     try {
       await axios.post(`${API_URL}/initiative`, {
         characterId: char.id,
         characterName: char.name,
         total,
-        diceResults: results.map(d => d.value),
+        diceResults: diceValues,
         isNPC: char.isNPC || false,
       });
     } catch { /* ignore */ }
-    alert(`${char.name} rolled ${total} for initiative (${percDice}D Perception)`);
   };
 
   const handleWoundChange = async (field, value) => {
@@ -251,6 +263,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
           onHeroPointChange={handleHeroPointChange}
           maxDice={maxDice}
           isNPC={isNPC}
+          onRollComplete={rollModal.isInitiative ? handleInitiativeComplete : undefined}
         />
       )}
 
