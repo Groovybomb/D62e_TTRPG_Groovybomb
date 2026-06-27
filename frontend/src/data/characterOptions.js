@@ -90,6 +90,27 @@ export const CYBERNETICS = [
   { name: 'Water Breathing', cost: 2, rank: true, effect: '+1D per rank to swim rolls. Cannot drown.', hints: { attrs: ['brawn'], skills: ['athletics', 'stamina'], note: '+1D/rank to swim rolls' } },
 ];
 
+export const WEAPONS = {
+  'Blaster Weapons': [
+    { name: 'Blaster Pocketgun', damage: '3D', ammo: '6', shortRange: '4m', mediumRange: '8m', longRange: '12m' },
+    { name: 'Blaster Pistol', damage: '5D', ammo: '12', shortRange: '50m', mediumRange: '50m', longRange: '150m' },
+    { name: 'Blaster Rifle', damage: '7D', ammo: '30', shortRange: '150m', mediumRange: '150m', longRange: '300m' },
+  ],
+  'Energy Weapons': [
+    { name: 'Energy Pistol', damage: '5D', ammo: '20', shortRange: '25m', mediumRange: '25m', longRange: '40m' },
+    { name: 'Energy Rifle', damage: '5D', ammo: '50', shortRange: '150m', mediumRange: '150m', longRange: '300m' },
+  ],
+  'Laser Weapons': [
+    { name: 'Laser Pistol', damage: '4D', ammo: '15', shortRange: '90m', mediumRange: '90m', longRange: '180m' },
+    { name: 'Laser Rifle', damage: '5D', ammo: '20', shortRange: '125m', mediumRange: '125m', longRange: '250m' },
+  ],
+  'Melee Weapons': [
+    { name: 'Energized Longblade', damage: '+4D', ammo: '', shortRange: '', mediumRange: '', longRange: '2m reach, throwable' },
+    { name: 'Nanoknife', damage: '+2D', ammo: '', shortRange: '', mediumRange: '', longRange: 'Throwable' },
+    { name: 'Shockbaton', damage: '+2D', ammo: '', shortRange: '', mediumRange: '', longRange: 'Stun (staggers→stunned)' },
+  ],
+};
+
 export const ITEMS = {
   'Armor': [
     { name: 'Nanoleather', description: '+1D armor protection', armorValue: 1 },
@@ -98,24 +119,6 @@ export const ITEMS = {
     { name: 'Synthweave', description: '+3D armor protection', armorValue: 3 },
     { name: 'Plasarmor', description: '+3D armor protection', armorValue: 3 },
     { name: 'Heavy Synthweave', description: '+4D armor protection', armorValue: 4 },
-  ],
-  'Blaster Weapons': [
-    { name: 'Blaster Pocketgun', description: 'Dmg 3D, Ammo 6, Range 4/8/12m' },
-    { name: 'Blaster Pistol', description: 'Dmg 5D, Ammo 12, Range 50/50/150m' },
-    { name: 'Blaster Rifle', description: 'Dmg 7D, Ammo 30, Range 150/150/300m' },
-  ],
-  'Energy Weapons': [
-    { name: 'Energy Pistol', description: 'Dmg 5D, Ammo 20, Range 25/25/40m' },
-    { name: 'Energy Rifle', description: 'Dmg 5D, Ammo 50, Range 150/150/300m' },
-  ],
-  'Laser Weapons': [
-    { name: 'Laser Pistol', description: 'Dmg 4D, Ammo 15, Range 90/90/180m' },
-    { name: 'Laser Rifle', description: 'Dmg 5D, Ammo 20, Range 125/125/250m' },
-  ],
-  'Melee Weapons': [
-    { name: 'Energized Longblade', description: '+4D damage, throwable, 2m reach' },
-    { name: 'Nanoknife', description: '+2D damage, throwable' },
-    { name: 'Shockbaton', description: '+2D damage, stun effect (staggers become stunned)' },
   ],
   'Gear & Equipment': [
     { name: 'Enviro-suit', description: 'Sealed bodysuit + helmet; +2D Stamina vs. environment, counts as gas mask' },

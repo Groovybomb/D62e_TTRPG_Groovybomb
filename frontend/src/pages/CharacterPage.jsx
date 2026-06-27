@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { ATTRIBUTE_DEFINITIONS, ADVANCED_SKILL_DEFINITIONS, SPECIAL_SKILLS, getDicePool, getAdvancedDicePool } from '../data/attributes';
 import { WOUND_LEVELS, STUN_STATES, getWoundPenalty } from '../data/wounds';
-import { TALENTS, PERKS, FLAWS, CYBERNETICS, ITEMS, getRollHints } from '../data/characterOptions';
+import { TALENTS, PERKS, FLAWS, CYBERNETICS, ITEMS, WEAPONS, getRollHints } from '../data/characterOptions';
 import RollModal from '../components/RollModal';
 
 export default function CharacterPage({ userId, maxDice, refreshKey, selectedCharacterId, onSelectCharacter }) {
@@ -465,7 +465,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
       </div>
 
       {/* Weapons */}
-      <WeaponSection weapons={char.weapons || []} editing={editing} onChange={w => onFieldChange('weapons', w)} character={char} onDamageRoll={onDamageRoll} />
+      <WeaponSection weapons={char.weapons || []} editing={editing} onChange={w => onFieldChange('weapons', w)} character={char} onDamageRoll={onDamageRoll} referenceData={WEAPONS} />
 
       {/* Talents, Flaws, Perks, Cybernetics, Items in a grid */}
       <div className="extras-grid">
@@ -510,8 +510,14 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
   );
 }
 
-function WeaponSection({ weapons, editing, onChange, character, onDamageRoll }) {
+function WeaponSection({ weapons, editing, onChange, character, onDamageRoll, referenceData }) {
+  const [showPicker, setShowPicker] = useState(false);
+
   const addWeapon = () => onChange([...weapons, { name: '', damage: '', ammo: '', shortRange: '', mediumRange: '', longRange: '' }]);
+  const addFromReference = (ref) => {
+    onChange([...weapons, { name: ref.name, damage: ref.damage || '', ammo: ref.ammo || '', shortRange: ref.shortRange || '', mediumRange: ref.mediumRange || '', longRange: ref.longRange || '' }]);
+    setShowPicker(false);
+  };
   const removeWeapon = (i) => onChange(weapons.filter((_, idx) => idx !== i));
   const updateWeapon = (i, field, value) => onChange(weapons.map((w, idx) => idx === i ? { ...w, [field]: value } : w));
 
@@ -524,8 +530,30 @@ function WeaponSection({ weapons, editing, onChange, character, onDamageRoll }) 
     <div className="card" style={{ marginTop: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <h3>Weapons</h3>
-        {editing && <button onClick={addWeapon} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Add</button>}
+        {editing && (
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            {referenceData && <button onClick={() => setShowPicker(!showPicker)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', backgroundColor: showPicker ? '#e94560' : '#06d6a0', color: '#1a1a2e', fontWeight: 600 }}>{showPicker ? 'Cancel' : '+ Book'}</button>}
+            <button onClick={addWeapon} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Custom</button>
+          </div>
+        )}
       </div>
+      {editing && showPicker && referenceData && (
+        <div style={{ marginBottom: '0.75rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #444', borderRadius: '4px', background: '#16213e' }}>
+          {Object.entries(referenceData).map(([category, refs]) => (
+            <div key={category}>
+              <div style={{ padding: '0.3rem 0.6rem', background: '#1a1a2e', color: '#ffd60a', fontSize: '0.8rem', fontWeight: 700, position: 'sticky', top: 0 }}>{category}</div>
+              {refs.map((ref, i) => (
+                <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.35rem 0.6rem 0.35rem 1rem', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '0.85rem' }}
+                  onMouseOver={e => e.currentTarget.style.background = '#0f3460'}
+                  onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                  <strong style={{ color: '#06d6a0' }}>{ref.name}</strong>
+                  <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>{ref.damage}{ref.ammo ? `, Ammo ${ref.ammo}` : ''}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
       {weapons.length === 0 && <p style={{ color: '#888' }}>No weapons.</p>}
       {weapons.length > 0 && (
         <table className="weapon-table">
