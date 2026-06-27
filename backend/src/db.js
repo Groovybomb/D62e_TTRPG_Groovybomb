@@ -14,6 +14,7 @@ const defaultData = {
   messages: [],
   gmRollRequests: [],
   gmRollResponses: [],
+  opposedRolls: [],
   gameSessions: [],
   gameSettings: { maxDice: null },
 };

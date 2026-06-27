@@ -8,6 +8,7 @@ import VehiclePage from './pages/VehiclePage';
 import GamePage from './pages/GamePage';
 import GameMasterPage from './pages/GameMasterPage';
 import GMRollModal from './components/GMRollModal';
+import OpposedRollModal from './components/OpposedRollModal';
 
 function getTabs(isGM) {
   return [
@@ -24,6 +25,7 @@ function App() {
   const [myCharacters, setMyCharacters] = useState([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const [activeGMRoll, setActiveGMRoll] = useState(null);
+  const [activeOpposedRoll, setActiveOpposedRoll] = useState(null);
   const [maxDice, setMaxDice] = useState(null);
   const [characterRefreshKey, setCharacterRefreshKey] = useState(0);
 
@@ -64,13 +66,19 @@ function App() {
           setActiveGMRoll(res.data[0]);
         }
       } catch { /* ignore */ }
+      try {
+        const oRes = await axios.get(`${API_URL}/opposed-rolls/active?userId=${currentUser.id}&isGM=${!!currentUser.isGM}`);
+        if (oRes.data.length > 0 && !activeOpposedRoll) {
+          setActiveOpposedRoll(oRes.data[0]);
+        }
+      } catch { /* ignore */ }
       fetchSettings();
       fetchMyCharacters(currentUser.id);
     };
     poll();
     const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
-  }, [currentUser, activeGMRoll]);
+  }, [currentUser, activeGMRoll, activeOpposedRoll]);
 
   const playerCharacters = myCharacters.filter(c => !c.isNPC);
   const selectedCharacter = playerCharacters.find(c => c.id === selectedCharacterId) || playerCharacters[0] || null;
@@ -86,6 +94,31 @@ function App() {
 
   const handleGMRollClose = () => {
     setActiveGMRoll(null);
+    if (currentUser) fetchMyCharacters(currentUser.id);
+    setCharacterRefreshKey(k => k + 1);
+  };
+
+  const [opposedDefenderChar, setOpposedDefenderChar] = useState(null);
+
+  useEffect(() => {
+    if (!activeOpposedRoll) { setOpposedDefenderChar(null); return; }
+    const local = myCharacters.find(c => c.id === activeOpposedRoll.defenderCharacterId);
+    if (local) { setOpposedDefenderChar(local); return; }
+    axios.get(`${API_URL}/characters/${activeOpposedRoll.defenderCharacterId}`)
+      .then(res => setOpposedDefenderChar(res.data))
+      .catch(() => setOpposedDefenderChar(null));
+  }, [activeOpposedRoll, myCharacters]);
+
+  const handleOpposedHeroPointChange = async (newPoints) => {
+    if (!opposedDefenderChar) return;
+    try {
+      await axios.patch(`${API_URL}/characters/${opposedDefenderChar.id}`, { heroPoints: newPoints });
+      setMyCharacters(prev => prev.map(c => c.id === opposedDefenderChar.id ? { ...c, heroPoints: newPoints } : c));
+    } catch { /* ignore */ }
+  };
+
+  const handleOpposedRollClose = () => {
+    setActiveOpposedRoll(null);
     if (currentUser) fetchMyCharacters(currentUser.id);
     setCharacterRefreshKey(k => k + 1);
   };
@@ -136,7 +169,7 @@ function App() {
           <VehiclePage userId={currentUser.id} maxDice={maxDice} isNPC={!!currentUser.isGM} />
         )}
         {currentPage === 'game' && currentUser && (
-          <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} />
+          <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} maxDice={maxDice} />
         )}
         {currentPage === 'gm' && currentUser && currentUser.isGM && (
           <GameMasterPage userId={currentUser.id} displayName={currentUser.displayName} maxDice={maxDice} onMaxDiceChange={(val) => setMaxDice(val)} />
@@ -149,6 +182,16 @@ function App() {
           character={selectedCharacter}
           onClose={handleGMRollClose}
           onHeroPointChange={handleGMRollHeroPointChange}
+          maxDice={maxDice}
+        />
+      )}
+
+      {activeOpposedRoll && opposedDefenderChar && (
+        <OpposedRollModal
+          opposedRoll={activeOpposedRoll}
+          character={opposedDefenderChar}
+          onClose={handleOpposedRollClose}
+          onHeroPointChange={handleOpposedHeroPointChange}
           maxDice={maxDice}
         />
       )}

@@ -8,6 +8,7 @@ import messageRoutes from './routes/messages.js';
 import gmRollRoutes from './routes/gmRolls.js';
 import settingsRoutes from './routes/settings.js';
 import initiativeRoutes from './routes/initiative.js';
+import opposedRollRoutes from './routes/opposedRolls.js';
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 5000;
@@ -36,6 +37,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/gm-rolls', gmRollRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/initiative', initiativeRoutes);
+app.use('/api/opposed-rolls', opposedRollRoutes);
 
 // 404 handler
 app.use((req, res) => {

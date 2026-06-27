@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.5.0 — NPC/Foe Management, initiative API, duplicate characters.
+**Version:** 1.6.0 — Opposed Rolls (live), collapsible panel with preset pairings, defender popup modal.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -341,6 +341,45 @@ Before committing, verify:
 - [x] **Dynamic Tab Labels** — `getTabs(isGM)` function replaces static TABS constant; GM sees "NPCs" / "NPC Vehicles" instead of "Characters" / "Vehicles"
 - [x] **Browser tested** — NPC creation, duplicate, initiative posting, GM tab filtering, [NPC] tags in roll log, tab labels all verified
 
+### v1.6.0: Opposed Rolls (2026-06-27)
+- [x] **Opposed Roll Panel** — collapsible "Opposed Roll" section on Roll Log / Chat tab with full setup → rolling → waiting → complete flow
+  - [x] Initiator/Defender character selectors (all characters visible, NPC tags shown)
+  - [x] 12 preset pairings from D6 2e rulebook across 3 categories: Combat (4), Social (4), Skill (3) + Damage vs Resistance (disabled, uses weapon buttons)
+  - [x] Preset buttons show live dice pools (green for attacker, yellow for defender) based on selected characters
+  - [x] Phase transitions: setup → rolling_initiator → waiting/complete
+  - [x] Complete result panel shows both totals, winner highlight, margin, "New Opposed Roll" button
+- [x] **Static Defense Presets** — Combat presets (Melee vs Parry, Shooting/Throwing/Gunnery vs Dodge) resolve immediately
+  - [x] Dodge = Perception × 5 (+ 10 if prone); Parry = Agility × 5 (capped at 10 if prone)
+  - [x] Initiator rolls via full RollModal, result compared to computed static value, winner determined instantly
+- [x] **Active Opposed Rolls** — Social and Skill presets create pending rolls requiring both sides to roll
+  - [x] Initiator rolls via RollModal, record saved as `pending_defender`
+  - [x] Defender gets popup modal (OpposedRollModal) via 3s polling in App.jsx
+  - [x] GM-aware polling: `isGM=true` param returns pending rolls targeting any NPC, not just GM's own characters
+  - [x] Waiting → complete transition: GamePage useEffect detects when polled data shows the roll is resolved
+- [x] **OpposedRollModal** — full defender roll modal mounted at App.jsx level (like GMRollModal)
+  - [x] Shows initiator's result at top (character name, skill, total)
+  - [x] Defender roll setup: dice pool from skill, Extra Dice, Double Dice (HP cost), Exceptional Success (free)
+  - [x] Wound penalty applied (with exemptions for special skills)
+  - [x] Roll hints from talents/perks/flaws/cybernetics
+  - [x] Result phase: dice visuals, wild die, complication notice, winner/margin display
+  - [x] Re-Roll (HP cost) and Double Down (free) options
+  - [x] Hero point changes persisted to backend
+- [x] **Winner Determination** — `determineWinner()`: higher total wins; ties: PC beats NPC, NPC vs NPC or PC vs PC flagged as tie
+- [x] **Opposed Roll Log Entries** — interleaved with rolls and chat, sorted by timestamp
+  - [x] Shows both sides: initiator name/skill/total vs defender name/skill/total
+  - [x] [NPC] tags on NPC characters, [Opposed Roll] tag header
+  - [x] Pending rolls show "Waiting for X to roll..." in yellow italic
+  - [x] Complete rolls show winner with color-coded highlight and margin
+- [x] **Backend API** — `backend/src/routes/opposedRolls.js` with 4 endpoints
+  - [x] `POST /api/opposed-rolls` — create record (initiator data pre-filled, static defense resolves immediately)
+  - [x] `GET /api/opposed-rolls/active?userId=X&isGM=true` — poll for pending defender rolls
+  - [x] `POST /api/opposed-rolls/:id/respond` — defender submits roll, determines winner
+  - [x] `GET /api/opposed-rolls` — recent rolls for log display (last 50)
+  - [x] `DELETE /api/opposed-rolls` — clear all (used by Clear Log button)
+- [x] **Preset Data** — `frontend/src/data/opposedPresets.js` with `OPPOSED_PRESETS`, `getStaticDefense()`, `getSkillLabel()`, `getDefenderDicePool()`, `determineWinner()`
+- [x] **Clear Log integration** — Clear Log button on Roll Log tab now also clears opposed rolls
+- [x] **Browser tested** — static defense (Shooting vs Dodge), NPC vs NPC active roll (Stealth vs Investigation), NPC vs Player active roll (Intimidation vs Willpower), roll log display, waiting→complete transition all verified
+
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
 - [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
@@ -438,7 +477,7 @@ The dice rolling system follows D6 Second Edition rules:
 ### What Still Needs Work
 - [ ] **WebSocket** — true real-time (currently polling every 3-5s, works but not instant)
 - [ ] **Game sessions** — group players, manage initiative, track resources
-- [ ] **Attack rolls UI** — opposed roll system on Game page (damage rolls done on Character Sheet)
+- [x] **Opposed rolls** — collapsible panel on Game page with 12 presets, static + active defense, defender popup modal
 - [ ] **Password hashing** — currently plain text (use bcrypt)
 - [ ] **JWT tokens** — proper authentication (currently just user ID)
 - [ ] **Input validation** — form validation on client and server
@@ -450,7 +489,7 @@ The dice rolling system follows D6 Second Edition rules:
 ### Short Term (Critical Path)
 1. **WebSocket** — replace polling with real-time push (currently 3-5s polling works but isn't instant)
 2. **Game sessions** — let players join a session, share rolls/chat within a group
-3. **Attack rolls UI** — opposed roll system on Game page (damage rolls already on Character Sheet)
+3. ~~**Attack rolls UI**~~ — ✅ Done (v1.6.0 Opposed Rolls)
 
 ### Medium Term (Polish & UX)
 1. **Password hashing** — use bcrypt in backend auth routes
@@ -476,7 +515,7 @@ Items identified from D6 Second Edition rulebook that are missing from the app. 
 - [x] **Brawn Resistance Roll** — Added "Resistance" skill under Brawn. Pool = Brawn + Armor dice. Armor displayed as die code (e.g., "3D"). Wound penalty exempt per rulebook. Works in both player RollModal and GM-initiated rolls.
 - [x] **Vehicle/Starship Wound Tracking** — Vehicles have 5-state wound track (Undamaged/Light/Heavy/Severe/Destroyed) with clickable buttons like character wounds. Light=−1D, Heavy=−2D, Severe=−3D + "cannot operate" warning. Penalty applied to all vehicle action rolls (Movement, Navigate, Attack, Evade, Resist Damage) with clear notice in roll modal. Repair rolls exempt from penalty. Persisted server-side.
 - [x] **Repair Rolls for Vehicles & Ships** — Repair action added to Vehicle Actions using crew member's Mechanical + Use/Repair skill. Wild die roll via VehicleRollModal. Crew member stats display now shows Repair dice.
-- [ ] **Attack Roll vs. Defense Structured Flow** — Attacker rolls weapon skill vs. static defense (Dodge = Perception×5, Parry = Agility×5); if attacker beats defense, damage is rolled. Currently no structured attack-then-damage flow in the UI.
+- [x] **Attack Roll vs. Defense Structured Flow** — Opposed Roll panel on Roll Log / Chat tab. Attacker rolls weapon skill via RollModal; static defense (Dodge/Parry) resolves immediately, active defense (Willpower, Investigation, etc.) creates pending roll for defender. 12 presets across Combat, Social, and Skill categories.
 - [x] **In-Round Condition Flags** — Running applies −1D to all actions. Handled via Extra Dice counter (supports negative values) + reminder text at bottom of character sheet. No dedicated tracking UI needed.
 - [x] **Preparing/Aiming Bonus** — Spending a full round aiming grants +1D to next action. Handled via Extra Dice counter (+1) + reminder text at bottom of character sheet.
 - [x] **Multi-Action Penalty** — −1D per extra action in a round. Handled via Extra Dice counter (−1 per extra action) + reminder text at bottom of character sheet.
@@ -502,7 +541,7 @@ Items identified from D6 Second Edition rulebook that are missing from the app. 
 
 ### GM Tools
 - [x] **NPC/Foe Management** — GM's Characters/Vehicles tabs become NPC tabs with `isNPC` flag. Full character sheet for NPCs with duplicate button, initiative button (posts to API tracker), [NPC] tags in roll log. GM roll prompts exclude NPCs. GM tab overview filtered to player characters only.
-- [ ] **Opposed Rolls (live)** — Player vs. player or player vs. NPC opposed rolls where both sides roll simultaneously and results are compared. Currently no live opposed roll flow.
+- [x] **Opposed Rolls (live)** — Collapsible panel on Roll Log / Chat tab with 12 presets (Combat, Social, Skill). Initiator rolls via RollModal; static defense resolves immediately, active defense sends defender popup via polling. Winner determined by higher total, PC wins ties vs NPC. Results shown in roll log with both sides' totals and margin.
 - [x] **Environmental Hazard Tracking** — Environmental Hazards reference table added to GM tab with 7 hazard types (Extreme Heat, Cold, Drowning, Toxic Gas, Vacuum, Fire, Radiation), each with difficulty, interval, and damage/effect details. Color-coded hazard names.
 
 ### Advanced Modules (Space Campaign Applicable)
@@ -542,7 +581,8 @@ D62e/
 │   │       ├── vehicles.js
 │   │       ├── messages.js
 │   │       ├── gmRolls.js
-│   │       └── initiative.js
+│   │       ├── initiative.js
+│   │       └── opposedRolls.js
 │   ├── data/db.json               (auto-created)
 │   ├── package.json
 │   └── README.md
@@ -557,10 +597,12 @@ D62e/
 │   │   ├── components/
 │   │   │   ├── RollModal.jsx
 │   │   │   ├── GMRollModal.jsx
+│   │   │   ├── OpposedRollModal.jsx
 │   │   │   └── VehicleRollModal.jsx
 │   │   ├── data/
 │   │   │   ├── attributes.js
 │   │   │   ├── characterOptions.js
+│   │   │   ├── opposedPresets.js
 │   │   │   ├── outcomes.js
 │   │   │   ├── vehicleWounds.js
 │   │   │   └── wounds.js
@@ -630,6 +672,13 @@ D62e/
 - `PATCH /api/vehicles/:id` — Update (stats, weapons, crew, notes, isNPC)
 - `DELETE /api/vehicles/:id` — Delete vehicle
 
+### Opposed Rolls
+- `POST /api/opposed-rolls` — Create opposed roll (initiator data pre-filled; static defense resolves immediately)
+- `GET /api/opposed-rolls/active?userId=X&isGM=true` — Poll for pending defender rolls (GM gets NPC defenders too)
+- `POST /api/opposed-rolls/:id/respond` — Defender submits roll (determines winner, updates record)
+- `GET /api/opposed-rolls` — Get recent opposed rolls (last 50, for roll log display)
+- `DELETE /api/opposed-rolls` — Clear all opposed rolls
+
 ### Initiative
 - `POST /api/initiative` — Add initiative entry (characterId, characterName, total, diceResults, isNPC, isVehicle)
 - `GET /api/initiative` — Get all entries sorted by total descending
@@ -666,6 +715,9 @@ Current db.json structure:
   ],
   "initiative": [
     { "id", "characterId", "characterName", "total", "diceResults", "isNPC", "isVehicle", "createdAt" }
+  ],
+  "opposedRolls": [
+    { "id", "initiatorUserId", "initiatorCharacterId", "initiatorCharacterName", "initiatorIsNPC", "preset", "initiatorSkillLabel", "initiatorDiceCount", "initiatorDiceRolled", "initiatorWildDie", "initiatorTotal", "initiatorComplication", "defenderUserId", "defenderCharacterId", "defenderCharacterName", "defenderIsNPC", "defenderSkillLabel", "defenderIsStatic", "defenderTotal", "defenderDiceCount", "defenderDiceRolled", "defenderWildDie", "defenderComplication", "winner", "margin", "status", "createdAt" }
   ],
   "gameSessions": []
 }
@@ -740,8 +792,24 @@ Current db.json structure:
 - [x] Roll log shows [NPC] tags on skill, damage, and GM rolls for NPC characters
 - [x] GM Roll prompts do not appear for NPC characters (filtered in App.jsx)
 
+### Opposed Rolls (Verified 2026-06-27)
+- [x] Opposed Roll panel opens/closes via collapsible header
+- [x] Initiator/Defender selectors show all characters with [NPC] tags
+- [x] Preset buttons appear after both characters selected, grouped by category
+- [x] Preset buttons show live dice pools (green=attacker, yellow=defender)
+- [x] Static defense (Shooting vs Dodge): initiator rolls → result resolves immediately → shows in panel and log
+- [x] Active opposed roll (Intimidation vs Willpower): initiator rolls → panel shows "Waiting for defender"
+- [x] NPC vs NPC: GM-aware polling returns NPC defender rolls to GM user
+- [x] Defender popup (OpposedRollModal): shows initiator result, defender rolls with full dice mechanics
+- [x] Winner/margin display in both OpposedRollModal and opposed panel
+- [x] Opposed roll entries appear in roll log with both sides' totals
+- [x] Pending entries show "Waiting for X to roll..." in yellow italic
+- [x] Complete entries show winner highlight with colored border
+- [x] Clear Log also clears opposed rolls
+- [x] Waiting → complete transition detected via polling (useEffect on opposedRolls state)
+
 ---
 
 **Last Updated:** 2026-06-27
-**Last Work Done:** NPC/Foe Management — GM NPC tabs, duplicate, initiative API, [NPC] roll tags
-**Status:** v1.5.0 + all prior features + NPC management + initiative API
+**Last Work Done:** Opposed Rolls — collapsible panel with 12 presets, static/active defense, defender popup modal
+**Status:** v1.6.0 + all prior features + opposed rolls system

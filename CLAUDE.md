@@ -50,12 +50,23 @@ Two rolling functions with distinct mechanics:
 
 ### Roll Modals
 
-Three modal components share similar structure but have distinct mechanics:
-- `RollModal` — Skill/attribute rolls. Setup phase (extra dice, Double Dice) → result phase (re-roll, double down).
+Four modal components share similar structure but have distinct mechanics:
+- `RollModal` — Skill/attribute rolls. Setup phase (extra dice, Double Dice) → result phase (re-roll, double down). Also used for opposed roll initiator rolls (via `isOpposedInitiator` flag and `onRollComplete` callback).
 - `GMRollModal` — GM-initiated rolls. Adds choice phase for wild-6/wild-1 scenarios and outcome reporting.
+- `OpposedRollModal` — Defender popup for active opposed rolls. Shows initiator's result, defender rolls with full mechanics, determines winner.
 - Damage rolls are handled inline in `RollModal` via a damage mode — `rollPlainDice`, no wild die.
 
 All modals support: extra dice, Double Dice (1 HP), Re-Roll (1 HP), Double Down (free, complication risk), Exceptional Success (free doubling).
+
+### Opposed Roll System
+
+Collapsible panel on GamePage (Roll Log / Chat tab). GM picks initiator + defender from all characters, selects a preset pairing. Presets defined in `frontend/src/data/opposedPresets.js` — 12 pairings across Combat (static defense), Social, and Skill categories.
+
+Two modes:
+- **Static defense** (Combat presets): Initiator rolls via RollModal, compared to computed Dodge/Parry value. Resolves immediately, saved as `status: 'complete'`.
+- **Active defense** (Social/Skill presets): Initiator rolls, record saved as `status: 'pending_defender'`. Defender gets `OpposedRollModal` popup via 3s polling in App.jsx. GM-aware polling (`isGM=true`) returns NPC defender rolls to the GM user.
+
+Winner: higher total wins. Ties: PC beats NPC; PC vs PC flagged as tie.
 
 ### Character Data Model
 
