@@ -32,13 +32,14 @@ function defaultVehicle(userId, name) {
 
 // POST /api/vehicles - Create new vehicle
 router.post('/', async (req, res) => {
-  const { userId, name } = req.body;
+  const { userId, name, isNPC } = req.body;
 
   if (!userId || !name) {
     return res.status(400).json({ error: 'userId and name required' });
   }
 
   const vehicle = defaultVehicle(userId, name);
+  if (isNPC) vehicle.isNPC = true;
   db.data.vehicles.push(vehicle);
   await db.write();
 
@@ -47,10 +48,12 @@ router.post('/', async (req, res) => {
 
 // GET /api/vehicles - Get all vehicles (optionally filter by ?userId=)
 router.get('/', async (req, res) => {
-  const { userId } = req.query;
-  const results = userId
+  const { userId, isNPC } = req.query;
+  let results = userId
     ? db.data.vehicles.filter(v => v.userId === userId)
     : db.data.vehicles;
+  if (isNPC === 'true') results = results.filter(v => v.isNPC);
+  else if (isNPC === 'false') results = results.filter(v => !v.isNPC);
   res.json(results);
 });
 
@@ -67,7 +70,7 @@ router.patch('/:id', async (req, res) => {
   if (index === -1) return res.status(404).json({ error: 'Vehicle not found' });
 
   const vehicle = db.data.vehicles[index];
-  const allowed = ['name', 'stats', 'weapons', 'crew', 'woundLevel', 'notes'];
+  const allowed = ['name', 'stats', 'weapons', 'crew', 'woundLevel', 'notes', 'isNPC'];
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) {

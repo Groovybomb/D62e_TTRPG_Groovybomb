@@ -5,7 +5,7 @@ import { rollDice, calculateTotal } from '../utils/dice';
 import { getWoundPenalty } from '../data/wounds';
 import { getRollHints } from '../data/characterOptions';
 
-export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice }) {
+export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice, isNPC }) {
   const { label, attrKey, attrLabel, attrDice, skillKey, skillLabel, skillDice, baseDice } = rollInfo;
   const rollHints = getRollHints(character, attrKey, skillKey);
 
@@ -67,6 +67,8 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
     try {
       const res = await axios.post(`${API_URL}/rolls/skill`, {
         characterId: character.id,
+        characterName: character.name,
+        isNPC: isNPC || false,
         skill: skillLabel || attrLabel,
         attribute: attrLabel,
         diceCount: count,

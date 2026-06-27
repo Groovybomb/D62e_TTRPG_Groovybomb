@@ -7,9 +7,9 @@ const router = express.Router();
 // POST /api/rolls/skill - Store a skill roll result
 router.post('/skill', async (req, res) => {
   const {
-    characterId, skill, attribute, diceCount,
+    characterId, characterName, skill, attribute, diceCount,
     diceRolled, wildDie, total, complication, removedDie,
-    doubled, extraDice, rollFlag, linkedRollId,
+    doubled, extraDice, rollFlag, linkedRollId, isNPC,
   } = req.body;
 
   if (!characterId || !skill) {
@@ -19,9 +19,11 @@ router.post('/skill', async (req, res) => {
   const roll = {
     id: generateId(),
     characterId,
+    characterName: characterName || '',
     rollType: 'SKILL',
     skill,
     attribute: attribute || '',
+    isNPC: isNPC || false,
     diceCount: diceCount || 0,
     diceRolled: diceRolled || [],
     wildDie: wildDie || null,
@@ -69,7 +71,7 @@ router.post('/attack', async (req, res) => {
 
 // POST /api/rolls/damage - Store a damage roll
 router.post('/damage', async (req, res) => {
-  const { characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag } = req.body;
+  const { characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag, isNPC } = req.body;
 
   if (!characterId || !weaponName) {
     return res.status(400).json({ error: 'characterId and weaponName required' });
@@ -80,6 +82,7 @@ router.post('/damage', async (req, res) => {
     rollType: 'DAMAGE',
     characterId,
     characterName: characterName || '',
+    isNPC: isNPC || false,
     weaponName,
     damageFormula: damageFormula || '',
     diceCount: diceCount || 0,

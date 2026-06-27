@@ -36,13 +36,14 @@ function defaultCharacter(userId, name) {
 
 // POST /api/characters - Create new character
 router.post('/', async (req, res) => {
-  const { userId, name } = req.body;
+  const { userId, name, isNPC } = req.body;
 
   if (!userId || !name) {
     return res.status(400).json({ error: 'userId and name required' });
   }
 
   const newCharacter = defaultCharacter(userId, name);
+  if (isNPC) newCharacter.isNPC = true;
   db.data.characters.push(newCharacter);
   await db.write();
 
@@ -51,10 +52,12 @@ router.post('/', async (req, res) => {
 
 // GET /api/characters - Get all characters (optionally filter by ?userId=)
 router.get('/', async (req, res) => {
-  const { userId } = req.query;
-  const results = userId
+  const { userId, isNPC } = req.query;
+  let results = userId
     ? db.data.characters.filter(c => c.userId === userId)
     : db.data.characters;
+  if (isNPC === 'true') results = results.filter(c => c.isNPC);
+  else if (isNPC === 'false') results = results.filter(c => !c.isNPC);
   res.json(results);
 });
 
@@ -78,7 +81,7 @@ router.patch('/:characterId', async (req, res) => {
   }
 
   const character = db.data.characters[index];
-  const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'woundLevel', 'stunState', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items', 'notes'];
+  const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'woundLevel', 'stunState', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items', 'notes', 'isNPC'];
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) {

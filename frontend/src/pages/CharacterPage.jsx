@@ -6,7 +6,7 @@ import { WOUND_LEVELS, STUN_STATES, getWoundPenalty } from '../data/wounds';
 import { TALENTS, PERKS, FLAWS, CYBERNETICS, ITEMS, WEAPONS, getRollHints } from '../data/characterOptions';
 import RollModal from '../components/RollModal';
 
-export default function CharacterPage({ userId, maxDice, refreshKey, selectedCharacterId, onSelectCharacter }) {
+export default function CharacterPage({ userId, maxDice, refreshKey, selectedCharacterId, onSelectCharacter, isNPC }) {
   const [characters, setCharacters] = useState([]);
   const [selectedId, setSelectedId] = useState(selectedCharacterId || null);
   const [editing, setEditing] = useState(false);
@@ -34,7 +34,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_URL}/characters`, { userId, name: newName });
+      const res = await axios.post(`${API_URL}/characters`, { userId, name: newName, isNPC: isNPC || false });
       setCharacters([...characters, res.data]);
       setSelectedId(res.data.id);
       onSelectCharacter?.(res.data.id);
@@ -124,6 +124,52 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
     } catch { /* ignore */ }
   };
 
+  const handleDuplicate = async () => {
+    if (!char) return;
+    try {
+      const clone = JSON.parse(JSON.stringify(char));
+      delete clone.id;
+      delete clone.createdAt;
+      delete clone.updatedAt;
+      const res = await axios.post(`${API_URL}/characters`, { userId, name: `${char.name} (copy)`, isNPC: isNPC || false });
+      const created = res.data;
+      await axios.patch(`${API_URL}/characters/${created.id}`, {
+        heroPoints: clone.heroPoints,
+        armor: clone.armor,
+        attributes: clone.attributes,
+        advancedSkills: clone.advancedSkills,
+        weapons: clone.weapons,
+        talents: clone.talents,
+        flaws: clone.flaws,
+        perks: clone.perks,
+        cybernetics: clone.cybernetics,
+        items: clone.items,
+        notes: clone.notes,
+      });
+      await fetchCharacters();
+      setSelectedId(created.id);
+      onSelectCharacter?.(created.id);
+    } catch { setError('Failed to duplicate'); }
+  };
+
+  const handleInitiativeRoll = async () => {
+    if (!char) return;
+    const { rollDice, calculateTotal } = await import('../utils/dice');
+    const percDice = char.attributes?.perception?.dice || 2;
+    const results = rollDice(percDice);
+    const { total } = calculateTotal(results);
+    try {
+      await axios.post(`${API_URL}/initiative`, {
+        characterId: char.id,
+        characterName: char.name,
+        total,
+        diceResults: results.map(d => d.value),
+        isNPC: char.isNPC || false,
+      });
+    } catch { /* ignore */ }
+    alert(`${char.name} rolled ${total} for initiative (${percDice}D Perception)`);
+  };
+
   const handleWoundChange = async (field, value) => {
     if (!char) return;
     try {
@@ -139,7 +185,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
 
       {/* Character selector bar */}
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <label style={{ fontWeight: 600 }}>Character:</label>
+        <label style={{ fontWeight: 600 }}>{isNPC ? 'NPC:' : 'Character:'}</label>
         {characters.length > 0 && (
           <select
             value={selectedId || ''}
@@ -153,6 +199,8 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
         {char && !editing && (
           <>
             <button onClick={startEdit}>Edit</button>
+            <button onClick={handleDuplicate} style={{ background: '#ffd60a', color: '#1a1a2e' }}>Duplicate</button>
+            <button onClick={handleInitiativeRoll} style={{ background: '#4cc9f0', color: '#1a1a2e' }}>Initiative</button>
             <button onClick={() => handleDelete(char.id)} style={{ background: '#ef476f' }}>Delete</button>
           </>
         )}
@@ -166,9 +214,9 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
 
       {showCreate && (
         <form onSubmit={handleCreate} className="card" style={{ marginBottom: '1.5rem', maxWidth: '400px' }}>
-          <h3>Create Character</h3>
+          <h3>{isNPC ? 'Create NPC' : 'Create Character'}</h3>
           <div className="form-group">
-            <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Character name" required />
+            <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder={isNPC ? 'NPC name' : 'Character name'} required />
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit">Create</button>
@@ -178,7 +226,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
       )}
 
       {!char && !showCreate && (
-        <div className="card"><p>No characters yet. Create one to get started!</p></div>
+        <div className="card"><p>{isNPC ? 'No NPCs yet. Create one to get started!' : 'No characters yet. Create one to get started!'}</p></div>
       )}
 
       {char && (
@@ -202,6 +250,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
           onClose={() => setRollModal(null)}
           onHeroPointChange={handleHeroPointChange}
           maxDice={maxDice}
+          isNPC={isNPC}
         />
       )}
 
@@ -212,6 +261,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
           onClose={() => setDamageRoll(null)}
           onHeroPointChange={handleHeroPointChange}
           maxDice={maxDice}
+          isNPC={isNPC}
         />
       )}
     </div>
@@ -731,7 +781,7 @@ function ListSection({ title, items, editing, onChange, fields, referenceData, r
   );
 }
 
-function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, maxDice }) {
+function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, maxDice, isNPC }) {
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
   const [doubled, setDoubled] = useState(false);
@@ -785,6 +835,7 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
       await axios.post(`${API_URL}/rolls/damage`, {
         characterId: character.id,
         characterName: character.name,
+        isNPC: isNPC || false,
         weaponName: damageInfo.weaponName,
         damageFormula: damageInfo.damageFormula,
         diceCount: count,

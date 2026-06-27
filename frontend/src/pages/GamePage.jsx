@@ -104,7 +104,8 @@ export default function GamePage({ userId, displayName, isGM }) {
     } catch { /* ignore */ }
   };
 
-  const getCharName = (id) => allCharacters.find(c => c.id === id)?.name || 'Unknown';
+  const getChar = (id) => allCharacters.find(c => c.id === id);
+  const getCharName = (id) => getChar(id)?.name || 'Unknown';
 
   const combined = [
     ...rolls.map(r => ({ type: 'roll', data: r, time: new Date(r.createdAt).getTime() })),
@@ -195,7 +196,8 @@ export default function GamePage({ userId, displayName, isGM }) {
             }
 
             const roll = item.data;
-            const charName = getCharName(roll.characterId);
+            const charName = roll.characterName || getCharName(roll.characterId);
+            const rollIsNPC = roll.isNPC || getChar(roll.characterId)?.isNPC || false;
             const wildDie = roll.wildDie;
 
             if (roll.rollType === 'GM_ROLL') {
@@ -204,7 +206,7 @@ export default function GamePage({ userId, displayName, isGM }) {
 
               return (
                 <div key={roll.id} className="message system" style={{ borderLeft: `3px solid ${outcomeColor}` }}>
-                  <div className="message-author">{charName} <span style={{ color: '#ffd60a', fontSize: '0.8rem' }}>[GM Roll]</span></div>
+                  <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#ffd60a', fontSize: '0.8rem' }}>[GM Roll]</span></div>
                   <div className="message-text">
                     <strong>{roll.skill}</strong> — {roll.total} vs DC {roll.dcValue}{' '}
                     <span style={{ color: outcomeColor, fontWeight: 700 }}>{outcomeLabel}</span>
@@ -234,7 +236,7 @@ export default function GamePage({ userId, displayName, isGM }) {
             if (roll.rollType === 'DAMAGE') {
               return (
                 <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #e94560' }}>
-                  <div className="message-author">{charName} <span style={{ color: '#e94560', fontSize: '0.8rem' }}>[Damage]</span></div>
+                  <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#e94560', fontSize: '0.8rem' }}>[Damage]</span></div>
                   <div className="message-text">
                     <strong>{roll.weaponName}</strong> ({roll.damageFormula}) — <strong style={{ color: '#e94560', fontSize: '1.1em' }}>{roll.total}</strong> damage
                   </div>
@@ -251,6 +253,7 @@ export default function GamePage({ userId, displayName, isGM }) {
               <div key={roll.id} className={`message system`}>
                 <div className="message-author">
                   {charName}
+                  {rollIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem', marginLeft: '0.3rem' }}>[NPC]</span>}
                   {roll.rollFlag && (
                     <span className={`roll-flag-inline ${roll.rollFlag === 'REROLL' ? 'reroll' : 'doubledown'}`}>
                       {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}

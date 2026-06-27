@@ -20,7 +20,7 @@ const CREW_ROLES = [
   { key: 'engineer', label: 'Engineer', duty: 'Repairs' },
 ];
 
-export default function VehiclePage({ userId, maxDice }) {
+export default function VehiclePage({ userId, maxDice, isNPC }) {
   const [vehicles, setVehicles] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -64,7 +64,7 @@ export default function VehiclePage({ userId, maxDice }) {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_URL}/vehicles`, { userId, name: newName });
+      const res = await axios.post(`${API_URL}/vehicles`, { userId, name: newName, isNPC: isNPC || false });
       setVehicles([...vehicles, res.data]);
       setSelectedId(res.data.id);
       setNewName('');
@@ -256,7 +256,7 @@ export default function VehiclePage({ userId, maxDice }) {
 
       {/* Vehicle selector bar */}
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <label style={{ fontWeight: 600 }}>Vehicle:</label>
+        <label style={{ fontWeight: 600 }}>{isNPC ? 'NPC Vehicle:' : 'Vehicle:'}</label>
         {vehicles.length > 0 && (
           <select
             value={selectedId || ''}
@@ -302,7 +302,7 @@ export default function VehiclePage({ userId, maxDice }) {
 
       {showCreate && (
         <form onSubmit={handleCreate} className="card" style={{ marginBottom: '1.5rem', maxWidth: '400px' }}>
-          <h3>New Vehicle</h3>
+          <h3>{isNPC ? 'New NPC Vehicle' : 'New Vehicle'}</h3>
           <div className="form-group">
             <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Vehicle name" required />
           </div>
@@ -314,7 +314,7 @@ export default function VehiclePage({ userId, maxDice }) {
       )}
 
       {!vehicle && !showCreate && (
-        <div className="card"><p>No vehicles yet. Create one to get started!</p></div>
+        <div className="card"><p>{isNPC ? 'No NPC vehicles yet. Create one to get started!' : 'No vehicles yet. Create one to get started!'}</p></div>
       )}
 
       {vehicle && (

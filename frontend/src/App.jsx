@@ -9,12 +9,14 @@ import GamePage from './pages/GamePage';
 import GameMasterPage from './pages/GameMasterPage';
 import GMRollModal from './components/GMRollModal';
 
-const TABS = [
-  { key: 'characters', label: 'Character Sheet' },
-  { key: 'vehicles', label: 'Vehicle' },
-  { key: 'game', label: 'Roll Log / Chat' },
-  { key: 'gm', label: 'Game Master' },
-];
+function getTabs(isGM) {
+  return [
+    { key: 'characters', label: isGM ? 'NPCs' : 'Character Sheet' },
+    { key: 'vehicles', label: isGM ? 'NPC Vehicles' : 'Vehicle' },
+    { key: 'game', label: 'Roll Log / Chat' },
+    { key: 'gm', label: 'Game Master' },
+  ];
+}
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -70,7 +72,8 @@ function App() {
     return () => clearInterval(interval);
   }, [currentUser, activeGMRoll]);
 
-  const selectedCharacter = myCharacters.find(c => c.id === selectedCharacterId) || myCharacters[0] || null;
+  const playerCharacters = myCharacters.filter(c => !c.isNPC);
+  const selectedCharacter = playerCharacters.find(c => c.id === selectedCharacterId) || playerCharacters[0] || null;
 
   const handleGMRollHeroPointChange = async (newPoints) => {
     const char = selectedCharacter;
@@ -105,7 +108,7 @@ function App() {
         <nav className="navbar">
           <div className="nav-left">
             <h1>D62e</h1>
-            {TABS.filter(tab => tab.key !== 'gm' || currentUser.isGM).map(tab => (
+            {getTabs(currentUser.isGM).filter(tab => tab.key !== 'gm' || currentUser.isGM).map(tab => (
               <button
                 key={tab.key}
                 className={currentPage === tab.key ? 'active' : ''}
@@ -127,10 +130,10 @@ function App() {
           <LoginPage onLogin={handleLogin} />
         )}
         {currentPage === 'characters' && currentUser && (
-          <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} selectedCharacterId={selectedCharacterId} onSelectCharacter={setSelectedCharacterId} />
+          <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} selectedCharacterId={selectedCharacterId} onSelectCharacter={setSelectedCharacterId} isNPC={!!currentUser.isGM} />
         )}
         {currentPage === 'vehicles' && currentUser && (
-          <VehiclePage userId={currentUser.id} maxDice={maxDice} />
+          <VehiclePage userId={currentUser.id} maxDice={maxDice} isNPC={!!currentUser.isGM} />
         )}
         {currentPage === 'game' && currentUser && (
           <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} />

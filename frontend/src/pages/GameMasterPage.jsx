@@ -147,9 +147,10 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
     setInitActive(prev => prev <= 0 ? initEntries.length - 1 : prev - 1);
   };
 
-  const clearInitiative = () => {
+  const clearInitiative = async () => {
     saveInitEntries([]);
     setInitActive(-1);
+    try { await axios.delete(`${API_URL}/initiative`); } catch { /* ignore */ }
   };
 
   const callForInitiativeRoll = async () => {
@@ -177,10 +178,39 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
   const [gmNotes, setGmNotes] = useState('');
   const [notesSaved, setNotesSaved] = useState(true);
 
+  const fetchInitiative = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/initiative`);
+      const apiEntries = res.data;
+      if (apiEntries.length === 0) return;
+      let updated = [...initEntries];
+      let changed = false;
+      for (const entry of apiEntries) {
+        const existing = updated.findIndex(e => e.charId === entry.characterId);
+        if (existing >= 0) {
+          if (updated[existing].roll !== entry.total) {
+            updated[existing] = { ...updated[existing], name: entry.characterName, roll: entry.total };
+            changed = true;
+          }
+        } else {
+          updated.push({ id: entry.id, charId: entry.characterId, name: entry.characterName, roll: entry.total, isNPC: entry.isNPC });
+          changed = true;
+        }
+      }
+      if (changed) {
+        updated.sort((a, b) => b.roll - a.roll);
+        saveInitEntries(updated);
+      }
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
     fetchCharacters();
     checkActiveRequest();
     fetchGmNotes();
+    fetchInitiative();
+    const initInterval = setInterval(fetchInitiative, 5000);
+    return () => clearInterval(initInterval);
   }, []);
 
   useEffect(() => {
@@ -223,7 +253,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
 
   const fetchCharacters = async () => {
     try {
-      const res = await axios.get(`${API_URL}/characters`);
+      const res = await axios.get(`${API_URL}/characters`, { params: { isNPC: 'false' } });
       setCharacters(res.data);
     } catch { /* ignore */ }
   };
@@ -462,7 +492,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                 </div>
               </div>
 
-              <h4 style={{ marginBottom: '0.5rem' }}>Responses ({getLatestResponses().length}/{characters.length})</h4>
+              <h4 style={{ marginBottom: '0.5rem' }}>Responses ({getLatestResponses().length}/{characters.filter(c => !c.isNPC).length})</h4>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {getLatestResponses().map(resp => (
                   <div key={resp.id} className="gm-response-card">
@@ -872,6 +902,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                     {/* Name */}
                     <span style={{ flex: 1, fontWeight: isActive ? 700 : 400, color: isActive ? '#06d6a0' : '#eee', fontSize: '0.95rem' }}>
                       {entry.name}
+                      {entry.isNPC && <span style={{ color: '#ff8c00', fontSize: '0.75rem', marginLeft: '0.35rem' }}>[NPC]</span>}
                     </span>
 
                     {/* Roll value */}
