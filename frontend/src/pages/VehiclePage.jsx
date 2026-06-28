@@ -35,11 +35,20 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
 
   useEffect(() => { fetchVehicles(); fetchCharacters(); }, [userId]);
 
+  useEffect(() => {
+    const interval = setInterval(fetchVehicles, 3000);
+    return () => clearInterval(interval);
+  }, [isNPC]);
+
   const fetchVehicles = async () => {
     try {
-      const res = await axios.get(`${API_URL}/vehicles`, { params: { userId } });
+      const params = { isNPC: isNPC ? 'true' : 'false' };
+      const res = await axios.get(`${API_URL}/vehicles`, { params });
       setVehicles(res.data);
-      if (res.data.length > 0 && !selectedId) setSelectedId(res.data[0].id);
+      setSelectedId(prev => {
+        if (prev && res.data.some(v => v.id === prev)) return prev;
+        return res.data.length > 0 ? res.data[0].id : null;
+      });
     } catch { setError('Failed to load vehicles'); }
   };
 

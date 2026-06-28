@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 2.1.0 — Database migration from lowdb to libSQL/Turso for cloud deployment.
+**Version:** 2.2.0 — Defender re-roll options, auto wound updates, shared player vehicles.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -419,6 +419,17 @@ Before committing, verify:
 - [x] **Helper functions** — `getVehicleGunneryDice()`, `getVehicleEvadeDice()`, `getVehicleResistDice()`, `getVehiclePilotingSkill()` in GamePage
 - [x] **Data exports** — `VEHICLE_OPPOSED_PRESETS`, `getVehicleDefense()`, `parseDamageFormula()` added to `opposedPresets.js`
 - [x] **Browser tested** — Character damage with weapon picker, Vehicle Gunnery vs Defense (static), Vehicle Gunnery vs Evade (active with flat bonus), roll log with vehicle names all verified
+
+### v2.2.0: Defender Re-Roll, Auto Wounds, Shared Vehicles (2026-06-28)
+- [x] **Defender re-roll/double-down on opposed rolls** — OpposedRollModal now defers server submission until user clicks "Accept Result", keeping Re-Roll (1 HP) and Double Down (free) buttons available after the initial roll. Previously, the result was posted immediately on first roll and `resolved=true` hid the buttons.
+- [x] **Auto wound updates after damage rolls** — When a "Damage vs Resistance" or "Vehicle Damage vs Resist" opposed roll completes with the attacker winning, the defender's wound level is automatically updated based on the damage margin:
+  - Character: margin 1-3 = stun escalation, 4-8 = +1 wound level, 9-12 = +2 wound levels, 13-15 = at least incapacitated, 16+ = at least mortally wounded
+  - Vehicle: margin 1-3 = +1 damage level, 4-8 = +1, 9-12 = +2, 13+ = destroyed
+  - System message posted to chat log (e.g., "Big McLargeHuge takes damage (margin: 5)! Wounds: Healthy → Wounded")
+  - Damage effect shown in opposed roll result panel, roll log entries, and OpposedRollModal
+  - `damageApplied` JSON column added to `opposed_rolls` table (with migration for existing databases)
+- [x] **Shared player vehicles** — Non-NPC vehicles now visible to all players (not just the creator). VehiclePage fetches by `isNPC` filter instead of `userId`, so all players see the same vehicle list. Added 3-second polling to keep vehicles synced across players. Vehicle selection preserved during polling updates via functional state updates.
+- [x] **Browser tested** — all three features verified: app loads without errors, vehicle tab shows shared vehicles, opposed rolls panel accessible
 
 ### v2.1.0: Database Migration — lowdb to libSQL/Turso (2026-06-27)
 - [x] **Replaced lowdb with @libsql/client** — migrated from flat-file JSON (db.json) to SQL database for cloud deployment
@@ -851,6 +862,6 @@ Schema auto-created on startup via `initDb()` in `backend/src/db.js`.
 
 ---
 
-**Last Updated:** 2026-06-27
-**Last Work Done:** Database migration from lowdb to libSQL/Turso for cloud deployment on Render
-**Status:** v2.1.0 — all prior features + persistent cloud-ready database
+**Last Updated:** 2026-06-28
+**Last Work Done:** Defender re-roll options, auto wound updates after damage rolls, shared player vehicles
+**Status:** v2.2.0 — defender re-roll fix, auto wound updates, shared vehicles

@@ -15,7 +15,8 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
   const [diceResults, setDiceResults] = useState([]);
   const [rollTotal, setRollTotal] = useState(null);
   const [rollFlag, setRollFlag] = useState(null);
-  const [resolved, setResolved] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [damageApplied, setDamageApplied] = useState(null);
 
   const isVehicle = opposedRoll.type === 'vehicle';
   const flatBonus = opposedRoll.defenderFlatBonus || 0;
@@ -67,7 +68,7 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
     setDoubleSource(null);
   };
 
-  const executeRoll = async (flag = null) => {
+  const executeRoll = (flag = null) => {
     const count = effectiveDice;
     if (count < 1) return;
     const results = rollDice(count);
@@ -78,31 +79,36 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
     setRollTotal({ total, diceTotal, complication, removedDie });
     setRollFlag(flag);
     setPhase('result');
-
-    const winner = determineWinner(
-      opposedRoll.initiatorTotal, total,
-      opposedRoll.initiatorIsNPC, opposedRoll.defenderIsNPC
-    );
-    const margin = Math.abs(opposedRoll.initiatorTotal - total);
-
-    try {
-      await axios.post(`${API_URL}/opposed-rolls/${opposedRoll.id}/respond`, {
-        diceCount: count,
-        diceRolled: results.map(d => d.value),
-        wildDie: { rolls: results[0].rolls, total: results[0].value, rawFirst: results[0].rawFirst, exploded: results[0].exploded },
-        total,
-        complication,
-        winner,
-        margin,
-      });
-      setResolved(true);
-    } catch { /* ignore */ }
   };
 
   const handleReroll = () => {
     if (heroPoints < 1) return;
     onHeroPointChange(heroPoints - 1);
     executeRoll('REROLL');
+  };
+
+  const submitResult = async () => {
+    if (submitted || !rollTotal) return;
+
+    const winner = determineWinner(
+      opposedRoll.initiatorTotal, rollTotal.total,
+      opposedRoll.initiatorIsNPC, opposedRoll.defenderIsNPC
+    );
+    const margin = Math.abs(opposedRoll.initiatorTotal - rollTotal.total);
+
+    try {
+      const res = await axios.post(`${API_URL}/opposed-rolls/${opposedRoll.id}/respond`, {
+        diceCount: effectiveDice,
+        diceRolled: diceResults.map(d => d.value),
+        wildDie: { rolls: diceResults[0].rolls, total: diceResults[0].value, rawFirst: diceResults[0].rawFirst, exploded: diceResults[0].exploded },
+        total: rollTotal.total,
+        complication: rollTotal.complication,
+        winner,
+        margin,
+      });
+      setSubmitted(true);
+      if (res.data?.damageApplied) setDamageApplied(res.data.damageApplied);
+    } catch { /* ignore */ }
   };
 
   const displayWinner = rollTotal
@@ -245,16 +251,25 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
               {displayWinner === 'tie' && <div style={{ fontSize: '0.8rem', color: '#e3b341' }}>Both PCs tied — highest wild die wins, or GM decides</div>}
             </div>
 
+            {damageApplied && (
+              <div style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', backgroundColor: '#3d1a1a', border: '1px solid #f85149', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.85rem', color: '#f85149', fontWeight: 700 }}>{damageApplied.message}</div>
+              </div>
+            )}
+
             <div className="hero-points-display">Hero Points: <strong>{heroPoints}</strong></div>
 
             <div className="result-actions">
-              {!resolved && (
+              {!submitted && (
                 <>
                   <button onClick={handleReroll} disabled={heroPoints < 1} className="reroll-btn">Re-Roll (costs 1 Hero Point)</button>
                   <button onClick={() => executeRoll('DOUBLE_DOWN')} className="doubledown-btn">Double Down (free, complication on 2nd failure)</button>
+                  <button onClick={submitResult} className="roll-execute-btn" style={{ marginTop: '0.5rem' }}>Accept Result</button>
                 </>
               )}
-              <button onClick={onClose} className="close-result-btn">Close</button>
+              {submitted && (
+                <button onClick={onClose} className="close-result-btn">Close</button>
+              )}
             </div>
           </div>
         )}

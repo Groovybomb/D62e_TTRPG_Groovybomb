@@ -4,6 +4,135 @@ import db from '../db.js';
 
 const router = express.Router();
 
+const CHARACTER_WOUND_ORDER = ['healthy', 'wounded', 'incapacitated', 'mortallyWounded', 'dead'];
+const CHARACTER_STUN_ORDER = ['none', 'staggered', 'stunned', 'prone'];
+const VEHICLE_WOUND_ORDER = ['undamaged', 'light', 'heavy', 'severe', 'destroyed'];
+const WOUND_LABELS = { healthy: 'Healthy', wounded: 'Wounded', incapacitated: 'Incapacitated', mortallyWounded: 'Mortally Wounded', dead: 'Dead' };
+const STUN_LABELS = { none: 'Clear', staggered: 'Staggered', stunned: 'Stunned', prone: 'Prone' };
+const VEHICLE_WOUND_LABELS = { undamaged: 'Undamaged', light: 'Light', heavy: 'Heavy', severe: 'Severe', destroyed: 'Destroyed' };
+
+function calculateDamageEffect(margin, currentWoundLevel, currentStunState, isVehicle) {
+  if (margin <= 0) return null;
+
+  if (isVehicle) {
+    const curIdx = VEHICLE_WOUND_ORDER.indexOf(currentWoundLevel || 'undamaged');
+    let steps;
+    if (margin <= 3) steps = 1;
+    else if (margin <= 8) steps = 1;
+    else if (margin <= 12) steps = 2;
+    else steps = VEHICLE_WOUND_ORDER.length - 1 - curIdx;
+    const newIdx = Math.min(curIdx + steps, VEHICLE_WOUND_ORDER.length - 1);
+    if (newIdx <= curIdx) return null;
+    return {
+      entityType: 'vehicle',
+      woundLevel: { old: VEHICLE_WOUND_ORDER[curIdx], new: VEHICLE_WOUND_ORDER[newIdx] },
+    };
+  }
+
+  const woundIdx = CHARACTER_WOUND_ORDER.indexOf(currentWoundLevel || 'healthy');
+  const stunIdx = CHARACTER_STUN_ORDER.indexOf(currentStunState || 'none');
+  let newWoundIdx = woundIdx;
+  let newStunIdx = stunIdx;
+
+  if (margin <= 3) {
+    newStunIdx = Math.min(stunIdx + 1, CHARACTER_STUN_ORDER.length - 1);
+  } else if (margin <= 8) {
+    newWoundIdx = Math.min(woundIdx + 1, CHARACTER_WOUND_ORDER.length - 1);
+  } else if (margin <= 12) {
+    newWoundIdx = Math.min(woundIdx + 2, CHARACTER_WOUND_ORDER.length - 1);
+  } else if (margin <= 15) {
+    newWoundIdx = Math.max(Math.min(woundIdx + 2, CHARACTER_WOUND_ORDER.length - 1), CHARACTER_WOUND_ORDER.indexOf('incapacitated'));
+  } else {
+    newWoundIdx = Math.max(Math.min(woundIdx + 3, CHARACTER_WOUND_ORDER.length - 1), CHARACTER_WOUND_ORDER.indexOf('mortallyWounded'));
+  }
+
+  if (newWoundIdx === woundIdx && newStunIdx === stunIdx) return null;
+
+  const result = { entityType: 'character' };
+  if (newWoundIdx !== woundIdx) {
+    result.woundLevel = { old: CHARACTER_WOUND_ORDER[woundIdx], new: CHARACTER_WOUND_ORDER[newWoundIdx] };
+  }
+  if (newStunIdx !== stunIdx) {
+    result.stunState = { old: CHARACTER_STUN_ORDER[stunIdx], new: CHARACTER_STUN_ORDER[newStunIdx] };
+  }
+  return result;
+}
+
+function formatDamageMessage(defenderName, effect, margin, isVehicle) {
+  const parts = [`${defenderName} takes damage (margin: ${margin})!`];
+  if (isVehicle) {
+    parts.push(`Hull: ${VEHICLE_WOUND_LABELS[effect.woundLevel.old]} → ${VEHICLE_WOUND_LABELS[effect.woundLevel.new]}`);
+  } else {
+    if (effect.woundLevel) {
+      parts.push(`Wounds: ${WOUND_LABELS[effect.woundLevel.old]} → ${WOUND_LABELS[effect.woundLevel.new]}`);
+    }
+    if (effect.stunState) {
+      parts.push(`Stun: ${STUN_LABELS[effect.stunState.old]} → ${STUN_LABELS[effect.stunState.new]}`);
+    }
+  }
+  return parts.join(' ');
+}
+
+async function applyDamage(opposedRoll) {
+  if (opposedRoll.winner !== 'initiator') return null;
+
+  const isDamagePreset = opposedRoll.preset === 'damage_vs_resist';
+  const isVehicleDamage = opposedRoll.preset === 'vehicle_damage_resist';
+  if (!isDamagePreset && !isVehicleDamage) return null;
+
+  const margin = opposedRoll.margin || Math.abs((opposedRoll.initiatorTotal || 0) - (opposedRoll.defenderTotal || 0));
+  if (margin <= 0) return null;
+
+  if (isVehicleDamage && opposedRoll.defenderVehicleId) {
+    const vResult = await db.execute({ sql: 'SELECT * FROM vehicles WHERE id = ?', args: [opposedRoll.defenderVehicleId] });
+    if (vResult.rows.length === 0) return null;
+    const vehicle = vResult.rows[0];
+    const effect = calculateDamageEffect(margin, vehicle.woundLevel, null, true);
+    if (!effect) return null;
+
+    await db.execute({ sql: 'UPDATE vehicles SET woundLevel=?, updatedAt=? WHERE id=?', args: [effect.woundLevel.new, new Date().toISOString(), opposedRoll.defenderVehicleId] });
+
+    const msg = formatDamageMessage(opposedRoll.defenderVehicleName || vehicle.name, effect, margin, true);
+    await db.execute({
+      sql: 'INSERT INTO messages (id, userId, author, text, createdAt) VALUES (?, ?, ?, ?, ?)',
+      args: [generateId(), 'system', 'System', msg, new Date().toISOString()],
+    });
+    return { ...effect, message: msg };
+  }
+
+  if (isDamagePreset && opposedRoll.defenderCharacterId) {
+    const cResult = await db.execute({ sql: 'SELECT * FROM characters WHERE id = ?', args: [opposedRoll.defenderCharacterId] });
+    if (cResult.rows.length === 0) return null;
+    const character = cResult.rows[0];
+    const effect = calculateDamageEffect(margin, character.woundLevel, character.stunState, false);
+    if (!effect) return null;
+
+    const updates = {};
+    if (effect.woundLevel) updates.woundLevel = effect.woundLevel.new;
+    if (effect.stunState) updates.stunState = effect.stunState.new;
+
+    const setClauses = [];
+    const args = [];
+    if (updates.woundLevel) { setClauses.push('woundLevel=?'); args.push(updates.woundLevel); }
+    if (updates.stunState) { setClauses.push('stunState=?'); args.push(updates.stunState); }
+    setClauses.push('updatedAt=?');
+    args.push(new Date().toISOString());
+    args.push(opposedRoll.defenderCharacterId);
+
+    await db.execute({ sql: `UPDATE characters SET ${setClauses.join(', ')} WHERE id=?`, args });
+
+    const defName = opposedRoll.defenderCharacterName || character.name;
+    const msg = formatDamageMessage(defName, effect, margin, false);
+    await db.execute({
+      sql: 'INSERT INTO messages (id, userId, author, text, createdAt) VALUES (?, ?, ?, ?, ?)',
+      args: [generateId(), 'system', 'System', msg, new Date().toISOString()],
+    });
+    return { ...effect, message: msg };
+  }
+
+  return null;
+}
+
 function parseRow(row) {
   return {
     ...row,
@@ -16,6 +145,7 @@ function parseRow(row) {
     defenderComplication: !!row.defenderComplication,
     defenderIsNPC: !!row.defenderIsNPC,
     defenderIsStatic: !!row.defenderIsStatic,
+    damageApplied: row.damageApplied ? JSON.parse(row.damageApplied) : null,
   };
 }
 
@@ -62,12 +192,13 @@ router.post('/', async (req, res) => {
     winner: winner || null,
     margin: margin ?? null,
     status: defenderIsStatic ? 'complete' : 'pending_defender',
+    damageApplied: null,
     createdAt: new Date().toISOString(),
   };
 
   await db.execute({
-    sql: `INSERT INTO opposed_rolls (id, type, initiatorUserId, initiatorCharacterId, initiatorCharacterName, initiatorIsNPC, initiatorVehicleId, initiatorVehicleName, preset, initiatorSkillLabel, initiatorDiceCount, initiatorDiceRolled, initiatorWildDie, initiatorTotal, initiatorComplication, defenderUserId, defenderCharacterId, defenderCharacterName, defenderIsNPC, defenderVehicleId, defenderVehicleName, defenderSkillLabel, defenderIsStatic, defenderTotal, defenderBaseDice, defenderFlatBonus, defenderDiceCount, defenderDiceRolled, defenderWildDie, defenderComplication, winner, margin, status, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO opposed_rolls (id, type, initiatorUserId, initiatorCharacterId, initiatorCharacterName, initiatorIsNPC, initiatorVehicleId, initiatorVehicleName, preset, initiatorSkillLabel, initiatorDiceCount, initiatorDiceRolled, initiatorWildDie, initiatorTotal, initiatorComplication, defenderUserId, defenderCharacterId, defenderCharacterName, defenderIsNPC, defenderVehicleId, defenderVehicleName, defenderSkillLabel, defenderIsStatic, defenderTotal, defenderBaseDice, defenderFlatBonus, defenderDiceCount, defenderDiceRolled, defenderWildDie, defenderComplication, winner, margin, status, damageApplied, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       record.id, record.type, record.initiatorUserId, record.initiatorCharacterId,
       record.initiatorCharacterName, record.initiatorIsNPC ? 1 : 0,
@@ -82,9 +213,21 @@ router.post('/', async (req, res) => {
       record.defenderTotal, record.defenderBaseDice, record.defenderFlatBonus,
       record.defenderDiceCount, record.defenderDiceRolled,
       record.defenderWildDie, record.defenderComplication ? 1 : 0,
-      record.winner, record.margin, record.status, record.createdAt,
+      record.winner, record.margin, record.status, record.damageApplied, record.createdAt,
     ],
   });
+
+  // Auto-apply damage for static defense damage rolls
+  if (record.status === 'complete') {
+    const damageResult = await applyDamage(record);
+    if (damageResult) {
+      record.damageApplied = damageResult;
+      await db.execute({
+        sql: 'UPDATE opposed_rolls SET damageApplied=? WHERE id=?',
+        args: [JSON.stringify(damageResult), record.id],
+      });
+    }
+  }
 
   res.status(201).json(record);
 });
@@ -139,6 +282,16 @@ router.post('/:id/respond', async (req, res) => {
   roll.winner = winner;
   roll.margin = margin;
   roll.status = 'complete';
+
+  // Auto-apply damage
+  const damageResult = await applyDamage(roll);
+  if (damageResult) {
+    roll.damageApplied = damageResult;
+    await db.execute({
+      sql: 'UPDATE opposed_rolls SET damageApplied=? WHERE id=?',
+      args: [JSON.stringify(damageResult), req.params.id],
+    });
+  }
 
   res.json(roll);
 });

@@ -173,6 +173,7 @@ const schema = `
     winner TEXT,
     margin INTEGER,
     status TEXT DEFAULT 'pending_defender',
+    damageApplied TEXT,
     createdAt TEXT
   );
 
@@ -202,6 +203,11 @@ export async function initDb() {
   for (const sql of statements) {
     await db.execute(sql);
   }
+
+  // Add damageApplied column if missing (migration for existing databases)
+  try {
+    await db.execute('ALTER TABLE opposed_rolls ADD COLUMN damageApplied TEXT');
+  } catch { /* column already exists */ }
 
   const settings = await db.execute('SELECT key FROM game_settings WHERE key = ?', ['maxDice']);
   if (settings.rows.length === 0) {

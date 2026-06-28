@@ -706,6 +706,11 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                        oppResult.winner === 'defender' ? `${oppResult.defenderCharacterName} wins!` : 'Tie!'}
                       {oppResult.margin > 0 && <span style={{ fontSize: '0.85rem', color: '#b1bac4', marginLeft: '0.5rem' }}>by {oppResult.margin}</span>}
                     </div>
+                    {oppResult.damageApplied && (
+                      <div style={{ fontSize: '0.85rem', color: '#f85149', marginTop: '0.3rem', fontWeight: 600 }}>
+                        {oppResult.damageApplied.message}
+                      </div>
+                    )}
                   </div>
                   <button onClick={resetOpposed} style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}>New Opposed Roll</button>
                 </div>
@@ -868,6 +873,11 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                        voppResult.winner === 'defender' ? `${voppResult.defenderVehicleName || voppResult.defenderCharacterName} wins!` : 'Tie!'}
                       {voppResult.margin > 0 && <span style={{ fontSize: '0.85rem', color: '#b1bac4', marginLeft: '0.5rem' }}>by {voppResult.margin}</span>}
                     </div>
+                    {voppResult.damageApplied && (
+                      <div style={{ fontSize: '0.85rem', color: '#f85149', marginTop: '0.3rem', fontWeight: 600 }}>
+                        {voppResult.damageApplied.message}
+                      </div>
+                    )}
                   </div>
                   <button onClick={resetVehicleOpposed} style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}>New Vehicle Opposed Roll</button>
                 </div>
@@ -937,6 +947,11 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                        o.winner === 'defender' ? `${o.defenderVehicleName || o.defenderCharacterName} wins` : 'Tie'}
                       {o.margin > 0 && ` by ${o.margin}`}
                       {o.winner === 'tie' && ' — PC wins ties vs NPC'}
+                    </div>
+                  )}
+                  {isComplete && o.damageApplied && (
+                    <div style={{ fontSize: '0.82rem', color: '#f85149', fontWeight: 600, marginTop: '0.2rem', padding: '0.2rem 0.4rem', backgroundColor: '#3d1a1a', borderRadius: '4px' }}>
+                      {o.damageApplied.message}
                     </div>
                   )}
                   {!isComplete && (
