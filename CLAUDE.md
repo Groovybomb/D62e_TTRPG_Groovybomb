@@ -18,13 +18,13 @@ npm run build        # Production build (frontend only — backend has no build 
 
 No test suite exists yet. No linter is configured at the root level (frontend has an eslint script but no eslint config file).
 
-All data persists in `backend/data/db.json` (lowdb, auto-created, gitignored). Delete it to reset all data.
+All data persists in `backend/data/local.db` (libSQL/SQLite, auto-created, gitignored). Delete it to reset all data. In production, data is stored in Turso cloud via `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` env vars.
 
 ## Architecture
 
 ### Overview
 
-D62e is a TTRPG (D6 Second Edition) platform. React frontend talks to Express backend via REST + polling. No WebSocket — all real-time features use `setInterval` polling (3s for chat/characters, 5s for GM rolls).
+D62e is a TTRPG (D6 Second Edition) platform. React frontend talks to Express backend via REST + polling. No WebSocket — all real-time features use `setInterval` polling (3s for chat/characters, 5s for GM rolls). Backend uses libSQL (`@libsql/client`) for data persistence — local SQLite file for dev, Turso cloud for production.
 
 ### Frontend Data Flow
 
@@ -76,9 +76,9 @@ Character objects store `attributes.{attrKey}.dice` (attribute level) and `attri
 
 ### Backend
 
-Express routes under `/api`. All CRUD follows the same pattern: lowdb array, `generateId()` (uuid), `findById()`, `findIndexById()`. See `backend/README.md` for endpoint reference.
+Express routes under `/api`. All CRUD uses parameterized SQL queries via `@libsql/client`. Complex nested objects (attributes, weapons, dice arrays) stored as JSON text columns, parsed via `parseRow()` on read. Booleans stored as INTEGER 0/1. See `backend/README.md` for endpoint reference.
 
-The GM roll lifecycle spans multiple endpoints: create → poll active → respond/decline → update outcome → close. Responses are stored in both `gmRollResponses` (for polling) and `rolls` (for roll log display).
+The GM roll lifecycle spans multiple endpoints: create → poll active → respond/decline → update outcome → close. Responses are stored in both `gm_roll_responses` (for polling) and `rolls` (for roll log display).
 
 ### Styling
 

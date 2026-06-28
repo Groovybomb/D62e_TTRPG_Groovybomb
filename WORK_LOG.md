@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.7.0 — Modern dark mode palette + Character Opposed Rolls + Vehicle Opposed Rolls.
+**Version:** 2.1.0 — Database migration from lowdb to libSQL/Turso for cloud deployment.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -108,7 +108,7 @@ Before committing, verify:
 
 ## Project Overview
 - **Project:** D62e TTRPG Platform (D6 Second Edition)
-- **Tech Stack:** React (frontend), Node.js/Express (backend), lowdb (flat-file storage)
+- **Tech Stack:** React (frontend), Node.js/Express (backend), libSQL/Turso (SQLite cloud database)
 - **Status:** Foundation complete, ready for testing and expansion
 
 ---
@@ -420,6 +420,21 @@ Before committing, verify:
 - [x] **Data exports** — `VEHICLE_OPPOSED_PRESETS`, `getVehicleDefense()`, `parseDamageFormula()` added to `opposedPresets.js`
 - [x] **Browser tested** — Character damage with weapon picker, Vehicle Gunnery vs Defense (static), Vehicle Gunnery vs Evade (active with flat bonus), roll log with vehicle names all verified
 
+### v2.1.0: Database Migration — lowdb to libSQL/Turso (2026-06-27)
+- [x] **Replaced lowdb with @libsql/client** — migrated from flat-file JSON (db.json) to SQL database for cloud deployment
+  - [x] Local dev uses SQLite file (`backend/data/local.db`), production uses Turso cloud via `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` env vars
+  - [x] All 10 collections migrated to SQL tables: users, characters, vehicles, rolls, messages, gm_roll_requests, gm_roll_responses, opposed_rolls, game_settings, initiative
+  - [x] Complex nested objects (attributes, skills, dice arrays, weapons) stored as JSON text columns, parsed on read
+  - [x] Schema auto-created on startup via `initDb()` with `CREATE TABLE IF NOT EXISTS`
+  - [x] Removed lowdb dependency, removed `findById`/`findIndexById` usage from all routes
+- [x] **Migrated all 10 route files** — replaced in-memory array operations (push, splice, find, filter) with parameterized SQL queries
+  - [x] users.js, characters.js, vehicles.js, rolls.js, messages.js, gmRolls.js, opposedRolls.js, settings.js, initiative.js
+  - [x] Boolean fields (isNPC, isGM, complication, doubled) stored as INTEGER (0/1), converted on read
+  - [x] game_settings uses key-value table with JSON-encoded values and UPSERT pattern
+- [x] **Added D6_System_2e_Rulebook.txt to .gitignore** — copyrighted material excluded from repository
+- [x] **Added backend/data/local.db to .gitignore** — local dev database excluded
+- [x] **Browser tested** — full app verified working with SQLite backend: login, character CRUD, NPC creation, all endpoints responding correctly
+
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
 - [x] **Extracted shared outcome constants** — created `frontend/src/data/outcomes.js` (`OUTCOME_LABELS`, `OUTCOME_COLORS`), removed duplication from GameMasterPage, GMRollModal, GamePage
@@ -512,7 +527,7 @@ The dice rolling system follows D6 Second Edition rules:
 ✅ **Vehicle** — stats, weapons, crew, reference panels, **action rolls** (Movement, Navigate via Jupiter Drive, Evade, Resist Damage), weapon damage rolls, crew member selector
 ✅ **Game Master tab** — roll initiator (static/dice DC), response tracking, difficulty table, recent rolls
 ✅ **Dark-themed UI** — responsive, modern, tab-based navigation
-✅ All data persists in lowdb (backend/data/db.json)
+✅ All data persists in libSQL/SQLite (local dev: backend/data/local.db, production: Turso cloud)
 
 ### What Still Needs Work
 - [ ] **WebSocket** — true real-time (currently polling every 3-5s, works but not instant)
@@ -542,7 +557,7 @@ The dice rolling system follows D6 Second Edition rules:
 2. **Sound effects** — dice sounds, level-up ding
 3. **Mobile optimization** — make UI touch-friendly
 4. **Dark mode toggle** — option for light theme
-5. **Database migration** — move to PostgreSQL if needed
+5. ~~**Database migration**~~ — ✅ Done (v2.1.0, migrated to libSQL/Turso)
 
 ---
 
@@ -598,7 +613,7 @@ Items identified from D6 Second Edition rulebook that are missing from the app. 
 - **No authentication** — user ID in localStorage, anyone with ID can modify their characters
 - **Polling, not WebSocket** — GM rolls poll every 3s, chat every 3s, roll log every 5s (functional but not instant)
 - **No game sessions** — all rolls/chat in one global log, no grouping by game
-- **lowdb limitations** — file-based JSON, fine for 2-4 players, not scalable
+- **~~lowdb limitations~~** — RESOLVED: migrated to libSQL/Turso (SQLite-compatible cloud DB, free tier)
 - **No input validation** — should validate skill values (0-5?), names, etc.
 - **GM Roll modal scrolling** — on smaller viewports the modal may require scrolling to reach buttons
 - **Single character per player for GM rolls** — currently uses first character; multi-character selection not implemented
@@ -727,41 +742,14 @@ D62e/
 
 ---
 
-## 💾 Data Schema (lowdb)
+## 💾 Data Schema (libSQL/SQLite)
 
-Current db.json structure:
-```json
-{
-  "users": [
-    { "id", "username", "password", "displayName", "createdAt" }
-  ],
-  "characters": [
-    { "id", "userId", "name", "isNPC", "attributes", "heroPoints", "armor", "weapons", "talents", "flaws", "perks", "items", "notes", "createdAt", "updatedAt" }
-  ],
-  "rolls": [
-    { "id", "characterId", "rollType", "skill", "attribute", "diceCount", "diceRolled", "wildDie", "total", "complication", "doubled", "extraDice", "rollFlag", "linkedRollId", "dcValue", "outcome", "heroPointDelta", "createdAt" }
-  ],
-  "vehicles": [
-    { "id", "userId", "name", "isNPC", "stats", "weapons", "crew", "notes", "createdAt", "updatedAt" }
-  ],
-  "messages": [
-    { "id", "userId", "author", "text", "createdAt" }
-  ],
-  "gmRollRequests": [
-    { "id", "gmUserId", "skill", "attribute", "label", "dcType", "dcValue", "dcDiceCount", "status", "createdAt" }
-  ],
-  "gmRollResponses": [
-    { "id", "requestId", "characterId", "characterName", "userId", "diceCount", "diceRolled", "wildDie", "total", "complication", "outcome", "heroPointDelta", "rollFlag", "createdAt" }
-  ],
-  "initiative": [
-    { "id", "characterId", "characterName", "total", "diceResults", "isNPC", "isVehicle", "createdAt" }
-  ],
-  "opposedRolls": [
-    { "id", "type", "initiatorUserId", "initiatorCharacterId", "initiatorCharacterName", "initiatorIsNPC", "initiatorVehicleId", "initiatorVehicleName", "preset", "initiatorSkillLabel", "initiatorDiceCount", "initiatorDiceRolled", "initiatorWildDie", "initiatorTotal", "initiatorComplication", "defenderUserId", "defenderCharacterId", "defenderCharacterName", "defenderIsNPC", "defenderVehicleId", "defenderVehicleName", "defenderSkillLabel", "defenderIsStatic", "defenderTotal", "defenderBaseDice", "defenderFlatBonus", "defenderDiceCount", "defenderDiceRolled", "defenderWildDie", "defenderComplication", "winner", "margin", "status", "createdAt" }
-  ],
-  "gameSessions": []
-}
-```
+Database: local SQLite file for dev (`backend/data/local.db`), Turso cloud for production.
+Schema auto-created on startup via `initDb()` in `backend/src/db.js`.
+
+**Tables:** users, characters, vehicles, rolls, messages, gm_roll_requests, gm_roll_responses, opposed_rolls, game_settings, initiative
+
+**Key design:** Complex nested objects (attributes, skills, dice arrays, weapons, crew) stored as JSON text columns. Booleans stored as INTEGER (0/1), converted on read via `parseRow()` functions in each route file.
 
 ---
 
@@ -864,5 +852,5 @@ Current db.json structure:
 ---
 
 **Last Updated:** 2026-06-27
-**Last Work Done:** Character & Vehicle Opposed Rolls rework — renamed panel, weapon pickers for damage, vehicle opposed rolls panel with Gunnery/Evade/Resist presets
-**Status:** v1.6.1 + all prior features + character and vehicle opposed roll systems
+**Last Work Done:** Database migration from lowdb to libSQL/Turso for cloud deployment on Render
+**Status:** v2.1.0 — all prior features + persistent cloud-ready database

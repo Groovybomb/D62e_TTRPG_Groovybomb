@@ -56,3 +56,7 @@ backend/node_modules/
 backend/dist/
 backend/.venv/
 backend/data/db.json
+backend/data/local.db
+
+# Copyrighted reference material
+D6_System_2e_Rulebook.txt

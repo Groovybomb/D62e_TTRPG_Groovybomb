@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateId, findById, findIndexById } from '../utils.js';
+import { generateId } from '../utils.js';
 import db from '../db.js';
 
 const router = express.Router();
@@ -12,36 +12,28 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Username, password, and display name required' });
   }
 
-  if (db.data.users.find(u => u.username === username)) {
+  const existing = await db.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [username] });
+  if (existing.rows.length > 0) {
     return res.status(400).json({ error: 'Username already exists' });
   }
 
-  const newUser = {
-    id: generateId(),
-    username,
-    displayName,
-    password, // TODO: Hash passwords with bcrypt
-    isGM: isGM || false,
-    createdAt: new Date().toISOString(),
-  };
+  const id = generateId();
+  const createdAt = new Date().toISOString();
 
-  db.data.users.push(newUser);
-  await db.write();
-
-  res.status(201).json({
-    id: newUser.id,
-    username: newUser.username,
-    displayName: newUser.displayName,
-    isGM: newUser.isGM,
+  await db.execute({
+    sql: 'INSERT INTO users (id, username, displayName, password, isGM, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [id, username, displayName, password, isGM ? 1 : 0, createdAt],
   });
+
+  res.status(201).json({ id, username, displayName, isGM: isGM || false });
 });
 
 // POST /api/users/login - Authenticate user
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  // Find user
-  const user = db.data.users.find(u => u.username === username);
+  const result = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
+  const user = result.rows[0];
 
   if (!user || user.password !== password) {
     return res.status(401).json({ error: 'Invalid credentials' });
@@ -51,36 +43,34 @@ router.post('/login', async (req, res) => {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
-    isGM: user.isGM || false,
+    isGM: !!user.isGM,
   });
 });
 
 // PATCH /api/users/:userId - Update user (display name, etc.)
 router.patch('/:userId', async (req, res) => {
-  const index = findIndexById(db.data.users, req.params.userId);
+  const result = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [req.params.userId] });
+  const user = result.rows[0];
 
-  if (index === -1) {
+  if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const user = db.data.users[index];
+  const displayName = req.body.displayName || user.displayName;
+  const updatedAt = new Date().toISOString();
 
-  if (req.body.displayName) user.displayName = req.body.displayName;
-
-  user.updatedAt = new Date().toISOString();
-  db.data.users[index] = user;
-  await db.write();
-
-  res.json({
-    id: user.id,
-    username: user.username,
-    displayName: user.displayName,
+  await db.execute({
+    sql: 'UPDATE users SET displayName = ?, updatedAt = ? WHERE id = ?',
+    args: [displayName, updatedAt, req.params.userId],
   });
+
+  res.json({ id: user.id, username: user.username, displayName });
 });
 
 // GET /api/users/:userId - Get user info
 router.get('/:userId', async (req, res) => {
-  const user = findById(db.data.users, req.params.userId);
+  const result = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [req.params.userId] });
+  const user = result.rows[0];
 
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
@@ -90,18 +80,31 @@ router.get('/:userId', async (req, res) => {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
-    isGM: user.isGM || false,
+    isGM: !!user.isGM,
     createdAt: user.createdAt,
   });
 });
 
 // GET /api/users/:userId/characters - Get user's characters
 router.get('/:userId/characters', async (req, res) => {
-  const userCharacters = db.data.characters.filter(
-    c => c.userId === req.params.userId
-  );
-
-  res.json(userCharacters);
+  const result = await db.execute({ sql: 'SELECT * FROM characters WHERE userId = ?', args: [req.params.userId] });
+  const characters = result.rows.map(parseCharacterRow);
+  res.json(characters);
 });
+
+function parseCharacterRow(row) {
+  return {
+    ...row,
+    attributes: JSON.parse(row.attributes || '{}'),
+    advancedSkills: JSON.parse(row.advancedSkills || '{}'),
+    weapons: JSON.parse(row.weapons || '[]'),
+    talents: JSON.parse(row.talents || '[]'),
+    flaws: JSON.parse(row.flaws || '[]'),
+    perks: JSON.parse(row.perks || '[]'),
+    cybernetics: JSON.parse(row.cybernetics || '[]'),
+    items: JSON.parse(row.items || '[]'),
+    isNPC: !!row.isNPC,
+  };
+}
 
 export default router;

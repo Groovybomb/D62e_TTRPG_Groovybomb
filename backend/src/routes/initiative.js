@@ -4,13 +4,17 @@ import db from '../db.js';
 
 const router = express.Router();
 
-function ensureCollection() {
-  if (!db.data.initiative) db.data.initiative = [];
+function parseRow(row) {
+  return {
+    ...row,
+    diceResults: JSON.parse(row.diceResults || '[]'),
+    isNPC: !!row.isNPC,
+    isVehicle: !!row.isVehicle,
+  };
 }
 
 // POST /api/initiative - Add initiative entry
 router.post('/', async (req, res) => {
-  ensureCollection();
   const { characterId, characterName, total, diceResults, isNPC, isVehicle } = req.body;
 
   if (!characterName) {
@@ -28,36 +32,32 @@ router.post('/', async (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  db.data.initiative.push(entry);
-  db.data.initiative.sort((a, b) => b.total - a.total);
-  await db.write();
+  await db.execute({
+    sql: 'INSERT INTO initiative (id, characterId, characterName, total, diceResults, isNPC, isVehicle, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    args: [entry.id, entry.characterId, entry.characterName, entry.total, JSON.stringify(entry.diceResults), entry.isNPC ? 1 : 0, entry.isVehicle ? 1 : 0, entry.createdAt],
+  });
 
   res.status(201).json(entry);
 });
 
 // GET /api/initiative - Get all entries sorted by total desc
 router.get('/', async (req, res) => {
-  ensureCollection();
-  const sorted = [...db.data.initiative].sort((a, b) => b.total - a.total);
-  res.json(sorted);
+  const result = await db.execute('SELECT * FROM initiative ORDER BY total DESC');
+  res.json(result.rows.map(parseRow));
 });
 
 // DELETE /api/initiative - Clear all
 router.delete('/', async (req, res) => {
-  ensureCollection();
-  db.data.initiative = [];
-  await db.write();
+  await db.execute('DELETE FROM initiative');
   res.json({ message: 'Initiative cleared' });
 });
 
 // DELETE /api/initiative/:id - Remove one entry
 router.delete('/:id', async (req, res) => {
-  ensureCollection();
-  const index = db.data.initiative.findIndex(e => e.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Entry not found' });
+  const result = await db.execute({ sql: 'SELECT id FROM initiative WHERE id = ?', args: [req.params.id] });
+  if (result.rows.length === 0) return res.status(404).json({ error: 'Entry not found' });
 
-  db.data.initiative.splice(index, 1);
-  await db.write();
+  await db.execute({ sql: 'DELETE FROM initiative WHERE id = ?', args: [req.params.id] });
   res.json({ message: 'Entry removed' });
 });
 

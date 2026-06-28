@@ -9,6 +9,7 @@ import gmRollRoutes from './routes/gmRolls.js';
 import settingsRoutes from './routes/settings.js';
 import initiativeRoutes from './routes/initiative.js';
 import opposedRollRoutes from './routes/opposedRolls.js';
+import { initDb } from './db.js';
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 5000;
@@ -50,8 +51,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🎲 D62e Backend running on http://localhost:${PORT}`);
-  console.log(`   Data stored in: backend/data/db.json`);
+// Initialize database and start server
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🎲 D62e Backend running on http://localhost:${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });

@@ -6,8 +6,8 @@ const router = express.Router();
 
 // GET /api/messages - Get all messages (newest first)
 router.get('/', async (req, res) => {
-  const messages = [...db.data.messages].reverse().slice(0, 100);
-  res.json(messages);
+  const result = await db.execute('SELECT * FROM messages ORDER BY createdAt DESC LIMIT 100');
+  res.json(result.rows);
 });
 
 // POST /api/messages - Send a chat message
@@ -26,16 +26,17 @@ router.post('/', async (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  db.data.messages.push(message);
-  await db.write();
+  await db.execute({
+    sql: 'INSERT INTO messages (id, userId, author, text, createdAt) VALUES (?, ?, ?, ?, ?)',
+    args: [message.id, message.userId, message.author, message.text, message.createdAt],
+  });
 
   res.status(201).json(message);
 });
 
 // DELETE /api/messages - Clear all messages
 router.delete('/', async (req, res) => {
-  db.data.messages = [];
-  await db.write();
+  await db.execute('DELETE FROM messages');
   res.json({ message: 'All messages cleared' });
 });
 

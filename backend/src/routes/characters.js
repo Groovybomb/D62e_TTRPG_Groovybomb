@@ -1,37 +1,34 @@
 import express from 'express';
-import { generateId, findById, findIndexById } from '../utils.js';
+import { generateId } from '../utils.js';
 import db from '../db.js';
 
 const router = express.Router();
 
-function defaultCharacter(userId, name) {
+const JSON_FIELDS = ['attributes', 'advancedSkills', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items'];
+
+function parseRow(row) {
+  const parsed = { ...row };
+  for (const f of JSON_FIELDS) {
+    parsed[f] = JSON.parse(row[f] || (f === 'attributes' || f === 'advancedSkills' ? '{}' : '[]'));
+  }
+  parsed.isNPC = !!row.isNPC;
+  return parsed;
+}
+
+function defaultAttributes() {
   return {
-    id: generateId(),
-    userId,
-    name,
-    heroPoints: 1,
-    armor: 0,
-    attributes: {
-      agility: { dice: 2, skills: { acrobatics: 0, shooting: 0, melee: 0, slightOfHand: 0 } },
-      brawn: { dice: 2, skills: { athletics: 0, intimidation: 0, stamina: 0, throwing: 0 } },
-      knowledge: { dice: 2, skills: { languages: 0, medicine: 0, scholar: 0, sciences: 0 } },
-      perception: { dice: 2, skills: { driving: 0, investigation: 0, stealth: 0, survival: 0, gunnery: 0, streetwise: 0 } },
-      charm: { dice: 2, skills: { command: 0, deceive: 0, persuasion: 0, willpower: 0 } },
-      mechanical: { dice: 2, skills: { communication: 0, navigation: 0, piloting: 0, useRepairMech: 0 } },
-      technical: { dice: 2, skills: { computers: 0, demolition: 0, upgrade: 0, useRepairTech: 0 } },
-    },
-    advancedSkills: { jupiterDrive: 0, surgery: 0, perform: 0, cryptography: 0 },
-    woundLevel: 'healthy',
-    stunState: 'none',
-    weapons: [],
-    talents: [],
-    flaws: [],
-    perks: [],
-    cybernetics: [],
-    items: [],
-    notes: '',
-    createdAt: new Date().toISOString(),
+    agility: { dice: 2, skills: { acrobatics: 0, shooting: 0, melee: 0, slightOfHand: 0 } },
+    brawn: { dice: 2, skills: { athletics: 0, intimidation: 0, stamina: 0, throwing: 0 } },
+    knowledge: { dice: 2, skills: { languages: 0, medicine: 0, scholar: 0, sciences: 0 } },
+    perception: { dice: 2, skills: { driving: 0, investigation: 0, stealth: 0, survival: 0, gunnery: 0, streetwise: 0 } },
+    charm: { dice: 2, skills: { command: 0, deceive: 0, persuasion: 0, willpower: 0 } },
+    mechanical: { dice: 2, skills: { communication: 0, navigation: 0, piloting: 0, useRepairMech: 0 } },
+    technical: { dice: 2, skills: { computers: 0, demolition: 0, upgrade: 0, useRepairTech: 0 } },
   };
+}
+
+function defaultAdvancedSkills() {
+  return { jupiterDrive: 0, surgery: 0, perform: 0, cryptography: 0 };
 }
 
 // POST /api/characters - Create new character
@@ -42,48 +39,89 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'userId and name required' });
   }
 
-  const newCharacter = defaultCharacter(userId, name);
-  if (isNPC) {
-    newCharacter.isNPC = true;
-    newCharacter.heroPoints = 0;
-  }
-  db.data.characters.push(newCharacter);
-  await db.write();
+  const character = {
+    id: generateId(),
+    userId,
+    name,
+    heroPoints: isNPC ? 0 : 1,
+    armor: 0,
+    attributes: defaultAttributes(),
+    advancedSkills: defaultAdvancedSkills(),
+    woundLevel: 'healthy',
+    stunState: 'none',
+    weapons: [],
+    talents: [],
+    flaws: [],
+    perks: [],
+    cybernetics: [],
+    items: [],
+    notes: '',
+    isNPC: isNPC || false,
+    createdAt: new Date().toISOString(),
+  };
 
-  res.status(201).json(newCharacter);
+  await db.execute({
+    sql: `INSERT INTO characters (id, userId, name, heroPoints, armor, attributes, advancedSkills, woundLevel, stunState, weapons, talents, flaws, perks, cybernetics, items, notes, isNPC, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      character.id, character.userId, character.name, character.heroPoints, character.armor,
+      JSON.stringify(character.attributes), JSON.stringify(character.advancedSkills),
+      character.woundLevel, character.stunState,
+      JSON.stringify(character.weapons), JSON.stringify(character.talents),
+      JSON.stringify(character.flaws), JSON.stringify(character.perks),
+      JSON.stringify(character.cybernetics), JSON.stringify(character.items),
+      character.notes, character.isNPC ? 1 : 0, character.createdAt,
+    ],
+  });
+
+  res.status(201).json(character);
 });
 
-// GET /api/characters - Get all characters (optionally filter by ?userId=)
+// GET /api/characters - Get all characters (optionally filter by ?userId= and ?isNPC=)
 router.get('/', async (req, res) => {
   const { userId, isNPC } = req.query;
-  let results = userId
-    ? db.data.characters.filter(c => c.userId === userId)
-    : db.data.characters;
-  if (isNPC === 'true') results = results.filter(c => c.isNPC);
-  else if (isNPC === 'false') results = results.filter(c => !c.isNPC);
-  res.json(results);
+  let sql = 'SELECT * FROM characters';
+  const conditions = [];
+  const args = [];
+
+  if (userId) {
+    conditions.push('userId = ?');
+    args.push(userId);
+  }
+  if (isNPC === 'true') {
+    conditions.push('isNPC = 1');
+  } else if (isNPC === 'false') {
+    conditions.push('isNPC = 0');
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  const result = await db.execute({ sql, args });
+  res.json(result.rows.map(parseRow));
 });
 
 // GET /api/characters/:characterId - Get character details
 router.get('/:characterId', async (req, res) => {
-  const character = findById(db.data.characters, req.params.characterId);
+  const result = await db.execute({ sql: 'SELECT * FROM characters WHERE id = ?', args: [req.params.characterId] });
 
-  if (!character) {
+  if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Character not found' });
   }
 
-  res.json(character);
+  res.json(parseRow(result.rows[0]));
 });
 
 // PATCH /api/characters/:characterId - Update character
 router.patch('/:characterId', async (req, res) => {
-  const index = findIndexById(db.data.characters, req.params.characterId);
+  const result = await db.execute({ sql: 'SELECT * FROM characters WHERE id = ?', args: [req.params.characterId] });
 
-  if (index === -1) {
+  if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Character not found' });
   }
 
-  const character = db.data.characters[index];
+  const character = parseRow(result.rows[0]);
   const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'woundLevel', 'stunState', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items', 'notes', 'isNPC'];
 
   for (const key of allowed) {
@@ -93,24 +131,33 @@ router.patch('/:characterId', async (req, res) => {
   }
 
   character.updatedAt = new Date().toISOString();
-  db.data.characters[index] = character;
-  await db.write();
+
+  await db.execute({
+    sql: `UPDATE characters SET name=?, heroPoints=?, armor=?, attributes=?, advancedSkills=?, woundLevel=?, stunState=?, weapons=?, talents=?, flaws=?, perks=?, cybernetics=?, items=?, notes=?, isNPC=?, updatedAt=? WHERE id=?`,
+    args: [
+      character.name, character.heroPoints, character.armor,
+      JSON.stringify(character.attributes), JSON.stringify(character.advancedSkills),
+      character.woundLevel, character.stunState,
+      JSON.stringify(character.weapons), JSON.stringify(character.talents),
+      JSON.stringify(character.flaws), JSON.stringify(character.perks),
+      JSON.stringify(character.cybernetics), JSON.stringify(character.items),
+      character.notes, character.isNPC ? 1 : 0, character.updatedAt, character.id,
+    ],
+  });
 
   res.json(character);
 });
 
 // DELETE /api/characters/:characterId - Delete character
 router.delete('/:characterId', async (req, res) => {
-  const index = findIndexById(db.data.characters, req.params.characterId);
+  const result = await db.execute({ sql: 'SELECT * FROM characters WHERE id = ?', args: [req.params.characterId] });
 
-  if (index === -1) {
+  if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Character not found' });
   }
 
-  const deleted = db.data.characters.splice(index, 1);
-  await db.write();
-
-  res.json({ message: 'Character deleted', character: deleted[0] });
+  await db.execute({ sql: 'DELETE FROM characters WHERE id = ?', args: [req.params.characterId] });
+  res.json({ message: 'Character deleted', character: parseRow(result.rows[0]) });
 });
 
 export default router;
