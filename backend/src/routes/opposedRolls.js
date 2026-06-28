@@ -27,7 +27,7 @@ function calculateVehicleDamageEffect(margin, currentWoundLevel) {
   };
 }
 
-function calculateCharacterDamageEffect(damageTotal, brawnTotal, currentWoundLevel, currentStunState, damageHadComplication) {
+function calculateCharacterDamageEffect(damageTotal, brawnTotal, currentWoundLevel, currentStunState, brawnHadComplication) {
   const woundIdx = CHARACTER_WOUND_ORDER.indexOf(currentWoundLevel || 'healthy');
   const stunIdx = CHARACTER_STUN_ORDER.indexOf(currentStunState || 'none');
   let newWoundIdx = woundIdx;
@@ -42,7 +42,7 @@ function calculateCharacterDamageEffect(damageTotal, brawnTotal, currentWoundLev
   }
 
   if (brawnTotal <= damageTotal) {
-    if (damageHadComplication) {
+    if (brawnHadComplication) {
       newWoundIdx = Math.max(CHARACTER_WOUND_ORDER.indexOf('mortallyWounded'), woundIdx + 1);
     } else {
       newWoundIdx = Math.min(woundIdx + 1, CHARACTER_WOUND_ORDER.length - 1);
@@ -120,8 +120,8 @@ async function applyDamage(opposedRoll) {
     const cResult = await db.execute({ sql: 'SELECT * FROM characters WHERE id = ?', args: [opposedRoll.defenderCharacterId] });
     if (cResult.rows.length === 0) return null;
     const character = cResult.rows[0];
-    const damageHadComplication = !!opposedRoll.initiatorComplication;
-    const effect = calculateCharacterDamageEffect(damageTotal, brawnTotal, character.woundLevel, character.stunState, damageHadComplication);
+    const brawnHadComplication = !!opposedRoll.defenderComplication;
+    const effect = calculateCharacterDamageEffect(damageTotal, brawnTotal, character.woundLevel, character.stunState, brawnHadComplication);
     if (!effect) return null;
 
     const updates = {};
