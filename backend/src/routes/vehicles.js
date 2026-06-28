@@ -24,7 +24,7 @@ function defaultCrew() {
 
 // POST /api/vehicles - Create new vehicle
 router.post('/', async (req, res) => {
-  const { userId, name, isNPC } = req.body;
+  const { userId, name, isNPC, crew } = req.body;
 
   if (!userId || !name) {
     return res.status(400).json({ error: 'userId and name required' });
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
     name,
     stats: defaultStats(),
     weapons: [],
-    crew: defaultCrew(),
+    crew: crew || defaultCrew(),
     woundLevel: 'undamaged',
     notes: '',
     isNPC: isNPC || false,

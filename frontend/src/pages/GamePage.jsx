@@ -295,6 +295,25 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
   const voppAtkCrew = allCharacters.find(c => c.id === voppAtkCrewId);
   const voppDefCrew = allCharacters.find(c => c.id === voppDefCrewId);
 
+  useEffect(() => {
+    if (!voppAtkVehicle || !voppPreset) return;
+    if (voppPreset.attacker.type === 'crew_skill') {
+      const tacticalId = voppAtkVehicle.crew?.tactical;
+      if (tacticalId && allCharacters.some(c => c.id === tacticalId)) setVoppAtkCrewId(tacticalId);
+    }
+  }, [voppAtkVehicleId, voppPreset]);
+
+  useEffect(() => {
+    if (!voppDefVehicle || !voppPreset) return;
+    if (voppPreset.defender.type === 'vehicle_evade') {
+      const helmId = voppDefVehicle.crew?.helm;
+      if (helmId && allCharacters.some(c => c.id === helmId)) setVoppDefCrewId(helmId);
+    } else if (voppPreset.defender.type === 'vehicle_resist') {
+      const opsId = voppDefVehicle.crew?.operations;
+      if (opsId && allCharacters.some(c => c.id === opsId)) setVoppDefCrewId(opsId);
+    }
+  }, [voppDefVehicleId, voppPreset]);
+
   const getVehicleGunneryDice = (char) => {
     if (!char) return 0;
     const perc = char.attributes?.perception;
@@ -386,7 +405,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
           initiatorWildDie: null,
           initiatorTotal: total,
           initiatorComplication: false,
-          defenderUserId: voppDefCrew?.userId || userId,
+          defenderUserId: voppDefCrew?.userId || voppDefVehicle.userId,
           defenderCharacterId: voppDefCrew?.id || null,
           defenderCharacterName: voppDefCrew?.name || 'Crew',
           defenderIsNPC,
@@ -432,7 +451,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
           initiatorWildDie: null,
           initiatorTotal: total,
           initiatorComplication: false,
-          defenderUserId: voppDefCrew?.userId || userId,
+          defenderUserId: voppDefCrew?.userId || voppDefVehicle.userId,
           defenderCharacterId: voppDefCrew?.id || null,
           defenderCharacterName: voppDefCrew?.name || 'Crew',
           defenderIsNPC,

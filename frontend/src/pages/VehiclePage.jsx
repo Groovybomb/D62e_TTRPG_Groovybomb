@@ -32,8 +32,9 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
   const [selectedCharId, setSelectedCharId] = useState(null);
   const [vehicleRoll, setVehicleRoll] = useState(null);
   const [damageRoll, setDamageRoll] = useState(null);
+  const [allCharacters, setAllCharacters] = useState([]);
 
-  useEffect(() => { fetchVehicles(); fetchCharacters(); }, [userId]);
+  useEffect(() => { fetchVehicles(); fetchCharacters(); fetchAllCharacters(); }, [userId]);
 
   useEffect(() => {
     const interval = setInterval(fetchVehicles, 3000);
@@ -60,6 +61,13 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
     } catch { /* ignore */ }
   };
 
+  const fetchAllCharacters = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/characters`);
+      setAllCharacters(res.data);
+    } catch { /* ignore */ }
+  };
+
   const selectedChar = characters.find(c => c.id === selectedCharId) || null;
 
   const handleHeroPointChange = async (newPoints) => {
@@ -73,7 +81,9 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_URL}/vehicles`, { userId, name: newName, isNPC: isNPC || false });
+      const defaultCrewId = selectedCharId || (characters.length > 0 ? characters[0].id : '');
+      const defaultCrew = isNPC ? undefined : { captain: defaultCrewId, helm: defaultCrewId, tactical: defaultCrewId, operations: defaultCrewId, engineer: defaultCrewId };
+      const res = await axios.post(`${API_URL}/vehicles`, { userId, name: newName, isNPC: isNPC || false, crew: defaultCrew });
       setVehicles([...vehicles, res.data]);
       setSelectedId(res.data.id);
       setNewName('');
@@ -119,6 +129,12 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
   };
 
   const updateField = (field, val) => setEditData({ ...editData, [field]: val });
+
+  const getCharName = (charId) => {
+    if (!charId) return 'Unassigned';
+    const c = allCharacters.find(ch => ch.id === charId);
+    return c ? `${c.name}${c.isNPC ? ' [NPC]' : ''}` : 'Unassigned';
+  };
 
   const getDefense = (stats) => (stats.hull || 0) * 5 + (stats.shield || 0);
   const getJupiterDriveDice = () => {
@@ -474,8 +490,11 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
                   <div className="crew-role">{role.label}</div>
                   <div className="crew-duty">{role.duty}</div>
                   {editing
-                    ? <input type="text" value={vehicle.crew?.[role.key] || ''} onChange={e => updateCrew(role.key, e.target.value)} placeholder="Unassigned" className="crew-input" />
-                    : <div className="crew-name">{vehicle.crew?.[role.key] || 'Unassigned'}</div>}
+                    ? <select value={vehicle.crew?.[role.key] || ''} onChange={e => updateCrew(role.key, e.target.value)} className="crew-input select-input">
+                        <option value="">Unassigned</option>
+                        {allCharacters.map(c => <option key={c.id} value={c.id}>{c.name}{c.isNPC ? ' [NPC]' : ''}</option>)}
+                      </select>
+                    : <div className="crew-name">{getCharName(vehicle.crew?.[role.key])}</div>}
                 </div>
               ))}
             </div>
@@ -507,9 +526,9 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
               <h3>Damage &amp; Repair</h3>
               <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
                 <li>Repair uses <strong>Mechanical</strong> skill</li>
-                <li>Difficulty 10: Remove Stunned</li>
-                <li>Difficulty 15: Remove Wounded / Incapacitated</li>
-                <li>Difficulty 20: Remove Mortally Wounded</li>
+                <li>Difficulty 10: Repair Light damage</li>
+                <li>Difficulty 15: Repair Heavy damage</li>
+                <li>Difficulty 20: Repair Severe damage</li>
                 <li>Hacking uses <strong>Computers</strong> skill</li>
               </ul>
             </div>

@@ -11,39 +11,47 @@ const WOUND_LABELS = { healthy: 'Healthy', wounded: 'Wounded', incapacitated: 'I
 const STUN_LABELS = { none: 'Clear', staggered: 'Staggered', stunned: 'Stunned', prone: 'Prone' };
 const VEHICLE_WOUND_LABELS = { undamaged: 'Undamaged', light: 'Light', heavy: 'Heavy', severe: 'Severe', destroyed: 'Destroyed' };
 
-function calculateDamageEffect(margin, currentWoundLevel, currentStunState, isVehicle) {
+function calculateVehicleDamageEffect(margin, currentWoundLevel) {
   if (margin <= 0) return null;
+  const curIdx = VEHICLE_WOUND_ORDER.indexOf(currentWoundLevel || 'undamaged');
+  let steps;
+  if (margin <= 3) steps = 1;
+  else if (margin <= 8) steps = 1;
+  else if (margin <= 12) steps = 2;
+  else steps = VEHICLE_WOUND_ORDER.length - 1 - curIdx;
+  const newIdx = Math.min(curIdx + steps, VEHICLE_WOUND_ORDER.length - 1);
+  if (newIdx <= curIdx) return null;
+  return {
+    entityType: 'vehicle',
+    woundLevel: { old: VEHICLE_WOUND_ORDER[curIdx], new: VEHICLE_WOUND_ORDER[newIdx] },
+  };
+}
 
-  if (isVehicle) {
-    const curIdx = VEHICLE_WOUND_ORDER.indexOf(currentWoundLevel || 'undamaged');
-    let steps;
-    if (margin <= 3) steps = 1;
-    else if (margin <= 8) steps = 1;
-    else if (margin <= 12) steps = 2;
-    else steps = VEHICLE_WOUND_ORDER.length - 1 - curIdx;
-    const newIdx = Math.min(curIdx + steps, VEHICLE_WOUND_ORDER.length - 1);
-    if (newIdx <= curIdx) return null;
-    return {
-      entityType: 'vehicle',
-      woundLevel: { old: VEHICLE_WOUND_ORDER[curIdx], new: VEHICLE_WOUND_ORDER[newIdx] },
-    };
-  }
-
+function calculateCharacterDamageEffect(damageTotal, brawnTotal, currentWoundLevel, currentStunState, damageHadComplication) {
   const woundIdx = CHARACTER_WOUND_ORDER.indexOf(currentWoundLevel || 'healthy');
   const stunIdx = CHARACTER_STUN_ORDER.indexOf(currentStunState || 'none');
   let newWoundIdx = woundIdx;
   let newStunIdx = stunIdx;
 
-  if (margin <= 3) {
-    newStunIdx = Math.min(stunIdx + 1, CHARACTER_STUN_ORDER.length - 1);
-  } else if (margin <= 8) {
-    newWoundIdx = Math.min(woundIdx + 1, CHARACTER_WOUND_ORDER.length - 1);
-  } else if (margin <= 12) {
-    newWoundIdx = Math.min(woundIdx + 2, CHARACTER_WOUND_ORDER.length - 1);
-  } else if (margin <= 15) {
-    newWoundIdx = Math.max(Math.min(woundIdx + 2, CHARACTER_WOUND_ORDER.length - 1), CHARACTER_WOUND_ORDER.indexOf('incapacitated'));
+  if (brawnTotal < damageTotal / 2) {
+    return {
+      entityType: 'character',
+      killingBlow: true,
+      woundLevel: { old: CHARACTER_WOUND_ORDER[woundIdx], new: 'dead' },
+    };
+  }
+
+  if (brawnTotal <= damageTotal) {
+    if (damageHadComplication) {
+      newWoundIdx = Math.max(CHARACTER_WOUND_ORDER.indexOf('mortallyWounded'), woundIdx + 1);
+    } else {
+      newWoundIdx = Math.min(woundIdx + 1, CHARACTER_WOUND_ORDER.length - 1);
+      if (newWoundIdx < CHARACTER_WOUND_ORDER.indexOf('wounded')) {
+        newWoundIdx = CHARACTER_WOUND_ORDER.indexOf('wounded');
+      }
+    }
   } else {
-    newWoundIdx = Math.max(Math.min(woundIdx + 3, CHARACTER_WOUND_ORDER.length - 1), CHARACTER_WOUND_ORDER.indexOf('mortallyWounded'));
+    newStunIdx = Math.min(stunIdx + 1, CHARACTER_STUN_ORDER.length - 1);
   }
 
   if (newWoundIdx === woundIdx && newStunIdx === stunIdx) return null;
@@ -58,41 +66,49 @@ function calculateDamageEffect(margin, currentWoundLevel, currentStunState, isVe
   return result;
 }
 
-function formatDamageMessage(defenderName, effect, margin, isVehicle) {
-  const parts = [`${defenderName} takes damage (margin: ${margin})!`];
+function formatDamageMessage(defenderName, effect, isVehicle, damageTotal, brawnTotal) {
   if (isVehicle) {
+    const margin = damageTotal - brawnTotal;
+    const parts = [`${defenderName} takes damage (margin: ${margin})!`];
     parts.push(`Hull: ${VEHICLE_WOUND_LABELS[effect.woundLevel.old]} → ${VEHICLE_WOUND_LABELS[effect.woundLevel.new]}`);
-  } else {
-    if (effect.woundLevel) {
-      parts.push(`Wounds: ${WOUND_LABELS[effect.woundLevel.old]} → ${WOUND_LABELS[effect.woundLevel.new]}`);
-    }
-    if (effect.stunState) {
-      parts.push(`Stun: ${STUN_LABELS[effect.stunState.old]} → ${STUN_LABELS[effect.stunState.new]}`);
-    }
+    return parts.join(' ');
+  }
+
+  if (effect.killingBlow) {
+    return `${defenderName} — KILLING BLOW! (Brawn ${brawnTotal} < half of Damage ${damageTotal}) → Dead`;
+  }
+  const parts = [`${defenderName} hit! (Damage ${damageTotal} vs Brawn ${brawnTotal})`];
+  if (effect.woundLevel) {
+    parts.push(`Wounds: ${WOUND_LABELS[effect.woundLevel.old]} → ${WOUND_LABELS[effect.woundLevel.new]}`);
+  }
+  if (effect.stunState) {
+    parts.push(`Stun: ${STUN_LABELS[effect.stunState.old]} → ${STUN_LABELS[effect.stunState.new]}`);
   }
   return parts.join(' ');
 }
 
 async function applyDamage(opposedRoll) {
-  if (opposedRoll.winner !== 'initiator') return null;
-
   const isDamagePreset = opposedRoll.preset === 'damage_vs_resist';
   const isVehicleDamage = opposedRoll.preset === 'vehicle_damage_resist';
   if (!isDamagePreset && !isVehicleDamage) return null;
 
-  const margin = opposedRoll.margin || Math.abs((opposedRoll.initiatorTotal || 0) - (opposedRoll.defenderTotal || 0));
-  if (margin <= 0) return null;
+  const damageTotal = opposedRoll.initiatorTotal || 0;
+  const brawnTotal = opposedRoll.defenderTotal || 0;
 
   if (isVehicleDamage && opposedRoll.defenderVehicleId) {
+    if (opposedRoll.winner !== 'initiator') return null;
+    const margin = Math.abs(damageTotal - brawnTotal);
+    if (margin <= 0) return null;
+
     const vResult = await db.execute({ sql: 'SELECT * FROM vehicles WHERE id = ?', args: [opposedRoll.defenderVehicleId] });
     if (vResult.rows.length === 0) return null;
     const vehicle = vResult.rows[0];
-    const effect = calculateDamageEffect(margin, vehicle.woundLevel, null, true);
+    const effect = calculateVehicleDamageEffect(margin, vehicle.woundLevel);
     if (!effect) return null;
 
     await db.execute({ sql: 'UPDATE vehicles SET woundLevel=?, updatedAt=? WHERE id=?', args: [effect.woundLevel.new, new Date().toISOString(), opposedRoll.defenderVehicleId] });
 
-    const msg = formatDamageMessage(opposedRoll.defenderVehicleName || vehicle.name, effect, margin, true);
+    const msg = formatDamageMessage(opposedRoll.defenderVehicleName || vehicle.name, effect, true, damageTotal, brawnTotal);
     await db.execute({
       sql: 'INSERT INTO messages (id, userId, author, text, createdAt) VALUES (?, ?, ?, ?, ?)',
       args: [generateId(), 'system', 'System', msg, new Date().toISOString()],
@@ -104,7 +120,8 @@ async function applyDamage(opposedRoll) {
     const cResult = await db.execute({ sql: 'SELECT * FROM characters WHERE id = ?', args: [opposedRoll.defenderCharacterId] });
     if (cResult.rows.length === 0) return null;
     const character = cResult.rows[0];
-    const effect = calculateDamageEffect(margin, character.woundLevel, character.stunState, false);
+    const damageHadComplication = !!opposedRoll.initiatorComplication;
+    const effect = calculateCharacterDamageEffect(damageTotal, brawnTotal, character.woundLevel, character.stunState, damageHadComplication);
     if (!effect) return null;
 
     const updates = {};
@@ -122,7 +139,7 @@ async function applyDamage(opposedRoll) {
     await db.execute({ sql: `UPDATE characters SET ${setClauses.join(', ')} WHERE id=?`, args });
 
     const defName = opposedRoll.defenderCharacterName || character.name;
-    const msg = formatDamageMessage(defName, effect, margin, false);
+    const msg = formatDamageMessage(defName, effect, false, damageTotal, brawnTotal);
     await db.execute({
       sql: 'INSERT INTO messages (id, userId, author, text, createdAt) VALUES (?, ?, ?, ?, ?)',
       args: [generateId(), 'system', 'System', msg, new Date().toISOString()],

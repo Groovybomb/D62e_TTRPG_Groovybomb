@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 2.2.0 — Defender re-roll options, auto wound updates, shared player vehicles.
+**Version:** 2.3.0 — D6 2e character damage rules, crew station dropdowns, crew-based popup routing.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -419,6 +419,19 @@ Before committing, verify:
 - [x] **Helper functions** — `getVehicleGunneryDice()`, `getVehicleEvadeDice()`, `getVehicleResistDice()`, `getVehiclePilotingSkill()` in GamePage
 - [x] **Data exports** — `VEHICLE_OPPOSED_PRESETS`, `getVehicleDefense()`, `parseDamageFormula()` added to `opposedPresets.js`
 - [x] **Browser tested** — Character damage with weapon picker, Vehicle Gunnery vs Defense (static), Vehicle Gunnery vs Evade (active with flat bonus), roll log with vehicle names all verified
+
+### v2.3.0: D6 2e Character Damage, Crew Dropdowns, Crew Popup Routing (2026-06-28)
+- [x] **Vehicle Damage & Repair reference updated** — Changed repair difficulty text from character wound terms (Stunned, Wounded, Mortally Wounded) to vehicle wound terms (Light, Heavy, Severe damage).
+- [x] **Crew stations as character ID dropdowns** — Replaced free-text crew inputs with `<select>` dropdowns populated with all players and NPCs. Crew stations now store character IDs instead of name strings. View mode resolves character names from IDs. All crew defaults to creating player's selected character on vehicle creation.
+- [x] **Crew-based vehicle opposed roll popup routing** — Vehicle opposed roll defender crew is auto-selected based on crew station assignments: helm station for evade rolls, operations station for resist damage rolls, tactical station for attack rolls. Falls back to vehicle creator if crew station is empty. GM can still override the auto-selection.
+- [x] **D6 2e character damage rules** — Rewrote character damage calculation from margin-based thresholds to D6 Second Edition binary comparison:
+  - Staggered: Brawn > damage (defender wins but still gets staggered, stun escalation)
+  - Wounded: Brawn ≤ damage (wound escalation: wounded → incapacitated → mortallyWounded)
+  - Mortally Wounded: Brawn ≤ damage AND damage roll had Complication (ready for wild die damage rolls)
+  - Killing Blow: Brawn < half of damage → dead immediately
+  - Damage messages now show "Damage X vs Brawn Y" instead of margin
+  - Vehicle damage rules unchanged (still margin-based)
+- [x] **Browser tested** — Damage & Repair text, crew dropdowns with character options, no console errors
 
 ### v2.2.0: Defender Re-Roll, Auto Wounds, Shared Vehicles (2026-06-28)
 - [x] **Defender re-roll/double-down on opposed rolls** — OpposedRollModal now defers server submission until user clicks "Accept Result", keeping Re-Roll (1 HP) and Double Down (free) buttons available after the initial roll. Previously, the result was posted immediately on first roll and `resolved=true` hid the buttons.
@@ -863,5 +876,5 @@ Schema auto-created on startup via `initDb()` in `backend/src/db.js`.
 ---
 
 **Last Updated:** 2026-06-28
-**Last Work Done:** Defender re-roll options, auto wound updates after damage rolls, shared player vehicles
-**Status:** v2.2.0 — defender re-roll fix, auto wound updates, shared vehicles
+**Last Work Done:** D6 2e character damage rules, crew station dropdowns, crew-based popup routing
+**Status:** v2.3.0 — D6 2e character damage, crew dropdowns, crew popup routing
