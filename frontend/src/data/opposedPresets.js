@@ -1,5 +1,6 @@
 import { ATTRIBUTE_DEFINITIONS, getDicePool } from './attributes';
 
+// Character vs Character presets
 export const OPPOSED_PRESETS = [
   // Combat — vs Static Defense
   {
@@ -21,13 +22,6 @@ export const OPPOSED_PRESETS = [
     label: 'Throwing vs. Dodge',
     category: 'Combat',
     attacker: { attr: 'brawn', skill: 'throwing' },
-    defender: { type: 'static', stat: 'dodge' },
-  },
-  {
-    key: 'ranged_gunnery',
-    label: 'Gunnery vs. Dodge',
-    category: 'Combat',
-    attacker: { attr: 'perception', skill: 'gunnery' },
     defender: { type: 'static', stat: 'dodge' },
   },
   {
@@ -92,6 +86,31 @@ export const OPPOSED_PRESETS = [
   },
 ];
 
+// Vehicle vs Vehicle presets
+export const VEHICLE_OPPOSED_PRESETS = [
+  {
+    key: 'vehicle_gunnery_dodge',
+    label: 'Gunnery vs. Defense',
+    category: 'Attack',
+    attacker: { type: 'crew_skill', attr: 'perception', skill: 'gunnery' },
+    defender: { type: 'vehicle_static', stat: 'defense' },
+  },
+  {
+    key: 'vehicle_gunnery_evade',
+    label: 'Gunnery vs. Evade',
+    category: 'Attack',
+    attacker: { type: 'crew_skill', attr: 'perception', skill: 'gunnery' },
+    defender: { type: 'vehicle_evade' },
+  },
+  {
+    key: 'vehicle_damage_resist',
+    label: 'Damage vs. Resist',
+    category: 'Damage',
+    attacker: { type: 'vehicle_damage' },
+    defender: { type: 'vehicle_resist' },
+  },
+];
+
 export function getStaticDefense(character, stat) {
   if (stat === 'dodge') {
     const percDice = character.attributes?.perception?.dice || 2;
@@ -108,6 +127,12 @@ export function getStaticDefense(character, stat) {
   return { value: 0, label: stat };
 }
 
+export function getVehicleDefense(vehicle) {
+  const hull = vehicle.stats?.hull || 0;
+  const shield = vehicle.stats?.shield || 0;
+  return hull * 5 + shield;
+}
+
 export function getSkillLabel(attrKey, skillKey) {
   const attr = ATTRIBUTE_DEFINITIONS[attrKey];
   if (!attr) return skillKey;
@@ -121,8 +146,13 @@ export function getDefenderDicePool(character, attrKey, skillKey) {
 export function determineWinner(initiatorTotal, defenderTotal, initiatorIsNPC, defenderIsNPC) {
   if (initiatorTotal > defenderTotal) return 'initiator';
   if (defenderTotal > initiatorTotal) return 'defender';
-  // Tie: PC wins over NPC
   if (!initiatorIsNPC && defenderIsNPC) return 'initiator';
   if (initiatorIsNPC && !defenderIsNPC) return 'defender';
   return 'tie';
+}
+
+export function parseDamageFormula(damageStr) {
+  if (!damageStr) return null;
+  const match = damageStr.match(/(\d+)D/i);
+  return match ? parseInt(match[1]) : null;
 }

@@ -193,7 +193,7 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
             <div className="dice-breakdown">
               <span className="breakdown-total">{baseDice}D6</span>
               {request.skillLabel && (
-                <span style={{ color: '#888', fontSize: '0.85rem', marginLeft: '0.5rem' }}>
+                <span style={{ color: '#7d8590', fontSize: '0.85rem', marginLeft: '0.5rem' }}>
                   ({request.skillLabel} + {request.attributeLabel})
                 </span>
               )}
@@ -240,7 +240,7 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
             </div>
 
             {isCapped && (
-              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#e3b341', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#0d1117', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
               </div>
             )}
@@ -248,9 +248,9 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
             {rollHints.length > 0 && (
               <div style={{ marginBottom: '0.5rem' }}>
                 {rollHints.map((h, i) => (
-                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#ef476f' : '#06d6a0'}` }}>
-                    <strong style={{ color: h.isWarning ? '#ef476f' : '#06d6a0' }}>{h.source}: {h.name}</strong>
-                    <span style={{ color: '#ccc', marginLeft: '0.4rem' }}>{h.note}</span>
+                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#f85149' : '#3fb950'}` }}>
+                    <strong style={{ color: h.isWarning ? '#f85149' : '#3fb950' }}>{h.source}: {h.name}</strong>
+                    <span style={{ color: '#b1bac4', marginLeft: '0.4rem' }}>{h.note}</span>
                   </div>
                 ))}
               </div>

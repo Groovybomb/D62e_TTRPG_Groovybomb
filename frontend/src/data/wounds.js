@@ -1,16 +1,16 @@
 export const WOUND_LEVELS = [
-  { key: 'healthy', label: 'Healthy', penalty: 0, color: '#06d6a0', canAct: true },
-  { key: 'wounded', label: 'Wounded', penalty: 1, color: '#ffd60a', canAct: true },
-  { key: 'incapacitated', label: 'Incapacitated', penalty: 0, color: '#e94560', canAct: false },
+  { key: 'healthy', label: 'Healthy', penalty: 0, color: '#3fb950', canAct: true },
+  { key: 'wounded', label: 'Wounded', penalty: 1, color: '#e3b341', canAct: true },
+  { key: 'incapacitated', label: 'Incapacitated', penalty: 0, color: '#818cf8', canAct: false },
   { key: 'mortallyWounded', label: 'Mortally Wounded', penalty: 0, color: '#c70039', canAct: false },
-  { key: 'dead', label: 'Dead', penalty: 0, color: '#666', canAct: false },
+  { key: 'dead', label: 'Dead', penalty: 0, color: '#6e7681', canAct: false },
 ];
 
 export const STUN_STATES = [
-  { key: 'none', label: 'Clear', penalty: 0, color: '#06d6a0' },
-  { key: 'staggered', label: 'Staggered', penalty: 1, color: '#ffd60a' },
-  { key: 'stunned', label: 'Stunned', penalty: 0, color: '#e94560' },
-  { key: 'prone', label: 'Prone', penalty: 0, color: '#ff8c00' },
+  { key: 'none', label: 'Clear', penalty: 0, color: '#3fb950' },
+  { key: 'staggered', label: 'Staggered', penalty: 1, color: '#e3b341' },
+  { key: 'stunned', label: 'Stunned', penalty: 0, color: '#818cf8' },
+  { key: 'prone', label: 'Prone', penalty: 0, color: '#f0883e' },
 ];
 
 export function getWoundPenalty(character) {

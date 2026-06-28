@@ -103,7 +103,7 @@ export default function LoginPage({ onLogin }) {
             onClick={() => setIsLogin(!isLogin)}
             style={{
               background: 'none',
-              color: '#e94560',
+              color: '#818cf8',
               textDecoration: 'underline',
             }}
           >

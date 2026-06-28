@@ -10,8 +10,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a1a2e;
-  color: #eee;
+  background-color: #0d1117;
+  color: #e6edf3;
 }
 
 .app {
@@ -21,12 +21,12 @@ body {
 }
 
 .navbar {
-  background-color: #16213e;
+  background-color: #161b22;
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid #e94560;
+  border-bottom: 2px solid #818cf8;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -39,13 +39,13 @@ body {
 .nav-left h1 {
   font-size: 1.5rem;
   margin-right: 1rem;
-  color: #e94560;
+  color: #818cf8;
 }
 
 .navbar button {
   background: none;
   border: none;
-  color: #aaa;
+  color: #8b949e;
   font-size: 1rem;
   cursor: pointer;
   padding: 0.5rem 1rem;
@@ -54,12 +54,12 @@ body {
 }
 
 .navbar button:hover {
-  background-color: rgba(233, 69, 96, 0.1);
-  color: #e94560;
+  background-color: rgba(129, 140, 248, 0.1);
+  color: #818cf8;
 }
 
 .navbar button.active {
-  background-color: #e94560;
+  background-color: #818cf8;
   color: white;
 }
 
@@ -84,12 +84,12 @@ body {
 .page h2 {
   font-size: 2rem;
   margin-bottom: 1.5rem;
-  color: #e94560;
+  color: #818cf8;
 }
 
 /* Forms */
 .form {
-  background-color: #16213e;
+  background-color: #161b22;
   padding: 2rem;
   border-radius: 8px;
   max-width: 400px;
@@ -105,23 +105,23 @@ body {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #ddd;
+  color: #c9d1d9;
 }
 
 .form-group input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #444;
+  border: 1px solid #30363d;
   border-radius: 4px;
-  background-color: #0f3460;
-  color: #eee;
+  background-color: #1c2128;
+  color: #e6edf3;
   font-size: 1rem;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #e94560;
-  box-shadow: 0 0 8px rgba(233, 69, 96, 0.3);
+  border-color: #818cf8;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3);
 }
 
 /* Buttons */
@@ -132,27 +132,27 @@ button {
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  background-color: #e94560;
+  background-color: #818cf8;
   color: white;
   font-weight: 500;
 }
 
 button:hover {
-  background-color: #d63449;
+  background-color: #6b7cf7;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+  box-shadow: 0 4px 12px rgba(129, 140, 248, 0.4);
 }
 
 button:disabled {
-  background-color: #555;
+  background-color: #484f58;
   cursor: not-allowed;
   transform: none;
 }
 
 /* Cards */
 .card {
-  background-color: #16213e;
-  border: 1px solid #444;
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1rem;
@@ -160,7 +160,7 @@ button:disabled {
 }
 
 .card h3 {
-  color: #e94560;
+  color: #818cf8;
   margin-bottom: 0.5rem;
 }
 
@@ -172,42 +172,42 @@ button:disabled {
 
 /* Roll results */
 .roll-result {
-  background-color: #0f3460;
-  border-left: 4px solid #e94560;
+  background-color: #1c2128;
+  border-left: 4px solid #818cf8;
   padding: 1rem;
   margin: 1rem 0;
   border-radius: 4px;
 }
 
 .roll-result.success {
-  border-left-color: #06d6a0;
+  border-left-color: #3fb950;
 }
 
 .roll-result.failure {
-  border-left-color: #ef476f;
+  border-left-color: #f85149;
 }
 
 .roll-result.critical {
-  border-left-color: #ffd60a;
+  border-left-color: #e3b341;
 }
 
 /* Messages */
 .message {
   margin-bottom: 1rem;
   padding: 0.75rem;
-  background-color: #0f3460;
+  background-color: #1c2128;
   border-radius: 4px;
 }
 
 .message.system {
-  background-color: rgba(233, 69, 96, 0.1);
-  border-left: 3px solid #e94560;
+  background-color: rgba(129, 140, 248, 0.1);
+  border-left: 3px solid #818cf8;
   padding-left: 1rem;
 }
 
 .message-author {
   font-weight: 600;
-  color: #e94560;
+  color: #818cf8;
   font-size: 0.9rem;
 }
 
@@ -217,7 +217,7 @@ button:disabled {
 
 .message-time {
   font-size: 0.8rem;
-  color: #888;
+  color: #7d8590;
   margin-top: 0.25rem;
 }
 
@@ -225,22 +225,22 @@ button:disabled {
 .loading {
   text-align: center;
   padding: 2rem;
-  color: #aaa;
+  color: #8b949e;
 }
 
 .error {
-  background-color: rgba(239, 71, 111, 0.1);
-  border: 1px solid #ef476f;
-  color: #ff8fa3;
+  background-color: rgba(248, 81, 73, 0.1);
+  border: 1px solid #f85149;
+  color: #ff7b72;
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
 }
 
 .success {
-  background-color: rgba(6, 214, 160, 0.1);
-  border: 1px solid #06d6a0;
-  color: #2ecc71;
+  background-color: rgba(63, 185, 80, 0.1);
+  border: 1px solid #3fb950;
+  color: #56d364;
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
@@ -249,9 +249,9 @@ button:disabled {
 /* Shared select input */
 .select-input {
   padding: 0.5rem 0.75rem;
-  background-color: #0f3460;
-  color: #eee;
-  border: 1px solid #444;
+  background-color: #1c2128;
+  color: #e6edf3;
+  border: 1px solid #30363d;
   border-radius: 4px;
   font-size: 1rem;
 }
@@ -283,7 +283,7 @@ button:disabled {
 .stat-label {
   display: block;
   font-size: 0.8rem;
-  color: #888;
+  color: #7d8590;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.2rem;
@@ -295,21 +295,21 @@ button:disabled {
 }
 
 .stat-value.computed {
-  color: #e94560;
+  color: #818cf8;
 }
 
 .stat-note {
   font-size: 0.75rem;
-  color: #666;
+  color: #6e7681;
   margin-left: 0.5rem;
 }
 
 .stat-input {
   padding: 0.4rem;
   width: 80px;
-  background-color: #0f3460;
-  color: #eee;
-  border: 1px solid #444;
+  background-color: #1c2128;
+  color: #e6edf3;
+  border: 1px solid #30363d;
   border-radius: 4px;
   font-size: 1rem;
 }
@@ -327,8 +327,8 @@ button:disabled {
 }
 
 .attribute-block {
-  background-color: #16213e;
-  border: 1px solid #444;
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -338,18 +338,18 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background-color: #0f3460;
-  border-bottom: 2px solid #e94560;
+  background-color: #1c2128;
+  border-bottom: 2px solid #818cf8;
 }
 
 .attribute-name {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #e94560;
+  color: #818cf8;
 }
 
 .dice-badge {
-  background-color: #e94560;
+  background-color: #818cf8;
   color: white;
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
@@ -361,9 +361,9 @@ button:disabled {
   width: 50px;
   padding: 0.3rem;
   text-align: center;
-  background-color: #16213e;
-  color: #eee;
-  border: 1px solid #e94560;
+  background-color: #161b22;
+  color: #e6edf3;
+  border: 1px solid #818cf8;
   border-radius: 4px;
   font-size: 0.9rem;
   font-weight: 600;
@@ -381,20 +381,20 @@ button:disabled {
 }
 
 .skill-row:hover {
-  background-color: rgba(233, 69, 96, 0.05);
+  background-color: rgba(129, 140, 248, 0.05);
 }
 
 .skill-name {
   flex: 1;
   font-size: 0.9rem;
-  color: #ccc;
+  color: #b1bac4;
 }
 
 .skill-dice {
   width: 30px;
   text-align: center;
   font-size: 0.9rem;
-  color: #888;
+  color: #7d8590;
 }
 
 .total-dice {
@@ -402,7 +402,7 @@ button:disabled {
   text-align: right;
   font-weight: 700;
   font-size: 0.9rem;
-  color: #06d6a0;
+  color: #3fb950;
 }
 
 /* Weapon table */
@@ -414,21 +414,21 @@ button:disabled {
 .weapon-table th {
   text-align: left;
   padding: 0.5rem;
-  border-bottom: 1px solid #444;
-  color: #888;
+  border-bottom: 1px solid #30363d;
+  color: #7d8590;
   font-size: 0.85rem;
   text-transform: uppercase;
 }
 
 .weapon-table td {
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #21262d;
 }
 
 .weapon-table input {
-  background-color: #0f3460;
-  color: #eee;
-  border: 1px solid #444;
+  background-color: #1c2128;
+  color: #e6edf3;
+  border: 1px solid #30363d;
   border-radius: 3px;
   padding: 0.3rem;
   width: 100%;
@@ -451,8 +451,8 @@ button:disabled {
 }
 
 .vehicle-stat-block {
-  background-color: #16213e;
-  border: 1px solid #444;
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -477,7 +477,7 @@ button:disabled {
 }
 
 .crew-slot {
-  background-color: #0f3460;
+  background-color: #1c2128;
   border-radius: 6px;
   padding: 0.75rem;
   text-align: center;
@@ -485,28 +485,28 @@ button:disabled {
 
 .crew-role {
   font-weight: 700;
-  color: #e94560;
+  color: #818cf8;
   font-size: 0.95rem;
 }
 
 .crew-duty {
   font-size: 0.75rem;
-  color: #888;
+  color: #7d8590;
   text-transform: uppercase;
   margin-bottom: 0.4rem;
 }
 
 .crew-name {
-  color: #ccc;
+  color: #b1bac4;
   font-size: 0.9rem;
 }
 
 .crew-input {
   width: 100%;
   padding: 0.3rem;
-  background-color: #16213e;
-  color: #eee;
-  border: 1px solid #444;
+  background-color: #161b22;
+  color: #e6edf3;
+  border: 1px solid #30363d;
   border-radius: 4px;
   text-align: center;
   font-size: 0.9rem;
@@ -524,9 +524,9 @@ button:disabled {
   align-items: center;
   gap: 1rem;
   padding: 0.6rem 0.75rem;
-  background-color: #0f3460;
+  background-color: #1c2128;
   border-radius: 6px;
-  border: 1px solid #333;
+  border: 1px solid #21262d;
 }
 
 .vehicle-action-info {
@@ -537,13 +537,13 @@ button:disabled {
 
 .vehicle-action-label {
   font-weight: 700;
-  color: #e94560;
+  color: #818cf8;
   font-size: 0.95rem;
 }
 
 .vehicle-action-desc {
   font-size: 0.75rem;
-  color: #888;
+  color: #7d8590;
 }
 
 .vehicle-action-dice {
@@ -555,13 +555,13 @@ button:disabled {
 
 .vehicle-action-detail {
   font-size: 0.75rem;
-  color: #aaa;
+  color: #8b949e;
 }
 
 .vehicle-action-total {
   font-weight: 700;
   font-size: 0.95rem;
-  color: #06d6a0;
+  color: #3fb950;
 }
 
 /* Roll buttons on character sheet */
@@ -571,15 +571,15 @@ button:disabled {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background-color: #0f3460;
-  border: 1px solid #e94560;
-  color: #e94560;
+  background-color: #1c2128;
+  border: 1px solid #818cf8;
+  color: #818cf8;
   border-radius: 3px;
   cursor: pointer;
 }
 
 .roll-btn:hover {
-  background-color: #e94560;
+  background-color: #818cf8;
   color: white;
   transform: none;
   box-shadow: none;
@@ -605,8 +605,8 @@ button:disabled {
 }
 
 .modal-content {
-  background-color: #16213e;
-  border: 2px solid #e94560;
+  background-color: #161b22;
+  border: 2px solid #818cf8;
   border-radius: 12px;
   padding: 2rem;
   max-width: 600px;
@@ -623,21 +623,21 @@ button:disabled {
   right: 1rem;
   background: none;
   border: none;
-  color: #888;
+  color: #7d8590;
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
 }
 
 .modal-close:hover {
-  color: #e94560;
+  color: #818cf8;
   transform: none;
   box-shadow: none;
 }
 
 .modal-title {
   font-size: 1.5rem;
-  color: #e94560;
+  color: #818cf8;
   margin-bottom: 1.5rem;
   padding-right: 2rem;
 }
@@ -654,19 +654,19 @@ button:disabled {
 
 .breakdown-attr,
 .breakdown-skill {
-  background-color: #0f3460;
+  background-color: #1c2128;
   padding: 0.4rem 0.8rem;
   border-radius: 4px;
   font-weight: 600;
 }
 
 .breakdown-plus {
-  color: #888;
+  color: #7d8590;
   font-weight: 700;
 }
 
 .breakdown-total {
-  background-color: #e94560;
+  background-color: #818cf8;
   color: white;
   padding: 0.4rem 0.8rem;
   border-radius: 4px;
@@ -683,7 +683,7 @@ button:disabled {
 
 .extra-dice-row label {
   font-weight: 500;
-  color: #ccc;
+  color: #b1bac4;
 }
 
 .extra-dice-controls {
@@ -701,14 +701,14 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0f3460;
-  border: 1px solid #444;
-  color: #eee;
+  background-color: #1c2128;
+  border: 1px solid #30363d;
+  color: #e6edf3;
   border-radius: 4px;
 }
 
 .dice-adjust-btn:hover {
-  border-color: #e94560;
+  border-color: #818cf8;
   transform: none;
   box-shadow: none;
 }
@@ -726,41 +726,41 @@ button:disabled {
 
 .double-btn {
   width: 100%;
-  background-color: #0f3460;
-  border: 2px solid #ffd60a;
-  color: #ffd60a;
+  background-color: #1c2128;
+  border: 2px solid #e3b341;
+  color: #e3b341;
   font-weight: 600;
 }
 
 .double-btn:hover:not(:disabled) {
-  background-color: #ffd60a;
-  color: #1a1a2e;
+  background-color: #e3b341;
+  color: #0d1117;
 }
 
 .double-btn:disabled {
-  border-color: #555;
-  color: #555;
-  background-color: #0f3460;
+  border-color: #484f58;
+  color: #484f58;
+  background-color: #1c2128;
 }
 
 .exceptional-double-btn {
-  border-color: #06d6a0 !important;
-  color: #06d6a0 !important;
+  border-color: #3fb950 !important;
+  color: #3fb950 !important;
   margin-top: 0.5rem;
 }
 
 .exceptional-double-btn:hover {
-  background-color: #06d6a0 !important;
-  color: #1a1a2e !important;
+  background-color: #3fb950 !important;
+  color: #0d1117 !important;
 }
 
 .doubled-indicator {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: rgba(255, 214, 10, 0.15);
-  border: 1px solid #ffd60a;
-  color: #ffd60a;
+  background-color: rgba(227, 179, 65, 0.15);
+  border: 1px solid #e3b341;
+  color: #e3b341;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
   font-weight: 600;
@@ -769,25 +769,25 @@ button:disabled {
 .undo-double-btn {
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
-  background-color: #555;
+  background-color: #484f58;
 }
 
 .no-hero-note {
   font-size: 0.8rem;
-  color: #888;
+  color: #7d8590;
   margin-top: 0.5rem;
 }
 
 .roll-info-text {
   font-size: 0.8rem;
-  color: #888;
+  color: #7d8590;
   margin-bottom: 1.25rem;
   line-height: 1.5;
 }
 
 .hero-points-display {
   font-size: 0.9rem;
-  color: #ccc;
+  color: #b1bac4;
   margin-bottom: 1rem;
 }
 
@@ -796,11 +796,11 @@ button:disabled {
   font-size: 1.2rem;
   font-weight: 700;
   padding: 1rem;
-  background-color: #e94560;
+  background-color: #818cf8;
 }
 
 .roll-execute-btn:disabled {
-  background-color: #555;
+  background-color: #484f58;
 }
 
 /* Roll result phase */
@@ -822,12 +822,12 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0f3460;
-  border: 2px solid #444;
+  background-color: #1c2128;
+  border: 2px solid #30363d;
   border-radius: 6px;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #eee;
+  color: #e6edf3;
 }
 
 .die-face.wild {
@@ -835,20 +835,20 @@ button:disabled {
   min-width: 80px;
   height: auto;
   min-height: 60px;
-  border-color: #ffd60a;
+  border-color: #e3b341;
   border-width: 3px;
   font-size: 0.85rem;
   padding: 0.4rem;
 }
 
 .die-face.wild-six {
-  border-color: #06d6a0;
-  background-color: rgba(6, 214, 160, 0.1);
+  border-color: #3fb950;
+  background-color: rgba(63, 185, 80, 0.1);
 }
 
 .die-face.wild-one {
-  border-color: #ef476f;
-  background-color: rgba(239, 71, 111, 0.1);
+  border-color: #f85149;
+  background-color: rgba(248, 81, 73, 0.1);
 }
 
 .wild-die-display {
@@ -862,7 +862,7 @@ button:disabled {
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #ffd60a;
+  color: #e3b341;
 }
 
 .wild-roll {
@@ -871,18 +871,18 @@ button:disabled {
 }
 
 .wild-roll.explode {
-  color: #06d6a0;
+  color: #3fb950;
 }
 
 .explode-note {
   font-size: 0.6rem;
-  color: #06d6a0;
+  color: #3fb950;
   text-transform: uppercase;
 }
 
 .wild-total {
   font-size: 0.85rem;
-  color: #ccc;
+  color: #b1bac4;
 }
 
 .die-number {
@@ -890,9 +890,9 @@ button:disabled {
 }
 
 .complication-notice {
-  background-color: rgba(239, 71, 111, 0.15);
-  border: 1px solid #ef476f;
-  color: #ff8fa3;
+  background-color: rgba(248, 81, 73, 0.15);
+  border: 1px solid #f85149;
+  color: #ff7b72;
   padding: 0.75rem;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -907,13 +907,13 @@ button:disabled {
 }
 
 .total-number {
-  color: #06d6a0;
+  color: #3fb950;
   font-size: 2.5rem;
 }
 
 .doubled-note {
   font-size: 0.8rem;
-  color: #ffd60a;
+  color: #e3b341;
   margin-bottom: 1rem;
 }
 
@@ -925,41 +925,41 @@ button:disabled {
 }
 
 .reroll-btn {
-  background-color: #0f3460;
-  border: 2px solid #e94560;
-  color: #e94560;
+  background-color: #1c2128;
+  border: 2px solid #818cf8;
+  color: #818cf8;
   font-weight: 600;
 }
 
 .reroll-btn:hover:not(:disabled) {
-  background-color: #e94560;
+  background-color: #818cf8;
   color: white;
 }
 
 .reroll-btn:disabled {
-  border-color: #555;
-  color: #555;
+  border-color: #484f58;
+  color: #484f58;
 }
 
 .doubledown-btn {
-  background-color: #0f3460;
-  border: 2px solid #ffd60a;
-  color: #ffd60a;
+  background-color: #1c2128;
+  border: 2px solid #e3b341;
+  color: #e3b341;
   font-weight: 600;
 }
 
 .doubledown-btn:hover {
-  background-color: #ffd60a;
-  color: #1a1a2e;
+  background-color: #e3b341;
+  color: #0d1117;
 }
 
 .close-result-btn {
-  background-color: #555;
+  background-color: #484f58;
 }
 
 .result-info-text {
   font-size: 0.8rem;
-  color: #888;
+  color: #7d8590;
   text-align: left;
   line-height: 1.6;
 }
@@ -977,15 +977,15 @@ button:disabled {
 }
 
 .roll-flag.reroll {
-  background-color: rgba(233, 69, 96, 0.2);
-  color: #e94560;
-  border: 1px solid #e94560;
+  background-color: rgba(129, 140, 248, 0.2);
+  color: #818cf8;
+  border: 1px solid #818cf8;
 }
 
 .roll-flag.doubledown {
-  background-color: rgba(255, 214, 10, 0.15);
-  color: #ffd60a;
-  border: 1px solid #ffd60a;
+  background-color: rgba(227, 179, 65, 0.15);
+  color: #e3b341;
+  border: 1px solid #e3b341;
 }
 
 .roll-flag-inline {
@@ -1000,29 +1000,29 @@ button:disabled {
 }
 
 .roll-flag-inline.reroll {
-  background-color: rgba(233, 69, 96, 0.2);
-  color: #e94560;
+  background-color: rgba(129, 140, 248, 0.2);
+  color: #818cf8;
 }
 
 .roll-flag-inline.doubledown {
-  background-color: rgba(255, 214, 10, 0.15);
-  color: #ffd60a;
+  background-color: rgba(227, 179, 65, 0.15);
+  color: #e3b341;
 }
 
 .roll-flag-inline.doubled {
-  background-color: rgba(255, 214, 10, 0.1);
-  color: #ffd60a;
+  background-color: rgba(227, 179, 65, 0.1);
+  color: #e3b341;
 }
 
 /* GM Roll Modal */
 .gm-roll-modal {
-  border-color: #06d6a0;
+  border-color: #3fb950;
 }
 
 .gm-roll-banner {
-  background-color: rgba(6, 214, 160, 0.15);
-  border: 1px solid #06d6a0;
-  color: #06d6a0;
+  background-color: rgba(63, 185, 80, 0.15);
+  border: 1px solid #3fb950;
+  color: #3fb950;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-weight: 700;
@@ -1037,19 +1037,19 @@ button:disabled {
 .dc-display {
   text-align: center;
   font-size: 1.2rem;
-  color: #ccc;
+  color: #b1bac4;
   margin-bottom: 1.5rem;
 }
 
 .dc-value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #ffd60a;
+  color: #e3b341;
 }
 
 .dc-dice-note {
   font-size: 0.85rem;
-  color: #888;
+  color: #7d8590;
 }
 
 .vs-display {
@@ -1064,11 +1064,11 @@ button:disabled {
 .vs-total {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #06d6a0;
+  color: #3fb950;
 }
 
 .vs-label {
-  color: #888;
+  color: #7d8590;
   font-size: 1rem;
   text-transform: uppercase;
 }
@@ -1076,7 +1076,7 @@ button:disabled {
 .vs-dc {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffd60a;
+  color: #e3b341;
 }
 
 .outcome-section {
@@ -1090,7 +1090,7 @@ button:disabled {
   border-radius: 6px;
   font-weight: 700;
   font-size: 1.1rem;
-  color: #1a1a2e;
+  color: #0d1117;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1101,7 +1101,7 @@ button:disabled {
   border-radius: 4px;
   font-weight: 700;
   font-size: 0.7rem;
-  color: #1a1a2e;
+  color: #0d1117;
   text-transform: uppercase;
 }
 
@@ -1109,18 +1109,18 @@ button:disabled {
   margin-top: 0.5rem;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #06d6a0;
+  color: #3fb950;
 }
 
 .outcome-complication {
   margin-top: 0.5rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #ef476f;
+  color: #f85149;
 }
 
 .choice-prompt {
-  color: #ccc;
+  color: #b1bac4;
   margin-bottom: 1rem;
   font-size: 0.95rem;
   line-height: 1.5;
@@ -1140,9 +1140,9 @@ button:disabled {
   gap: 0.25rem;
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  border: 2px solid #444;
-  background-color: #0f3460;
-  color: #eee;
+  border: 2px solid #30363d;
+  background-color: #1c2128;
+  color: #e6edf3;
   cursor: pointer;
   min-width: 160px;
   transition: all 0.2s;
@@ -1153,63 +1153,63 @@ button:disabled {
 }
 
 .choice-btn.exceptional {
-  border-color: #ffd60a;
+  border-color: #e3b341;
 }
 
 .choice-btn.exceptional:hover {
-  background-color: rgba(255, 214, 10, 0.15);
-  box-shadow: 0 4px 12px rgba(255, 214, 10, 0.3);
+  background-color: rgba(227, 179, 65, 0.15);
+  box-shadow: 0 4px 12px rgba(227, 179, 65, 0.3);
 }
 
 .choice-btn.success {
-  border-color: #06d6a0;
+  border-color: #3fb950;
 }
 
 .choice-btn.success:hover {
-  background-color: rgba(6, 214, 160, 0.15);
-  box-shadow: 0 4px 12px rgba(6, 214, 160, 0.3);
+  background-color: rgba(63, 185, 80, 0.15);
+  box-shadow: 0 4px 12px rgba(63, 185, 80, 0.3);
 }
 
 .choice-btn.partial {
-  border-color: #f9a825;
+  border-color: #d29922;
 }
 
 .choice-btn.partial:hover {
-  background-color: rgba(249, 168, 37, 0.15);
-  box-shadow: 0 4px 12px rgba(249, 168, 37, 0.3);
+  background-color: rgba(227, 179, 65, 0.15);
+  box-shadow: 0 4px 12px rgba(227, 179, 65, 0.3);
 }
 
 .choice-btn.choose-fail {
-  border-color: #ef476f;
+  border-color: #f85149;
 }
 
 .choice-btn.choose-fail:hover {
-  background-color: rgba(239, 71, 111, 0.15);
-  box-shadow: 0 4px 12px rgba(239, 71, 111, 0.3);
+  background-color: rgba(248, 81, 73, 0.15);
+  box-shadow: 0 4px 12px rgba(248, 81, 73, 0.3);
 }
 
 .choice-note {
   font-size: 0.75rem;
-  color: #888;
+  color: #7d8590;
   font-style: italic;
 }
 
 /* GM Response cards */
 .gm-response-card {
   padding: 0.75rem;
-  background-color: #0f3460;
+  background-color: #1c2128;
   border-radius: 6px;
   margin-bottom: 0.5rem;
-  border-left: 3px solid #444;
+  border-left: 3px solid #30363d;
 }
 
 /* Wound Tracker */
 .wound-tracker {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
-  background: #16213e;
+  background: #161b22;
   border-radius: 8px;
-  border: 1px solid #333;
+  border: 1px solid #21262d;
 }
 
 .wound-track-section {
@@ -1226,7 +1226,7 @@ button:disabled {
 
 .wound-track-label {
   font-size: 0.8rem;
-  color: #888;
+  color: #7d8590;
   font-weight: 600;
   min-width: 90px;
 }
@@ -1239,10 +1239,10 @@ button:disabled {
 
 .wound-state-btn {
   padding: 0.3rem 0.6rem;
-  border: 2px solid #444;
+  border: 2px solid #30363d;
   border-radius: 4px;
   background: transparent;
-  color: #666;
+  color: #6e7681;
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -1250,8 +1250,8 @@ button:disabled {
 }
 
 .wound-state-btn:hover {
-  border-color: #888;
-  color: #ccc;
+  border-color: #7d8590;
+  color: #b1bac4;
 }
 
 .wound-state-btn.active {
@@ -1260,21 +1260,21 @@ button:disabled {
 
 .wound-penalty-summary {
   font-size: 0.85rem;
-  color: #ffd60a;
+  color: #e3b341;
   margin-top: 0.5rem;
   font-weight: 600;
   padding: 0.3rem 0.5rem;
-  background: rgba(255, 214, 10, 0.08);
+  background: rgba(227, 179, 65, 0.08);
   border-radius: 4px;
 }
 
 .wound-cant-act {
   font-size: 0.85rem;
-  color: #e94560;
+  color: #818cf8;
   margin-top: 0.5rem;
   font-weight: 600;
   padding: 0.3rem 0.5rem;
-  background: rgba(233, 69, 96, 0.08);
+  background: rgba(129, 140, 248, 0.08);
   border-radius: 4px;
 }
 
@@ -1283,24 +1283,24 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #ffd60a;
+  color: #e3b341;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.5rem 0.75rem;
-  background: rgba(255, 214, 10, 0.1);
-  border: 1px solid rgba(255, 214, 10, 0.3);
+  background: rgba(227, 179, 65, 0.1);
+  border: 1px solid rgba(227, 179, 65, 0.3);
   border-radius: 6px;
   margin-bottom: 0.75rem;
 }
 
 /* Wound can't-act warning in roll modals */
 .wound-cant-act-notice {
-  color: #e94560;
+  color: #818cf8;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.5rem 0.75rem;
-  background: rgba(233, 69, 96, 0.1);
-  border: 1px solid rgba(233, 69, 96, 0.3);
+  background: rgba(129, 140, 248, 0.1);
+  border: 1px solid rgba(129, 140, 248, 0.3);
   border-radius: 6px;
   margin-bottom: 0.75rem;
   text-align: center;
@@ -1312,8 +1312,8 @@ button:disabled {
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: #ffd60a;
-  color: #1a1a2e;
+  background: #e3b341;
+  color: #0d1117;
   border-radius: 50%;
   font-size: 0.75rem;
   font-weight: 800;

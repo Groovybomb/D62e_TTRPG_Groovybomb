@@ -17,22 +17,29 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
   const [rollFlag, setRollFlag] = useState(null);
   const [resolved, setResolved] = useState(false);
 
+  const isVehicle = opposedRoll.type === 'vehicle';
+  const flatBonus = opposedRoll.defenderFlatBonus || 0;
+
   const defSkillLabel = opposedRoll.defenderSkillLabel || '';
   const parts = defSkillLabel.match(/^(.+?)\s*\((.+?)\)$/);
   const defSkillName = parts ? parts[1] : defSkillLabel;
 
   let defAttrKey = null;
   let defSkillKey = null;
-  for (const [aKey, aDef] of Object.entries(ATTRIBUTE_DEFINITIONS)) {
-    for (const [sKey, sLabel] of Object.entries(aDef.skills)) {
-      if (sLabel === defSkillName) { defAttrKey = aKey; defSkillKey = sKey; break; }
+  if (!opposedRoll.defenderBaseDice) {
+    for (const [aKey, aDef] of Object.entries(ATTRIBUTE_DEFINITIONS)) {
+      for (const [sKey, sLabel] of Object.entries(aDef.skills)) {
+        if (sLabel === defSkillName) { defAttrKey = aKey; defSkillKey = sKey; break; }
+      }
+      if (defSkillKey) break;
     }
-    if (defSkillKey) break;
   }
 
-  const baseDice = defAttrKey && defSkillKey
-    ? getDicePool(character, defAttrKey, defSkillKey)
-    : (character.attributes?.brawn?.dice || 2);
+  const baseDice = opposedRoll.defenderBaseDice
+    ? opposedRoll.defenderBaseDice
+    : defAttrKey && defSkillKey
+      ? getDicePool(character, defAttrKey, defSkillKey)
+      : (character.attributes?.brawn?.dice || 2);
 
   const rollHints = defAttrKey && defSkillKey ? getRollHints(character, defAttrKey, defSkillKey) : [];
 
@@ -64,10 +71,11 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
     const count = effectiveDice;
     if (count < 1) return;
     const results = rollDice(count);
-    const { total, complication, removedDie } = calculateTotal(results);
+    const { total: diceTotal, complication, removedDie } = calculateTotal(results);
+    const total = diceTotal + flatBonus;
 
     setDiceResults(results);
-    setRollTotal({ total, complication, removedDie });
+    setRollTotal({ total, diceTotal, complication, removedDie });
     setRollFlag(flag);
     setPhase('result');
 
@@ -97,25 +105,27 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
     executeRoll('REROLL');
   };
 
-  const winner = rollTotal
+  const displayWinner = rollTotal
     ? determineWinner(opposedRoll.initiatorTotal, rollTotal.total, opposedRoll.initiatorIsNPC, opposedRoll.defenderIsNPC)
     : null;
-  const margin = rollTotal ? Math.abs(opposedRoll.initiatorTotal - rollTotal.total) : 0;
+  const displayMargin = rollTotal ? Math.abs(opposedRoll.initiatorTotal - rollTotal.total) : 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ borderColor: '#e94560' }}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ borderColor: '#f85149' }}>
         <button className="modal-close" onClick={onClose}>&times;</button>
         <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-          <span style={{ color: '#ffd60a', fontSize: '0.9rem', fontWeight: 700 }}>OPPOSED ROLL — DEFEND</span>
+          <span style={{ color: '#e3b341', fontSize: '0.9rem', fontWeight: 700 }}>OPPOSED ROLL — DEFEND</span>
         </div>
-        <div style={{ background: '#1a1a2e', padding: '0.6rem', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.85rem' }}>
-          <div><strong style={{ color: '#e94560' }}>{opposedRoll.initiatorCharacterName}</strong>{opposedRoll.initiatorIsNPC && <span style={{ color: '#ff8c00' }}> [NPC]</span>} rolled <strong>{opposedRoll.initiatorSkillLabel}</strong></div>
-          <div style={{ color: '#06d6a0', fontSize: '1.1rem', fontWeight: 700 }}>Total: {opposedRoll.initiatorTotal}</div>
+        <div style={{ background: '#0d1117', padding: '0.6rem', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.85rem' }}>
+          <div><strong style={{ color: '#f85149' }}>{opposedRoll.initiatorCharacterName}</strong>{opposedRoll.initiatorIsNPC && <span style={{ color: '#f0883e' }}> [NPC]</span>} rolled <strong>{opposedRoll.initiatorSkillLabel}</strong></div>
+          <div style={{ color: '#3fb950', fontSize: '1.1rem', fontWeight: 700 }}>Total: {opposedRoll.initiatorTotal}</div>
         </div>
 
         <h2 className="modal-title" style={{ fontSize: '1.2rem' }}>
-          {character.name}: {defSkillLabel}
+          {isVehicle && opposedRoll.defenderVehicleName
+            ? `${opposedRoll.defenderVehicleName} (${character.name}): ${defSkillLabel}`
+            : `${character.name}: ${defSkillLabel}`}
         </h2>
 
         {phase === 'setup' && (
@@ -158,7 +168,7 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
             </div>
 
             {isCapped && (
-              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#e3b341', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#0d1117', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
               </div>
             )}
@@ -166,9 +176,9 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
             {rollHints.length > 0 && (
               <div style={{ marginBottom: '0.5rem' }}>
                 {rollHints.map((h, i) => (
-                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#ef476f' : '#06d6a0'}` }}>
-                    <strong style={{ color: h.isWarning ? '#ef476f' : '#06d6a0' }}>{h.source}: {h.name}</strong>
-                    <span style={{ color: '#ccc', marginLeft: '0.4rem' }}>{h.note}</span>
+                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#f85149' : '#3fb950'}` }}>
+                    <strong style={{ color: h.isWarning ? '#f85149' : '#3fb950' }}>{h.source}: {h.name}</strong>
+                    <span style={{ color: '#b1bac4', marginLeft: '0.4rem' }}>{h.note}</span>
                   </div>
                 ))}
               </div>
@@ -216,7 +226,8 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
 
             <div className="roll-total">
               Your Total: <span className="total-number">{rollTotal?.total}</span>
-              <span style={{ color: '#888', fontSize: '0.9rem', marginLeft: '0.5rem' }}>vs. {opposedRoll.initiatorTotal}</span>
+              {flatBonus > 0 && <span style={{ color: '#3fb950', fontSize: '0.85rem', marginLeft: '0.3rem' }}>(dice {rollTotal?.diceTotal} + {flatBonus} bonus)</span>}
+              <span style={{ color: '#7d8590', fontSize: '0.9rem', marginLeft: '0.5rem' }}>vs. {opposedRoll.initiatorTotal}</span>
             </div>
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}
@@ -224,14 +235,14 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
             {/* Outcome */}
             <div style={{
               padding: '0.75rem', borderRadius: '8px', textAlign: 'center', marginTop: '0.5rem', marginBottom: '0.5rem',
-              backgroundColor: winner === 'defender' ? '#1a2e1a' : winner === 'initiator' ? '#3d1a1a' : '#2a2a3e',
-              border: `2px solid ${winner === 'defender' ? '#06d6a0' : winner === 'initiator' ? '#e94560' : '#ffd60a'}`,
+              backgroundColor: displayWinner === 'defender' ? '#1a2e1a' : displayWinner === 'initiator' ? '#3d1a1a' : '#2a2a3e',
+              border: `2px solid ${displayWinner === 'defender' ? '#3fb950' : displayWinner === 'initiator' ? '#f85149' : '#e3b341'}`,
             }}>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: winner === 'defender' ? '#06d6a0' : winner === 'initiator' ? '#e94560' : '#ffd60a' }}>
-                {winner === 'defender' ? `${character.name} wins!` : winner === 'initiator' ? `${opposedRoll.initiatorCharacterName} wins!` : 'Tie!'}
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: displayWinner === 'defender' ? '#3fb950' : displayWinner === 'initiator' ? '#f85149' : '#e3b341' }}>
+                {displayWinner === 'defender' ? `${character.name} wins!` : displayWinner === 'initiator' ? `${opposedRoll.initiatorCharacterName} wins!` : 'Tie!'}
               </div>
-              {margin > 0 && <div style={{ fontSize: '0.85rem', color: '#ccc' }}>Margin: {margin}</div>}
-              {winner === 'tie' && <div style={{ fontSize: '0.8rem', color: '#ffd60a' }}>Both PCs tied — highest wild die wins, or GM decides</div>}
+              {displayMargin > 0 && <div style={{ fontSize: '0.85rem', color: '#b1bac4' }}>Margin: {displayMargin}</div>}
+              {displayWinner === 'tie' && <div style={{ fontSize: '0.8rem', color: '#e3b341' }}>Both PCs tied — highest wild die wins, or GM decides</div>}
             </div>
 
             <div className="hero-points-display">Hero Points: <strong>{heroPoints}</strong></div>

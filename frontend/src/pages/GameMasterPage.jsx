@@ -429,7 +429,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
           {/* Max Dice Cap */}
           <div className="card" style={{ flex: 1 }}>
-            <h4 style={{ margin: '0 0 0.5rem', color: '#ffd60a', fontSize: '0.9rem' }}>Max Dice Cap</h4>
+            <h4 style={{ margin: '0 0 0.5rem', color: '#e3b341', fontSize: '0.9rem' }}>Max Dice Cap</h4>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
                 type="number"
@@ -437,57 +437,57 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                 onChange={e => setMaxDiceInput(e.target.value)}
                 min={1}
                 placeholder="No limit"
-                style={{ width: '80px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+                style={{ width: '80px', padding: '0.4rem', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '4px' }}
               />
               <button onClick={handleMaxDiceSave} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Set</button>
               {maxDice && (
-                <button onClick={async () => { setMaxDiceInput(''); onMaxDiceChange(null); try { await axios.patch(`${API_URL}/settings`, { maxDice: null }); } catch {} }} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#555' }}>Clear</button>
+                <button onClick={async () => { setMaxDiceInput(''); onMaxDiceChange(null); try { await axios.patch(`${API_URL}/settings`, { maxDice: null }); } catch {} }} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#484f58' }}>Clear</button>
               )}
             </div>
-            {maxDice && <div style={{ fontSize: '0.8rem', color: '#ffd60a', marginTop: '0.25rem' }}>Active: {maxDice}D6 max</div>}
+            {maxDice && <div style={{ fontSize: '0.8rem', color: '#e3b341', marginTop: '0.25rem' }}>Active: {maxDice}D6 max</div>}
           </div>
 
           {/* Generic Roll */}
           <div className="card" style={{ flex: 1 }}>
-            <h4 style={{ margin: '0 0 0.5rem', color: '#06d6a0', fontSize: '0.9rem' }}>Quick Roll</h4>
+            <h4 style={{ margin: '0 0 0.5rem', color: '#3fb950', fontSize: '0.9rem' }}>Quick Roll</h4>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button onClick={() => setGenericDiceCount(Math.max(1, genericDiceCount - 1))} className="dice-adjust-btn">-</button>
               <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: '40px', textAlign: 'center' }}>{genericDiceCount}D6</span>
               <button onClick={() => setGenericDiceCount(genericDiceCount + 1)} className="dice-adjust-btn">+</button>
-              <button onClick={handleGenericRoll} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', fontWeight: 700, fontSize: '0.85rem' }}>Roll</button>
+              <button onClick={handleGenericRoll} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#3fb950', color: '#0d1117', fontWeight: 700, fontSize: '0.85rem' }}>Roll</button>
             </div>
             {genericResult && (
-              <div style={{ marginTop: '0.4rem', padding: '0.4rem', backgroundColor: '#1a1a2e', borderRadius: '4px', fontSize: '0.85rem' }}>
+              <div style={{ marginTop: '0.4rem', padding: '0.4rem', backgroundColor: '#0d1117', borderRadius: '4px', fontSize: '0.85rem' }}>
                 <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                   {genericResult.results.map((val, i) => (
                     <span key={i} style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       width: '24px', height: '24px', borderRadius: '3px', fontSize: '0.8rem', fontWeight: 700,
-                      backgroundColor: '#0f3460',
-                      color: '#eee',
+                      backgroundColor: '#1c2128',
+                      color: '#e6edf3',
                     }}>
                       {val}
                     </span>
                   ))}
                 </div>
-                <span style={{ color: '#888' }}>Total: </span>
-                <strong style={{ color: '#ffd60a' }}>{genericResult.total}</strong>
+                <span style={{ color: '#7d8590' }}>Total: </span>
+                <strong style={{ color: '#e3b341' }}>{genericResult.total}</strong>
               </div>
             )}
           </div>
         </div>
 
         {/* GM Roll Initiator */}
-        <div className="card" style={{ borderColor: '#e94560', borderWidth: '2px' }}>
-          <h3 style={{ color: '#e94560' }}>Call for Roll</h3>
+        <div className="card" style={{ borderColor: '#818cf8', borderWidth: '2px' }}>
+          <h3 style={{ color: '#818cf8' }}>Call for Roll</h3>
 
           {activeRequest ? (
             <div>
-              <div style={{ padding: '0.75rem', backgroundColor: '#1a1a2e', borderRadius: '6px', marginBottom: '1rem' }}>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffd60a' }}>
+              <div style={{ padding: '0.75rem', backgroundColor: '#0d1117', borderRadius: '6px', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e3b341' }}>
                   Active: {activeRequest.label}
                 </div>
-                <div style={{ color: '#888', fontSize: '0.85rem' }}>
+                <div style={{ color: '#7d8590', fontSize: '0.85rem' }}>
                   DC: {activeRequest.dcValue} ({activeRequest.dcType})
                 </div>
               </div>
@@ -497,39 +497,39 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                 {getLatestResponses().map(resp => (
                   <div key={resp.id} className="gm-response-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: '#eee' }}>{resp.characterName}</strong>
+                      <strong style={{ color: '#e6edf3' }}>{resp.characterName}</strong>
                       {resp.outcome && (
-                        <span className="outcome-badge-sm" style={{ backgroundColor: OUTCOME_COLORS[resp.outcome] || '#888' }}>
+                        <span className="outcome-badge-sm" style={{ backgroundColor: OUTCOME_COLORS[resp.outcome] || '#7d8590' }}>
                           {OUTCOME_LABELS[resp.outcome] || resp.outcome}
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#8b949e', marginTop: '0.25rem' }}>
                       Rolled: {resp.total} vs DC {activeRequest.dcValue}
-                      {resp.complication && <span style={{ color: '#ef476f' }}> COMPLICATION</span>}
+                      {resp.complication && <span style={{ color: '#f85149' }}> COMPLICATION</span>}
                       {resp.heroPointDelta > 0 && (
-                        <span style={{ color: '#06d6a0' }}> (+{resp.heroPointDelta} HP)</span>
+                        <span style={{ color: '#3fb950' }}> (+{resp.heroPointDelta} HP)</span>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.15rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#6e7681', marginTop: '0.15rem' }}>
                       Dice: [{resp.diceRolled?.join(', ')}]
                       {resp.rollFlag && <span> ({resp.rollFlag})</span>}
                     </div>
                   </div>
                 ))}
                 {getLatestResponses().length === 0 && (
-                  <p style={{ color: '#666', fontSize: '0.85rem' }}>Waiting for players to roll...</p>
+                  <p style={{ color: '#6e7681', fontSize: '0.85rem' }}>Waiting for players to roll...</p>
                 )}
               </div>
 
-              <button onClick={handleCloseRoll} style={{ marginTop: '1rem', width: '100%', padding: '0.6rem', backgroundColor: '#ef476f' }}>
+              <button onClick={handleCloseRoll} style={{ marginTop: '1rem', width: '100%', padding: '0.6rem', backgroundColor: '#f85149' }}>
                 Close Roll
               </button>
             </div>
           ) : (
             <div>
               {/* Skill picker */}
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#aaa' }}>Skill / Attribute:</label>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#8b949e' }}>Skill / Attribute:</label>
               <select
                 value={selectedSkill}
                 onChange={e => setSelectedSkill(e.target.value)}
@@ -548,19 +548,19 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
               </select>
 
               {/* DC Type */}
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#aaa' }}>DC Type:</label>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#8b949e' }}>DC Type:</label>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
                 <button
                   onClick={() => { setDcType('static'); setDcDiceResults(null); setDcDiceTotal(null); }}
                   className={dcType === 'static' ? 'active' : ''}
-                  style={{ flex: 1, padding: '0.5rem', backgroundColor: dcType === 'static' ? '#e94560' : '#16213e', border: '1px solid #444', borderRadius: '4px', color: '#eee', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '0.5rem', backgroundColor: dcType === 'static' ? '#818cf8' : '#161b22', border: '1px solid #30363d', borderRadius: '4px', color: '#e6edf3', cursor: 'pointer' }}
                 >
                   Static
                 </button>
                 <button
                   onClick={() => setDcType('dice')}
                   className={dcType === 'dice' ? 'active' : ''}
-                  style={{ flex: 1, padding: '0.5rem', backgroundColor: dcType === 'dice' ? '#e94560' : '#16213e', border: '1px solid #444', borderRadius: '4px', color: '#eee', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '0.5rem', backgroundColor: dcType === 'dice' ? '#818cf8' : '#161b22', border: '1px solid #30363d', borderRadius: '4px', color: '#e6edf3', cursor: 'pointer' }}
                 >
                   Dice Roll
                 </button>
@@ -570,13 +570,13 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
               {dcType === 'static' && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#aaa' }}>DC:</label>
+                    <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>DC:</label>
                     <input
                       type="number"
                       value={staticDC}
                       onChange={e => setStaticDC(parseInt(e.target.value) || 0)}
                       min={1}
-                      style={{ width: '80px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+                      style={{ width: '80px', padding: '0.4rem', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '4px' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.75rem' }}>
@@ -587,9 +587,9 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                         style={{
                           padding: '0.25rem 0.5rem',
                           fontSize: '0.75rem',
-                          backgroundColor: staticDC === d.dn ? '#e94560' : '#16213e',
-                          color: '#eee',
-                          border: '1px solid #444',
+                          backgroundColor: staticDC === d.dn ? '#818cf8' : '#161b22',
+                          color: '#e6edf3',
+                          border: '1px solid #30363d',
                           borderRadius: '4px',
                           cursor: 'pointer',
                         }}
@@ -605,18 +605,18 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
               {dcType === 'dice' && (
                 <div style={{ marginBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#aaa' }}>Dice:</label>
+                    <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Dice:</label>
                     <button onClick={() => setDcDiceCount(Math.max(1, dcDiceCount - 1))} className="dice-adjust-btn">-</button>
                     <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{dcDiceCount}D6</span>
                     <button onClick={() => setDcDiceCount(dcDiceCount + 1)} className="dice-adjust-btn">+</button>
-                    <button onClick={handleRollDC} style={{ marginLeft: '0.5rem', padding: '0.4rem 0.8rem', backgroundColor: '#e94560' }}>
+                    <button onClick={handleRollDC} style={{ marginLeft: '0.5rem', padding: '0.4rem 0.8rem', backgroundColor: '#818cf8' }}>
                       Roll DC
                     </button>
                   </div>
                   {dcDiceResults && (
-                    <div style={{ padding: '0.5rem', backgroundColor: '#1a1a2e', borderRadius: '6px' }}>
-                      <span style={{ color: '#888' }}>Rolled: [{dcDiceResults.join(', ')}] = </span>
-                      <strong style={{ color: '#ffd60a', fontSize: '1.1rem' }}>{dcDiceTotal}</strong>
+                    <div style={{ padding: '0.5rem', backgroundColor: '#0d1117', borderRadius: '6px' }}>
+                      <span style={{ color: '#7d8590' }}>Rolled: [{dcDiceResults.join(', ')}] = </span>
+                      <strong style={{ color: '#e3b341', fontSize: '1.1rem' }}>{dcDiceTotal}</strong>
                     </div>
                   )}
                 </div>
@@ -631,8 +631,8 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                   padding: '0.75rem',
                   fontSize: '1rem',
                   fontWeight: 700,
-                  backgroundColor: '#06d6a0',
-                  color: '#1a1a2e',
+                  backgroundColor: '#3fb950',
+                  color: '#0d1117',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -648,7 +648,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
         {/* Recent Calls presets */}
         {presets.length > 0 && !activeRequest && (
           <div className="card" style={{ marginTop: '1rem' }}>
-            <h3 style={{ color: '#ffd60a' }}>Recent Calls</h3>
+            <h3 style={{ color: '#e3b341' }}>Recent Calls</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               {presets.map((p, i) => (
                 <button
@@ -666,16 +666,16 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '0.5rem 0.75rem',
-                    backgroundColor: selectedSkill === p.selectedSkill && dcType === p.dcType && staticDC === p.staticDC ? '#1a1a2e' : '#0f3460',
-                    border: '1px solid #444',
+                    backgroundColor: selectedSkill === p.selectedSkill && dcType === p.dcType && staticDC === p.staticDC ? '#0d1117' : '#1c2128',
+                    border: '1px solid #30363d',
                     borderRadius: '4px',
-                    color: '#eee',
+                    color: '#e6edf3',
                     cursor: 'pointer',
                     textAlign: 'left',
                   }}
                 >
                   <span style={{ fontWeight: 600 }}>{p.label}</span>
-                  <span style={{ fontSize: '0.8rem', color: '#888' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#7d8590' }}>
                     {p.dcType === 'static' ? `DC ${p.staticDC}` : `${p.dcDiceCount}D6 DC`}
                   </span>
                 </button>
@@ -691,7 +691,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
             <thead><tr><th>DN</th><th>Difficulty</th></tr></thead>
             <tbody>
               {DIFFICULTY_TABLE.map(d => (
-                <tr key={d.dn}><td style={{ fontWeight: 700, color: '#e94560' }}>{d.dn}</td><td>{d.label}</td></tr>
+                <tr key={d.dn}><td style={{ fontWeight: 700, color: '#818cf8' }}>{d.dn}</td><td>{d.label}</td></tr>
               ))}
             </tbody>
           </table>
@@ -705,14 +705,14 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
 
           {/* Hidden characters toggle */}
           {hiddenCharsList.length > 0 && (
-            <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#1a1a2e', borderRadius: '4px' }}>
-              <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.25rem' }}>Hidden ({hiddenCharsList.length}):</div>
+            <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#0d1117', borderRadius: '4px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#7d8590', marginBottom: '0.25rem' }}>Hidden ({hiddenCharsList.length}):</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                 {hiddenCharsList.map(char => (
                   <button
                     key={char.id}
                     onClick={() => toggleCharHidden(char.id)}
-                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#16213e', border: '1px solid #444', borderRadius: '3px', color: '#888', cursor: 'pointer' }}
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: '3px', color: '#7d8590', cursor: 'pointer' }}
                     title="Click to show"
                   >
                     {char.name} ↩
@@ -725,33 +725,33 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
           {/* Visible characters */}
           <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
             {visibleChars.map(char => (
-              <div key={char.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #333' }}>
+              <div key={char.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #21262d' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <button
                       onClick={() => toggleCharExpanded(char.id)}
-                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: '#888', cursor: 'pointer' }}
+                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #484f58', borderRadius: '3px', color: '#7d8590', cursor: 'pointer' }}
                     >
                       {expandedChars[char.id] ? '▼' : '▶'}
                     </button>
-                    <strong style={{ color: '#e94560' }}>{char.name}</strong>
+                    <strong style={{ color: '#818cf8' }}>{char.name}</strong>
                   </div>
                   <button
                     onClick={() => toggleCharHidden(char.id)}
-                    style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: '#666', cursor: 'pointer' }}
+                    style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #484f58', borderRadius: '3px', color: '#6e7681', cursor: 'pointer' }}
                     title="Hide character"
                   >
                     ✕
                   </button>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#aaa', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#8b949e', marginTop: '0.25rem' }}>
                   <span>HP: {char.heroPoints}</span>
                   <span>Armor: {char.armor}</span>
                   <span>Dodge: {(char.attributes?.perception?.dice || 0) * 5}</span>
                   <span>Parry: {(char.attributes?.agility?.dice || 0) * 5}</span>
                 </div>
                 {/* Compressed attribute dice */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem', color: '#7d8590', marginTop: '0.25rem' }}>
                   {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attrDef]) => (
                     <span key={attrKey}>{attrDef.label}: {char.attributes?.[attrKey]?.dice || 0}D</span>
                   ))}
@@ -759,7 +759,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
 
                 {/* Expanded: full skill breakdown */}
                 {expandedChars[char.id] && char.attributes && (
-                  <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#0a0a1a', borderRadius: '4px' }}>
+                  <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#010409', borderRadius: '4px' }}>
                     {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attrDef]) => {
                       const attr = char.attributes[attrKey];
                       if (!attr) return null;
@@ -768,30 +768,30 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                         .filter(s => s.dice > 0);
                       return (
                         <div key={attrKey} style={{ marginBottom: '0.4rem' }}>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e94560' }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
                             {attrDef.label} ({attr.dice}D)
                           </div>
                           {skills.length > 0 ? (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingLeft: '0.5rem', fontSize: '0.75rem', color: '#aaa' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingLeft: '0.5rem', fontSize: '0.75rem', color: '#8b949e' }}>
                               {skills.map(s => (
-                                <span key={s.key} style={{ backgroundColor: '#16213e', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
+                                <span key={s.key} style={{ backgroundColor: '#161b22', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
                                   {s.label} +{s.dice}D = {s.total}D
                                 </span>
                               ))}
                             </div>
                           ) : (
-                            <div style={{ fontSize: '0.75rem', color: '#555', paddingLeft: '0.5rem' }}>No trained skills</div>
+                            <div style={{ fontSize: '0.75rem', color: '#484f58', paddingLeft: '0.5rem' }}>No trained skills</div>
                           )}
                         </div>
                       );
                     })}
                     {/* Weapons */}
                     {char.weapons && char.weapons.length > 0 && (
-                      <div style={{ marginTop: '0.4rem', borderTop: '1px solid #333', paddingTop: '0.4rem' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffd60a' }}>Weapons</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#aaa' }}>
+                      <div style={{ marginTop: '0.4rem', borderTop: '1px solid #21262d', paddingTop: '0.4rem' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e3b341' }}>Weapons</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#8b949e' }}>
                           {char.weapons.map((w, i) => (
-                            <span key={i} style={{ backgroundColor: '#16213e', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
+                            <span key={i} style={{ backgroundColor: '#161b22', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
                               {w.name} ({w.damage})
                             </span>
                           ))}
@@ -813,7 +813,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
           <button
             onClick={callForInitiativeRoll}
             disabled={!!activeRequest}
-            style={{ padding: '0.4rem 0.8rem', backgroundColor: activeRequest ? '#555' : '#ffd60a', color: '#1a1a2e', fontWeight: 700, fontSize: '0.85rem', borderRadius: '4px', border: 'none', cursor: activeRequest ? 'not-allowed' : 'pointer' }}
+            style={{ padding: '0.4rem 0.8rem', backgroundColor: activeRequest ? '#484f58' : '#e3b341', color: '#0d1117', fontWeight: 700, fontSize: '0.85rem', borderRadius: '4px', border: 'none', cursor: activeRequest ? 'not-allowed' : 'pointer' }}
           >
             Roll Initiative
           </button>
@@ -828,7 +828,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
               onChange={e => setInitNewName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addInitEntry()}
               placeholder="Name (player or NPC)"
-              style={{ flex: 2, minWidth: '120px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+              style={{ flex: 2, minWidth: '120px', padding: '0.4rem', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '4px' }}
             />
             <input
               type="number"
@@ -836,28 +836,28 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
               onChange={e => setInitNewRoll(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addInitEntry()}
               placeholder="Roll"
-              style={{ width: '70px', padding: '0.4rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+              style={{ width: '70px', padding: '0.4rem', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '4px' }}
             />
-            <button onClick={addInitEntry} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', fontWeight: 700 }}>Add</button>
+            <button onClick={addInitEntry} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#3fb950', color: '#0d1117', fontWeight: 700 }}>Add</button>
           </div>
         </div>
 
         {/* Turn controls */}
         {initEntries.length > 0 && (
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-            <button onClick={prevTurn} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#16213e', border: '1px solid #444', color: '#eee', borderRadius: '4px' }}>Prev</button>
-            <button onClick={nextTurn} style={{ flex: 1, padding: '0.5rem', backgroundColor: '#e94560', fontWeight: 700, fontSize: '1rem', borderRadius: '4px', border: 'none', color: '#eee', cursor: 'pointer' }}>
+            <button onClick={prevTurn} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#161b22', border: '1px solid #30363d', color: '#e6edf3', borderRadius: '4px' }}>Prev</button>
+            <button onClick={nextTurn} style={{ flex: 1, padding: '0.5rem', backgroundColor: '#818cf8', fontWeight: 700, fontSize: '1rem', borderRadius: '4px', border: 'none', color: '#e6edf3', cursor: 'pointer' }}>
               Next Turn
             </button>
-            <button onClick={() => setInitActive(-1)} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#16213e', border: '1px solid #444', color: '#888', borderRadius: '4px' }}>Reset</button>
-            <button onClick={clearInitiative} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#ef476f', borderRadius: '4px', border: 'none', color: '#eee', cursor: 'pointer' }}>Clear</button>
+            <button onClick={() => setInitActive(-1)} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#161b22', border: '1px solid #30363d', color: '#7d8590', borderRadius: '4px' }}>Reset</button>
+            <button onClick={clearInitiative} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#f85149', borderRadius: '4px', border: 'none', color: '#e6edf3', cursor: 'pointer' }}>Clear</button>
           </div>
         )}
 
         {/* Initiative list */}
-        <div style={{ backgroundColor: '#0f3460', border: '1px solid #444', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: '#1c2128', border: '1px solid #30363d', borderRadius: '8px', overflow: 'hidden' }}>
           {initEntries.length === 0 && (
-            <p style={{ color: '#888', textAlign: 'center', padding: '2rem' }}>No initiative entries. Add characters and NPCs above.</p>
+            <p style={{ color: '#7d8590', textAlign: 'center', padding: '2rem' }}>No initiative entries. Add characters and NPCs above.</p>
           )}
           {initEntries.map((entry, idx) => {
             const isActive = idx === initActive;
@@ -867,14 +867,14 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                 key={entry.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.75rem',
-                  backgroundColor: isActive ? '#06d6a020' : 'transparent',
-                  borderLeft: isActive ? '4px solid #06d6a0' : '4px solid transparent',
-                  borderBottom: idx < initEntries.length - 1 ? '1px solid #333' : 'none',
+                  backgroundColor: isActive ? '#3fb95020' : 'transparent',
+                  borderLeft: isActive ? '4px solid #3fb950' : '4px solid transparent',
+                  borderBottom: idx < initEntries.length - 1 ? '1px solid #21262d' : 'none',
                   transition: 'background-color 0.2s',
                 }}
               >
                 {/* Turn marker */}
-                <span style={{ width: '20px', textAlign: 'center', fontSize: '0.9rem', color: isActive ? '#06d6a0' : 'transparent', fontWeight: 700 }}>
+                <span style={{ width: '20px', textAlign: 'center', fontSize: '0.9rem', color: isActive ? '#3fb950' : 'transparent', fontWeight: 700 }}>
                   {isActive ? '▶' : ''}
                 </span>
 
@@ -885,37 +885,37 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                       value={initEditName}
                       onChange={e => setInitEditName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && saveEditInit()}
-                      style={{ flex: 1, padding: '0.3rem', backgroundColor: '#16213e', color: '#eee', border: '1px solid #555', borderRadius: '3px' }}
+                      style={{ flex: 1, padding: '0.3rem', backgroundColor: '#161b22', color: '#e6edf3', border: '1px solid #484f58', borderRadius: '3px' }}
                     />
                     <input
                       type="number"
                       value={initEditRoll}
                       onChange={e => setInitEditRoll(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && saveEditInit()}
-                      style={{ width: '55px', padding: '0.3rem', backgroundColor: '#16213e', color: '#ffd60a', border: '1px solid #555', borderRadius: '3px', textAlign: 'center' }}
+                      style={{ width: '55px', padding: '0.3rem', backgroundColor: '#161b22', color: '#e3b341', border: '1px solid #484f58', borderRadius: '3px', textAlign: 'center' }}
                     />
-                    <button onClick={saveEditInit} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', border: 'none', borderRadius: '3px' }}>OK</button>
-                    <button onClick={() => setInitEditId(null)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#555', border: 'none', borderRadius: '3px', color: '#eee' }}>X</button>
+                    <button onClick={saveEditInit} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#3fb950', color: '#0d1117', border: 'none', borderRadius: '3px' }}>OK</button>
+                    <button onClick={() => setInitEditId(null)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#484f58', border: 'none', borderRadius: '3px', color: '#e6edf3' }}>X</button>
                   </>
                 ) : (
                   <>
                     {/* Name */}
-                    <span style={{ flex: 1, fontWeight: isActive ? 700 : 400, color: isActive ? '#06d6a0' : '#eee', fontSize: '0.95rem' }}>
+                    <span style={{ flex: 1, fontWeight: isActive ? 700 : 400, color: isActive ? '#3fb950' : '#e6edf3', fontSize: '0.95rem' }}>
                       {entry.name}
-                      {entry.isNPC && <span style={{ color: '#ff8c00', fontSize: '0.75rem', marginLeft: '0.35rem' }}>[NPC]</span>}
+                      {entry.isNPC && <span style={{ color: '#f0883e', fontSize: '0.75rem', marginLeft: '0.35rem' }}>[NPC]</span>}
                     </span>
 
                     {/* Roll value */}
-                    <span style={{ fontWeight: 700, color: '#ffd60a', fontSize: '1rem', minWidth: '30px', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 700, color: '#e3b341', fontSize: '1rem', minWidth: '30px', textAlign: 'center' }}>
                       {entry.roll}
                     </span>
 
                     {/* Controls */}
                     <div style={{ display: 'flex', gap: '0.2rem' }}>
-                      <button onClick={() => moveInitEntry(idx, -1)} disabled={idx === 0} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: idx === 0 ? '#333' : '#888', cursor: idx === 0 ? 'default' : 'pointer' }} title="Move up">&#9650;</button>
-                      <button onClick={() => moveInitEntry(idx, 1)} disabled={idx === initEntries.length - 1} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: idx === initEntries.length - 1 ? '#333' : '#888', cursor: idx === initEntries.length - 1 ? 'default' : 'pointer' }} title="Move down">&#9660;</button>
-                      <button onClick={() => startEditInit(entry)} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #555', borderRadius: '3px', color: '#888', cursor: 'pointer' }} title="Edit">&#9998;</button>
-                      <button onClick={() => removeInitEntry(entry.id)} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #ef476f', borderRadius: '3px', color: '#ef476f', cursor: 'pointer' }} title="Remove">&#10005;</button>
+                      <button onClick={() => moveInitEntry(idx, -1)} disabled={idx === 0} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #484f58', borderRadius: '3px', color: idx === 0 ? '#21262d' : '#7d8590', cursor: idx === 0 ? 'default' : 'pointer' }} title="Move up">&#9650;</button>
+                      <button onClick={() => moveInitEntry(idx, 1)} disabled={idx === initEntries.length - 1} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #484f58', borderRadius: '3px', color: idx === initEntries.length - 1 ? '#21262d' : '#7d8590', cursor: idx === initEntries.length - 1 ? 'default' : 'pointer' }} title="Move down">&#9660;</button>
+                      <button onClick={() => startEditInit(entry)} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #484f58', borderRadius: '3px', color: '#7d8590', cursor: 'pointer' }} title="Edit">&#9998;</button>
+                      <button onClick={() => removeInitEntry(entry.id)} style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', backgroundColor: 'transparent', border: '1px solid #f85149', borderRadius: '3px', color: '#f85149', cursor: 'pointer' }} title="Remove">&#10005;</button>
                     </div>
                   </>
                 )}
@@ -928,7 +928,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
         <div className="card" style={{ marginTop: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <h3>GM Notes</h3>
-            <span style={{ fontSize: '0.75rem', color: notesSaved ? '#06d6a0' : '#ffd60a' }}>
+            <span style={{ fontSize: '0.75rem', color: notesSaved ? '#3fb950' : '#e3b341' }}>
               {notesSaved ? 'Saved' : 'Saving...'}
             </span>
           </div>
@@ -939,9 +939,9 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
             rows={8}
             style={{
               width: '100%',
-              backgroundColor: '#0f3460',
-              color: '#eee',
-              border: '1px solid #444',
+              backgroundColor: '#1c2128',
+              color: '#e6edf3',
+              border: '1px solid #30363d',
               borderRadius: '4px',
               padding: '0.5rem',
               resize: 'vertical',
@@ -952,46 +952,46 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
         </div>
 
         {/* Hacking Reference */}
-        <div className="card" style={{ marginTop: '1rem', borderColor: '#555' }}>
-          <h3 style={{ color: '#888' }}>Hacking Reference</h3>
-          <p style={{ color: '#aaa', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
-            Skill: <strong style={{ color: '#eee' }}>Computers</strong> vs. target&apos;s <strong style={{ color: '#eee' }}>Firewall</strong> (Technical &times; 5 for player devices).
+        <div className="card" style={{ marginTop: '1rem', borderColor: '#484f58' }}>
+          <h3 style={{ color: '#7d8590' }}>Hacking Reference</h3>
+          <p style={{ color: '#8b949e', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+            Skill: <strong style={{ color: '#e6edf3' }}>Computers</strong> vs. target&apos;s <strong style={{ color: '#e6edf3' }}>Firewall</strong> (Technical &times; 5 for player devices).
           </p>
           <table className="weapon-table" style={{ fontSize: '0.82rem' }}>
             <thead><tr><th>Result</th><th>Outcome</th></tr></thead>
             <tbody>
-              <tr><td style={{ color: '#ef476f', fontWeight: 700 }}>Fail by 10+</td><td>Identity revealed &mdash; traced immediately, counter-attack possible</td></tr>
-              <tr><td style={{ color: '#ef476f', fontWeight: 700 }}>Fail by 5-9</td><td>Traced &mdash; location pinpointed, target alerted</td></tr>
-              <tr><td style={{ color: '#e94560', fontWeight: 700 }}>Fail by 1-4</td><td>Locked out &mdash; cannot retry this session</td></tr>
-              <tr><td style={{ color: '#06d6a0', fontWeight: 700 }}>Beat DC</td><td>Access gained &mdash; can read/copy data</td></tr>
-              <tr><td style={{ color: '#06d6a0', fontWeight: 700 }}>Beat DC by 5+</td><td>Full control &mdash; lock/unlock doors, fry equipment, plant false data</td></tr>
-              <tr><td style={{ color: '#06d6a0', fontWeight: 700 }}>Beat DC by 10+</td><td>Ghost access &mdash; no logs, backdoor installed for future use</td></tr>
+              <tr><td style={{ color: '#f85149', fontWeight: 700 }}>Fail by 10+</td><td>Identity revealed &mdash; traced immediately, counter-attack possible</td></tr>
+              <tr><td style={{ color: '#f85149', fontWeight: 700 }}>Fail by 5-9</td><td>Traced &mdash; location pinpointed, target alerted</td></tr>
+              <tr><td style={{ color: '#818cf8', fontWeight: 700 }}>Fail by 1-4</td><td>Locked out &mdash; cannot retry this session</td></tr>
+              <tr><td style={{ color: '#3fb950', fontWeight: 700 }}>Beat DC</td><td>Access gained &mdash; can read/copy data</td></tr>
+              <tr><td style={{ color: '#3fb950', fontWeight: 700 }}>Beat DC by 5+</td><td>Full control &mdash; lock/unlock doors, fry equipment, plant false data</td></tr>
+              <tr><td style={{ color: '#3fb950', fontWeight: 700 }}>Beat DC by 10+</td><td>Ghost access &mdash; no logs, backdoor installed for future use</td></tr>
             </tbody>
           </table>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#666' }}>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#6e7681' }}>
             Firewall examples: Personal device 10 &bull; Corporate terminal 20 &bull; Military system 30 &bull; AI core 40
           </div>
         </div>
 
         {/* Environmental Hazards Reference */}
-        <div className="card" style={{ marginTop: '1rem', borderColor: '#555' }}>
-          <h3 style={{ color: '#888' }}>Environmental Hazards</h3>
-          <p style={{ color: '#aaa', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
-            Skill: <strong style={{ color: '#eee' }}>Stamina</strong> (Brawn) at the listed interval. Failure causes wound escalation.
+        <div className="card" style={{ marginTop: '1rem', borderColor: '#484f58' }}>
+          <h3 style={{ color: '#7d8590' }}>Environmental Hazards</h3>
+          <p style={{ color: '#8b949e', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+            Skill: <strong style={{ color: '#e6edf3' }}>Stamina</strong> (Brawn) at the listed interval. Failure causes wound escalation.
           </p>
           <table className="weapon-table" style={{ fontSize: '0.82rem' }}>
             <thead><tr><th>Hazard</th><th>Difficulty</th><th>Interval</th><th>Damage / Effect</th></tr></thead>
             <tbody>
-              <tr><td style={{ fontWeight: 700, color: '#ffd60a' }}>Extreme Heat</td><td>15</td><td>Every 10 min</td><td>Fail: +1 wound level. Protective gear gives +2D.</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#4cc9f0' }}>Extreme Cold</td><td>15</td><td>Every 10 min</td><td>Fail: +1 wound level. Cold weather gear gives +1D.</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#4cc9f0' }}>Drowning</td><td>5, +5 each round</td><td>Every round</td><td>Fail: Incapacitated, then Mortally Wounded next round.</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#06d6a0' }}>Toxic Gas / Poison</td><td>15-25</td><td>Per exposure</td><td>Fail: 3D-5D damage (resisted by Stamina). Gas mask gives +2D.</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#e94560' }}>Vacuum / Decompression</td><td>20</td><td>Every round</td><td>Fail: +1 wound level. Enviro-suit required. Without suit: automatic 4D damage/round.</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#e94560' }}>Fire / Burns</td><td>&mdash;</td><td>Per exposure</td><td>Light fire 2D, heavy fire 4D, inferno 6D damage. Stamina to resist.</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#ffd60a' }}>Radiation</td><td>20</td><td>Every hour</td><td>Fail: +1 wound level. Cumulative; protective shielding required.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#e3b341' }}>Extreme Heat</td><td>15</td><td>Every 10 min</td><td>Fail: +1 wound level. Protective gear gives +2D.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#58a6ff' }}>Extreme Cold</td><td>15</td><td>Every 10 min</td><td>Fail: +1 wound level. Cold weather gear gives +1D.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#58a6ff' }}>Drowning</td><td>5, +5 each round</td><td>Every round</td><td>Fail: Incapacitated, then Mortally Wounded next round.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#3fb950' }}>Toxic Gas / Poison</td><td>15-25</td><td>Per exposure</td><td>Fail: 3D-5D damage (resisted by Stamina). Gas mask gives +2D.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#818cf8' }}>Vacuum / Decompression</td><td>20</td><td>Every round</td><td>Fail: +1 wound level. Enviro-suit required. Without suit: automatic 4D damage/round.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#818cf8' }}>Fire / Burns</td><td>&mdash;</td><td>Per exposure</td><td>Light fire 2D, heavy fire 4D, inferno 6D damage. Stamina to resist.</td></tr>
+              <tr><td style={{ fontWeight: 700, color: '#e3b341' }}>Radiation</td><td>20</td><td>Every hour</td><td>Fail: +1 wound level. Cumulative; protective shielding required.</td></tr>
             </tbody>
           </table>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#666' }}>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#6e7681' }}>
             Wound penalties from hazard damage stack normally. Characters at Incapacitated+ cannot act without help.
           </div>
         </div>

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { ATTRIBUTE_DEFINITIONS, getDicePool, SPECIAL_SKILLS } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
-import { OPPOSED_PRESETS, getStaticDefense, getSkillLabel, determineWinner } from '../data/opposedPresets';
+import { OPPOSED_PRESETS, VEHICLE_OPPOSED_PRESETS, getStaticDefense, getVehicleDefense, getSkillLabel, determineWinner, parseDamageFormula } from '../data/opposedPresets';
 import { rollDice, calculateTotal } from '../utils/dice';
 import { getWoundPenalty } from '../data/wounds';
 import RollModal from '../components/RollModal';
@@ -23,13 +23,25 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
   const [oppInitiatorId, setOppInitiatorId] = useState('');
   const [oppDefenderId, setOppDefenderId] = useState('');
   const [oppPreset, setOppPreset] = useState(null);
-  const [oppCustomAttacker, setOppCustomAttacker] = useState('');
-  const [oppCustomDefender, setOppCustomDefender] = useState('');
-  const [oppPhase, setOppPhase] = useState('setup'); // 'setup' | 'rolling_initiator' | 'waiting' | 'rolling_defender' | 'complete'
+  const [oppWeaponIdx, setOppWeaponIdx] = useState('');
+  const [oppPhase, setOppPhase] = useState('setup');
   const [oppResult, setOppResult] = useState(null);
+
+  // Vehicle opposed roll state
+  const [allVehicles, setAllVehicles] = useState([]);
+  const [voppOpen, setVoppOpen] = useState(false);
+  const [voppAtkVehicleId, setVoppAtkVehicleId] = useState('');
+  const [voppAtkCrewId, setVoppAtkCrewId] = useState('');
+  const [voppDefVehicleId, setVoppDefVehicleId] = useState('');
+  const [voppDefCrewId, setVoppDefCrewId] = useState('');
+  const [voppPreset, setVoppPreset] = useState(null);
+  const [voppWeaponIdx, setVoppWeaponIdx] = useState('');
+  const [voppPhase, setVoppPhase] = useState('setup');
+  const [voppResult, setVoppResult] = useState(null);
 
   useEffect(() => {
     fetchCharacters();
+    fetchVehicles();
     fetchRolls();
     fetchMessages();
     fetchOpposedRolls();
@@ -48,6 +60,13 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
       setAllCharacters(allRes.data);
       setCharacters(mineRes.data);
       if (mineRes.data.length > 0 && !selectedCharacter) setSelectedCharacter(mineRes.data[0]);
+    } catch { /* ignore */ }
+  };
+
+  const fetchVehicles = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/vehicles`);
+      setAllVehicles(res.data);
     } catch { /* ignore */ }
   };
 
@@ -128,16 +147,27 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
 
   const handlePresetSelect = (preset) => {
     setOppPreset(preset);
-    setOppCustomAttacker('');
-    setOppCustomDefender('');
+    setOppWeaponIdx('');
   };
 
   const startOpposedRoll = () => {
     if (!initiatorChar || !defenderChar || !oppPreset) return;
 
     if (oppPreset.attacker.type === 'damage') {
-      // Damage mode: initiator picks a weapon, just use plain dice
-      // For simplicity, open a "pick dice count" approach
+      const weapon = initiatorChar.weapons?.[parseInt(oppWeaponIdx)];
+      if (!weapon) return;
+      const diceCount = parseDamageFormula(weapon.damage);
+      if (!diceCount) return;
+      setRollModal({
+        label: `Damage — ${weapon.name} (${weapon.damage})`,
+        attrKey: null, attrLabel: 'Damage', attrDice: 0,
+        skillKey: null, skillLabel: null, skillDice: 0,
+        baseDice: diceCount,
+        weaponName: weapon.name,
+        damageFormula: weapon.damage,
+        isOpposedInitiator: true,
+        isDamageOpposed: true,
+      });
       setOppPhase('rolling_initiator');
       return;
     }
@@ -167,8 +197,10 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
   const handleInitiatorRollComplete = async (total, diceValues) => {
     if (!initiatorChar || !defenderChar || !oppPreset) return;
 
-    const { attr: aAttr, skill: aSkill } = oppPreset.attacker;
-    const initiatorSkillLabel = getSkillLabel(aAttr, aSkill);
+    const isDamage = oppPreset.attacker.type === 'damage';
+    const initiatorSkillLabel = isDamage
+      ? `Damage — ${initiatorChar.weapons?.[parseInt(oppWeaponIdx)]?.name || 'Weapon'}`
+      : getSkillLabel(oppPreset.attacker.attr, oppPreset.attacker.skill);
     const initiatorIsNPC = initiatorChar.isNPC || false;
     const defenderIsNPC = defenderChar.isNPC || false;
 
@@ -245,6 +277,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
     setOppPhase('setup');
     setOppResult(null);
     setOppPreset(null);
+    setOppWeaponIdx('');
   };
 
   useEffect(() => {
@@ -255,6 +288,186 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
       setOppPhase('complete');
     }
   }, [opposedRolls, oppPhase, oppResult]);
+
+  // --- Vehicle Opposed Roll Logic ---
+  const voppAtkVehicle = allVehicles.find(v => v.id === voppAtkVehicleId);
+  const voppDefVehicle = allVehicles.find(v => v.id === voppDefVehicleId);
+  const voppAtkCrew = allCharacters.find(c => c.id === voppAtkCrewId);
+  const voppDefCrew = allCharacters.find(c => c.id === voppDefCrewId);
+
+  const getVehicleGunneryDice = (char) => {
+    if (!char) return 0;
+    const perc = char.attributes?.perception;
+    return (perc?.dice || 0) + (perc?.skills?.gunnery || 0);
+  };
+
+  const getVehiclePilotingSkill = (char) => {
+    if (!char) return 0;
+    return char.attributes?.mechanical?.skills?.piloting || 0;
+  };
+
+  const getVehicleEvadeDice = (char, vehicle) => {
+    return getVehiclePilotingSkill(char) + (vehicle?.stats?.maneuverability || 0);
+  };
+
+  const getVehicleResistDice = (vehicle) => {
+    return (vehicle?.stats?.hull || 0) + (vehicle?.stats?.shield || 0);
+  };
+
+  const startVehicleOpposed = () => {
+    if (!voppAtkVehicle || !voppDefVehicle || !voppPreset) return;
+
+    if (voppPreset.attacker.type === 'vehicle_damage') {
+      const weapon = voppAtkVehicle.weapons?.[parseInt(voppWeaponIdx)];
+      if (!weapon) return;
+      const diceCount = parseDamageFormula(weapon.damage);
+      if (!diceCount) return;
+      setRollModal({
+        label: `Vehicle Damage — ${weapon.name} (${weapon.damage})`,
+        attrKey: null, attrLabel: 'Damage', attrDice: 0,
+        skillKey: null, skillLabel: null, skillDice: 0,
+        baseDice: diceCount,
+        weaponName: weapon.name,
+        damageFormula: weapon.damage,
+        isVehicleOpposedInitiator: true,
+        isDamageOpposed: true,
+      });
+      setVoppPhase('rolling_initiator');
+      return;
+    }
+
+    if (voppPreset.attacker.type === 'crew_skill') {
+      if (!voppAtkCrew) return;
+      const { attr, skill } = voppPreset.attacker;
+      const attrDef = ATTRIBUTE_DEFINITIONS[attr];
+      const attrData = voppAtkCrew.attributes?.[attr];
+      if (!attrDef || !attrData) return;
+      const skillLabel = attrDef.skills[skill];
+      const skillDice = attrData.skills[skill] || 0;
+      const baseDice = attrData.dice + skillDice;
+      setRollModal({
+        label: `${skillLabel} (${attrDef.label}) — ${voppAtkVehicle.name}`,
+        attrKey: attr, attrLabel: attrDef.label, attrDice: attrData.dice,
+        skillKey: skill, skillLabel, skillDice, baseDice,
+        isVehicleOpposedInitiator: true,
+      });
+      setVoppPhase('rolling_initiator');
+    }
+  };
+
+  const handleVehicleInitiatorComplete = async (total, diceValues) => {
+    if (!voppAtkVehicle || !voppDefVehicle || !voppPreset) return;
+
+    const isDamage = voppPreset.attacker.type === 'vehicle_damage';
+    const weapon = isDamage ? voppAtkVehicle.weapons?.[parseInt(voppWeaponIdx)] : null;
+    const initiatorSkillLabel = isDamage
+      ? `Damage — ${weapon?.name || 'Weapon'}`
+      : getSkillLabel(voppPreset.attacker.attr, voppPreset.attacker.skill);
+    const initiatorIsNPC = voppAtkCrew?.isNPC || voppAtkVehicle.isNPC || false;
+    const defenderIsNPC = voppDefCrew?.isNPC || voppDefVehicle.isNPC || false;
+
+    if (voppPreset.defender.type === 'vehicle_static') {
+      const defenseVal = getVehicleDefense(voppDefVehicle);
+      const winner = determineWinner(total, defenseVal, initiatorIsNPC, defenderIsNPC);
+      const margin = Math.abs(total - defenseVal);
+      try {
+        const res = await axios.post(`${API_URL}/opposed-rolls`, {
+          type: 'vehicle',
+          initiatorUserId: voppAtkCrew?.userId || userId,
+          initiatorCharacterId: voppAtkCrew?.id || null,
+          initiatorCharacterName: voppAtkCrew?.name || 'Crew',
+          initiatorIsNPC,
+          initiatorVehicleId: voppAtkVehicle.id,
+          initiatorVehicleName: voppAtkVehicle.name,
+          preset: voppPreset.key,
+          initiatorSkillLabel,
+          initiatorDiceCount: diceValues.length,
+          initiatorDiceRolled: diceValues,
+          initiatorWildDie: null,
+          initiatorTotal: total,
+          initiatorComplication: false,
+          defenderUserId: voppDefCrew?.userId || userId,
+          defenderCharacterId: voppDefCrew?.id || null,
+          defenderCharacterName: voppDefCrew?.name || 'Crew',
+          defenderIsNPC,
+          defenderVehicleId: voppDefVehicle.id,
+          defenderVehicleName: voppDefVehicle.name,
+          defenderSkillLabel: `Defense (${defenseVal})`,
+          defenderIsStatic: true,
+          defenderTotal: defenseVal,
+          winner,
+          margin,
+        });
+        setVoppResult(res.data);
+        setVoppPhase('complete');
+        fetchOpposedRolls();
+      } catch { /* ignore */ }
+    } else {
+      let defenderSkillLabel, defenderBaseDice, defenderFlatBonus;
+      if (voppPreset.defender.type === 'vehicle_evade') {
+        const evadeDice = getVehicleEvadeDice(voppDefCrew, voppDefVehicle);
+        const defense = getVehicleDefense(voppDefVehicle);
+        defenderSkillLabel = `Evade (Piloting + Maneuverability)`;
+        defenderBaseDice = evadeDice;
+        defenderFlatBonus = defense;
+      } else if (voppPreset.defender.type === 'vehicle_resist') {
+        const resistDice = getVehicleResistDice(voppDefVehicle);
+        defenderSkillLabel = `Resist Damage (Hull + Shield)`;
+        defenderBaseDice = resistDice;
+        defenderFlatBonus = 0;
+      }
+      try {
+        const res = await axios.post(`${API_URL}/opposed-rolls`, {
+          type: 'vehicle',
+          initiatorUserId: voppAtkCrew?.userId || userId,
+          initiatorCharacterId: voppAtkCrew?.id || null,
+          initiatorCharacterName: voppAtkCrew?.name || 'Crew',
+          initiatorIsNPC,
+          initiatorVehicleId: voppAtkVehicle.id,
+          initiatorVehicleName: voppAtkVehicle.name,
+          preset: voppPreset.key,
+          initiatorSkillLabel,
+          initiatorDiceCount: diceValues.length,
+          initiatorDiceRolled: diceValues,
+          initiatorWildDie: null,
+          initiatorTotal: total,
+          initiatorComplication: false,
+          defenderUserId: voppDefCrew?.userId || userId,
+          defenderCharacterId: voppDefCrew?.id || null,
+          defenderCharacterName: voppDefCrew?.name || 'Crew',
+          defenderIsNPC,
+          defenderVehicleId: voppDefVehicle.id,
+          defenderVehicleName: voppDefVehicle.name,
+          defenderSkillLabel,
+          defenderIsStatic: false,
+          defenderTotal: null,
+          defenderBaseDice,
+          defenderFlatBonus,
+          winner: null,
+          margin: null,
+        });
+        setVoppResult(res.data);
+        setVoppPhase('waiting');
+        fetchOpposedRolls();
+      } catch { /* ignore */ }
+    }
+  };
+
+  const resetVehicleOpposed = () => {
+    setVoppPhase('setup');
+    setVoppResult(null);
+    setVoppPreset(null);
+    setVoppWeaponIdx('');
+  };
+
+  useEffect(() => {
+    if (voppPhase !== 'waiting' || !voppResult) return;
+    const updated = opposedRolls.find(r => r.id === voppResult.id);
+    if (updated && updated.status === 'complete') {
+      setVoppResult(updated);
+      setVoppPhase('complete');
+    }
+  }, [opposedRolls, voppPhase, voppResult]);
 
   // Combine all log entries
   const combined = [
@@ -285,14 +498,14 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
               >
                 {characters.map(c => <option key={c.id} value={c.id}>{c.name}{c.isNPC ? ' [NPC]' : ''}</option>)}
               </select>
-              <div style={{ fontSize: '0.85rem', color: '#888' }}>
-                Hero Points: <strong style={{ color: '#e94560' }}>{selectedCharacter?.heroPoints || 0}</strong>
+              <div style={{ fontSize: '0.85rem', color: '#7d8590' }}>
+                Hero Points: <strong style={{ color: '#818cf8' }}>{selectedCharacter?.heroPoints || 0}</strong>
               </div>
             </div>
 
             <div className="card">
               <h3>Quick Roll</h3>
-              <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '0.75rem' }}>Select a skill to open the roll popup:</p>
+              <p style={{ fontSize: '0.85rem', color: '#7d8590', marginBottom: '0.75rem' }}>Select a skill to open the roll popup:</p>
               <select onChange={handleSkillSelect} value="" className="select-input" style={{ width: '100%' }}>
                 <option value="" disabled>Choose a skill...</option>
                 {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attr]) => (
@@ -314,8 +527,8 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
             onClick={() => setOpposedOpen(!opposedOpen)}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
           >
-            <h3 style={{ margin: 0, color: '#e94560' }}>Opposed Roll</h3>
-            <span style={{ fontSize: '1.2rem', color: '#888' }}>{opposedOpen ? '▾' : '▸'}</span>
+            <h3 style={{ margin: 0, color: '#818cf8' }}>Character Opposed Rolls</h3>
+            <span style={{ fontSize: '1.2rem', color: '#7d8590' }}>{opposedOpen ? '▾' : '▸'}</span>
           </div>
 
           {opposedOpen && (
@@ -323,7 +536,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
               {oppPhase === 'setup' && (
                 <>
                   {/* Initiator selector */}
-                  <label style={{ fontSize: '0.85rem', color: '#aaa' }}>Initiator:</label>
+                  <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Initiator:</label>
                   <select
                     value={oppInitiatorId}
                     onChange={e => setOppInitiatorId(e.target.value)}
@@ -337,7 +550,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                   </select>
 
                   {/* Defender selector */}
-                  <label style={{ fontSize: '0.85rem', color: '#aaa' }}>Defender:</label>
+                  <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Defender:</label>
                   <select
                     value={oppDefenderId}
                     onChange={e => setOppDefenderId(e.target.value)}
@@ -355,7 +568,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                       {/* Preset buttons by category */}
                       {categories.map(cat => (
                         <div key={cat} style={{ marginBottom: '0.5rem' }}>
-                          <div style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{cat}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#7d8590', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{cat}</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
                             {OPPOSED_PRESETS.filter(p => p.category === cat && p.attacker.type !== 'damage').map(p => {
                               const isSelected = oppPreset?.key === p.key;
@@ -377,16 +590,16 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                                   onClick={() => handlePresetSelect(p)}
                                   style={{
                                     padding: '0.3rem 0.5rem', fontSize: '0.78rem',
-                                    background: isSelected ? '#e94560' : '#16213e',
-                                    border: `1px solid ${isSelected ? '#e94560' : '#444'}`,
-                                    color: isSelected ? '#fff' : '#ccc',
+                                    background: isSelected ? '#818cf8' : '#161b22',
+                                    border: `1px solid ${isSelected ? '#818cf8' : '#30363d'}`,
+                                    color: isSelected ? '#fff' : '#b1bac4',
                                     borderRadius: '4px', cursor: 'pointer',
                                   }}
                                 >
                                   {p.label.split(' vs. ')[0]}
-                                  {initiatorPool && <span style={{ color: isSelected ? '#ffd' : '#06d6a0', marginLeft: '0.3rem' }}>{initiatorPool}</span>}
-                                  <span style={{ color: '#888', margin: '0 0.2rem' }}>vs</span>
-                                  {defenderInfo && <span style={{ color: isSelected ? '#ffd' : '#ffd60a' }}>{defenderInfo}</span>}
+                                  {initiatorPool && <span style={{ color: isSelected ? '#ffd' : '#3fb950', marginLeft: '0.3rem' }}>{initiatorPool}</span>}
+                                  <span style={{ color: '#7d8590', margin: '0 0.2rem' }}>vs</span>
+                                  {defenderInfo && <span style={{ color: isSelected ? '#ffd' : '#e3b341' }}>{defenderInfo}</span>}
                                 </button>
                               );
                             })}
@@ -406,29 +619,48 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                                 onClick={() => handlePresetSelect(p)}
                                 style={{
                                   padding: '0.3rem 0.5rem', fontSize: '0.78rem',
-                                  background: isSelected ? '#e94560' : '#16213e',
-                                  border: `1px solid ${isSelected ? '#e94560' : '#444'}`,
-                                  color: isSelected ? '#fff' : '#ccc',
+                                  background: isSelected ? '#818cf8' : '#161b22',
+                                  border: `1px solid ${isSelected ? '#818cf8' : '#30363d'}`,
+                                  color: isSelected ? '#fff' : '#b1bac4',
                                   borderRadius: '4px', cursor: 'pointer',
                                 }}
                               >
                                 Damage vs Resistance
-                                <span style={{ color: '#888', margin: '0 0.2rem' }}>vs</span>
-                                <span style={{ color: isSelected ? '#ffd' : '#ffd60a' }}>{defPool}D</span>
+                                <span style={{ color: '#7d8590', margin: '0 0.2rem' }}>vs</span>
+                                <span style={{ color: isSelected ? '#ffd' : '#e3b341' }}>{defPool}D</span>
                               </button>
                             );
                           })}
                         </div>
                       </div>
 
+                      {/* Weapon picker for damage preset */}
+                      {oppPreset?.attacker.type === 'damage' && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Weapon ({initiatorChar.name}):</label>
+                          <select
+                            value={oppWeaponIdx}
+                            onChange={e => setOppWeaponIdx(e.target.value)}
+                            className="select-input"
+                            style={{ width: '100%', marginBottom: '0.25rem' }}
+                          >
+                            <option value="">Select weapon...</option>
+                            {(initiatorChar.weapons || []).map((w, i) => {
+                              const dc = parseDamageFormula(w.damage);
+                              return dc ? <option key={i} value={i}>{w.name} — {w.damage}</option> : null;
+                            })}
+                          </select>
+                        </div>
+                      )}
+
                       {oppPreset && (
                         <button
                           onClick={startOpposedRoll}
-                          disabled={oppPreset.attacker.type === 'damage'}
-                          style={{ width: '100%', padding: '0.6rem', background: '#e94560', border: 'none', color: '#fff', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', marginTop: '0.25rem' }}
+                          disabled={oppPreset.attacker.type === 'damage' && !oppWeaponIdx}
+                          style={{ width: '100%', padding: '0.6rem', background: '#818cf8', border: 'none', color: '#fff', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', marginTop: '0.25rem', opacity: (oppPreset.attacker.type === 'damage' && !oppWeaponIdx) ? 0.5 : 1 }}
                         >
                           {oppPreset.attacker.type === 'damage'
-                            ? 'Use weapon damage buttons on character sheet'
+                            ? (oppWeaponIdx ? `Start: ${initiatorChar.name} rolls ${initiatorChar.weapons?.[parseInt(oppWeaponIdx)]?.name} damage` : 'Select a weapon above')
                             : `Start: ${initiatorChar.name} rolls ${oppPreset.label.split(' vs. ')[0]}`}
                         </button>
                       )}
@@ -438,18 +670,18 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
               )}
 
               {oppPhase === 'rolling_initiator' && (
-                <div style={{ textAlign: 'center', color: '#ffd60a', padding: '1rem 0' }}>
+                <div style={{ textAlign: 'center', color: '#e3b341', padding: '1rem 0' }}>
                   Rolling for {initiatorChar?.name}...
                 </div>
               )}
 
               {oppPhase === 'waiting' && (
                 <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                  <div style={{ color: '#ffd60a', marginBottom: '0.5rem' }}>
+                  <div style={{ color: '#e3b341', marginBottom: '0.5rem' }}>
                     Waiting for {defenderChar?.name} to roll {oppPreset?.label.split(' vs. ')[1]}...
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: '#888' }}>
-                    {initiatorChar?.name} rolled <strong style={{ color: '#06d6a0' }}>{oppResult?.initiatorTotal}</strong>
+                  <div style={{ fontSize: '0.85rem', color: '#7d8590' }}>
+                    {initiatorChar?.name} rolled <strong style={{ color: '#3fb950' }}>{oppResult?.initiatorTotal}</strong>
                   </div>
                   <button onClick={resetOpposed} style={{ marginTop: '0.5rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Cancel</button>
                 </div>
@@ -459,23 +691,185 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                 <div style={{ padding: '0.5rem 0' }}>
                   <div style={{
                     padding: '0.6rem', borderRadius: '6px', textAlign: 'center',
-                    backgroundColor: oppResult.winner === 'initiator' ? '#1a2e1a' : oppResult.winner === 'defender' ? '#3d1a1a' : '#2a2a3e',
-                    border: `2px solid ${oppResult.winner === 'initiator' ? '#06d6a0' : oppResult.winner === 'defender' ? '#e94560' : '#ffd60a'}`,
+                    backgroundColor: oppResult.winner === 'initiator' ? '#122117' : oppResult.winner === 'defender' ? '#2a1215' : '#1c1c2a',
+                    border: `2px solid ${oppResult.winner === 'initiator' ? '#3fb950' : oppResult.winner === 'defender' ? '#f85149' : '#e3b341'}`,
                   }}>
-                    <div style={{ fontSize: '0.85rem', color: '#ccc' }}>
-                      {oppResult.initiatorCharacterName}: <strong style={{ color: '#06d6a0' }}>{oppResult.initiatorTotal}</strong>
-                      <span style={{ color: '#888', margin: '0 0.5rem' }}>vs.</span>
-                      {oppResult.defenderCharacterName}: <strong style={{ color: '#ffd60a' }}>{oppResult.defenderTotal}</strong>
+                    <div style={{ fontSize: '0.85rem', color: '#b1bac4' }}>
+                      {oppResult.initiatorCharacterName}: <strong style={{ color: '#3fb950' }}>{oppResult.initiatorTotal}</strong>
+                      <span style={{ color: '#7d8590', margin: '0 0.5rem' }}>vs.</span>
+                      {oppResult.defenderCharacterName}: <strong style={{ color: '#e3b341' }}>{oppResult.defenderTotal}</strong>
                     </div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.3rem',
-                      color: oppResult.winner === 'initiator' ? '#06d6a0' : oppResult.winner === 'defender' ? '#e94560' : '#ffd60a'
+                      color: oppResult.winner === 'initiator' ? '#3fb950' : oppResult.winner === 'defender' ? '#f85149' : '#e3b341'
                     }}>
                       {oppResult.winner === 'initiator' ? `${oppResult.initiatorCharacterName} wins!` :
                        oppResult.winner === 'defender' ? `${oppResult.defenderCharacterName} wins!` : 'Tie!'}
-                      {oppResult.margin > 0 && <span style={{ fontSize: '0.85rem', color: '#ccc', marginLeft: '0.5rem' }}>by {oppResult.margin}</span>}
+                      {oppResult.margin > 0 && <span style={{ fontSize: '0.85rem', color: '#b1bac4', marginLeft: '0.5rem' }}>by {oppResult.margin}</span>}
                     </div>
                   </div>
                   <button onClick={resetOpposed} style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}>New Opposed Roll</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Vehicle Opposed Roll Panel */}
+        <div className="card" style={{ marginTop: '0.5rem' }}>
+          <div
+            onClick={() => setVoppOpen(!voppOpen)}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <h3 style={{ margin: 0, color: '#3fb950' }}>Vehicle Opposed Rolls</h3>
+            <span style={{ fontSize: '1.2rem', color: '#7d8590' }}>{voppOpen ? '▾' : '▸'}</span>
+          </div>
+
+          {voppOpen && (
+            <div style={{ marginTop: '0.75rem' }}>
+              {voppPhase === 'setup' && (
+                <>
+                  <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Attacker Vehicle:</label>
+                  <select value={voppAtkVehicleId} onChange={e => setVoppAtkVehicleId(e.target.value)} className="select-input" style={{ width: '100%', marginBottom: '0.25rem' }}>
+                    <option value="">Select vehicle...</option>
+                    {allVehicles.map(v => <option key={v.id} value={v.id}>{v.name}{v.isNPC ? ' [NPC]' : ''}</option>)}
+                  </select>
+
+                  <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Attacker Crew:</label>
+                  <select value={voppAtkCrewId} onChange={e => setVoppAtkCrewId(e.target.value)} className="select-input" style={{ width: '100%', marginBottom: '0.5rem' }}>
+                    <option value="">Select crew member...</option>
+                    {allCharacters.map(c => <option key={c.id} value={c.id}>{c.name}{c.isNPC ? ' [NPC]' : ''}</option>)}
+                  </select>
+
+                  <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Defender Vehicle:</label>
+                  <select value={voppDefVehicleId} onChange={e => setVoppDefVehicleId(e.target.value)} className="select-input" style={{ width: '100%', marginBottom: '0.25rem' }}>
+                    <option value="">Select vehicle...</option>
+                    {allVehicles.filter(v => v.id !== voppAtkVehicleId).map(v => <option key={v.id} value={v.id}>{v.name}{v.isNPC ? ' [NPC]' : ''}</option>)}
+                  </select>
+
+                  <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Defender Crew:</label>
+                  <select value={voppDefCrewId} onChange={e => setVoppDefCrewId(e.target.value)} className="select-input" style={{ width: '100%', marginBottom: '0.75rem' }}>
+                    <option value="">Select crew member...</option>
+                    {allCharacters.map(c => <option key={c.id} value={c.id}>{c.name}{c.isNPC ? ' [NPC]' : ''}</option>)}
+                  </select>
+
+                  {voppAtkVehicle && voppDefVehicle && (
+                    <>
+                      {['Attack', 'Damage'].map(cat => (
+                        <div key={cat} style={{ marginBottom: '0.5rem' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#7d8590', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{cat}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                            {VEHICLE_OPPOSED_PRESETS.filter(p => p.category === cat).map(p => {
+                              const isSelected = voppPreset?.key === p.key;
+                              let atkInfo = '';
+                              if (p.attacker.type === 'crew_skill' && voppAtkCrew) {
+                                atkInfo = `${getVehicleGunneryDice(voppAtkCrew)}D`;
+                              }
+                              let defInfo = '';
+                              if (p.defender.type === 'vehicle_static') {
+                                defInfo = `${getVehicleDefense(voppDefVehicle)}`;
+                              } else if (p.defender.type === 'vehicle_evade' && voppDefCrew) {
+                                defInfo = `${getVehicleEvadeDice(voppDefCrew, voppDefVehicle)}D+${getVehicleDefense(voppDefVehicle)}`;
+                              } else if (p.defender.type === 'vehicle_resist') {
+                                defInfo = `${getVehicleResistDice(voppDefVehicle)}D`;
+                              }
+
+                              return (
+                                <button
+                                  key={p.key}
+                                  onClick={() => { setVoppPreset(p); setVoppWeaponIdx(''); }}
+                                  style={{
+                                    padding: '0.3rem 0.5rem', fontSize: '0.78rem',
+                                    background: isSelected ? '#3fb950' : '#161b22',
+                                    border: `1px solid ${isSelected ? '#3fb950' : '#30363d'}`,
+                                    color: isSelected ? '#000' : '#b1bac4',
+                                    borderRadius: '4px', cursor: 'pointer',
+                                  }}
+                                >
+                                  {p.label.split(' vs. ')[0]}
+                                  {atkInfo && <span style={{ color: isSelected ? '#003' : '#3fb950', marginLeft: '0.3rem' }}>{atkInfo}</span>}
+                                  <span style={{ color: '#7d8590', margin: '0 0.2rem' }}>vs</span>
+                                  {defInfo && <span style={{ color: isSelected ? '#003' : '#e3b341' }}>{defInfo}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Vehicle weapon picker for damage */}
+                      {voppPreset?.attacker.type === 'vehicle_damage' && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.85rem', color: '#8b949e' }}>Weapon ({voppAtkVehicle.name}):</label>
+                          <select
+                            value={voppWeaponIdx}
+                            onChange={e => setVoppWeaponIdx(e.target.value)}
+                            className="select-input"
+                            style={{ width: '100%', marginBottom: '0.25rem' }}
+                          >
+                            <option value="">Select weapon...</option>
+                            {(voppAtkVehicle.weapons || []).map((w, i) => {
+                              const dc = parseDamageFormula(w.damage);
+                              return dc ? <option key={i} value={i}>{w.name} — {w.damage}</option> : null;
+                            })}
+                          </select>
+                        </div>
+                      )}
+
+                      {voppPreset && (
+                        <button
+                          onClick={startVehicleOpposed}
+                          disabled={(voppPreset.attacker.type === 'vehicle_damage' && !voppWeaponIdx) || (voppPreset.attacker.type === 'crew_skill' && !voppAtkCrew)}
+                          style={{ width: '100%', padding: '0.6rem', background: '#3fb950', border: 'none', color: '#000', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', marginTop: '0.25rem', opacity: ((voppPreset.attacker.type === 'vehicle_damage' && !voppWeaponIdx) || (voppPreset.attacker.type === 'crew_skill' && !voppAtkCrew)) ? 0.5 : 1 }}
+                        >
+                          {voppPreset.attacker.type === 'vehicle_damage'
+                            ? (voppWeaponIdx ? `Start: ${voppAtkVehicle.name} fires ${voppAtkVehicle.weapons?.[parseInt(voppWeaponIdx)]?.name}` : 'Select a weapon above')
+                            : (voppAtkCrew ? `Start: ${voppAtkCrew.name} fires from ${voppAtkVehicle.name}` : 'Select attacker crew above')}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {voppPhase === 'rolling_initiator' && (
+                <div style={{ textAlign: 'center', color: '#3fb950', padding: '1rem 0' }}>
+                  Rolling for {voppAtkVehicle?.name}...
+                </div>
+              )}
+
+              {voppPhase === 'waiting' && (
+                <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                  <div style={{ color: '#3fb950', marginBottom: '0.5rem' }}>
+                    Waiting for {voppDefVehicle?.name} ({voppDefCrew?.name}) to roll...
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#7d8590' }}>
+                    {voppAtkVehicle?.name} rolled <strong style={{ color: '#3fb950' }}>{voppResult?.initiatorTotal}</strong>
+                  </div>
+                  <button onClick={resetVehicleOpposed} style={{ marginTop: '0.5rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Cancel</button>
+                </div>
+              )}
+
+              {voppPhase === 'complete' && voppResult && (
+                <div style={{ padding: '0.5rem 0' }}>
+                  <div style={{
+                    padding: '0.6rem', borderRadius: '6px', textAlign: 'center',
+                    backgroundColor: voppResult.winner === 'initiator' ? '#122117' : voppResult.winner === 'defender' ? '#2a1215' : '#1c1c2a',
+                    border: `2px solid ${voppResult.winner === 'initiator' ? '#3fb950' : voppResult.winner === 'defender' ? '#f85149' : '#e3b341'}`,
+                  }}>
+                    <div style={{ fontSize: '0.85rem', color: '#b1bac4' }}>
+                      {voppResult.initiatorVehicleName || voppResult.initiatorCharacterName}: <strong style={{ color: '#3fb950' }}>{voppResult.initiatorTotal}</strong>
+                      <span style={{ color: '#7d8590', margin: '0 0.5rem' }}>vs.</span>
+                      {voppResult.defenderVehicleName || voppResult.defenderCharacterName}: <strong style={{ color: '#e3b341' }}>{voppResult.defenderTotal}</strong>
+                    </div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.3rem',
+                      color: voppResult.winner === 'initiator' ? '#3fb950' : voppResult.winner === 'defender' ? '#f85149' : '#e3b341'
+                    }}>
+                      {voppResult.winner === 'initiator' ? `${voppResult.initiatorVehicleName || voppResult.initiatorCharacterName} wins!` :
+                       voppResult.winner === 'defender' ? `${voppResult.defenderVehicleName || voppResult.defenderCharacterName} wins!` : 'Tie!'}
+                      {voppResult.margin > 0 && <span style={{ fontSize: '0.85rem', color: '#b1bac4', marginLeft: '0.5rem' }}>by {voppResult.margin}</span>}
+                    </div>
+                  </div>
+                  <button onClick={resetVehicleOpposed} style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}>New Vehicle Opposed Roll</button>
                 </div>
               )}
             </div>
@@ -489,13 +883,13 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
           <h2>Roll Log &amp; Chat</h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={() => { fetchRolls(); fetchOpposedRolls(); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Refresh</button>
-            {isGM && <button onClick={clearLog} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#ef476f' }}>Clear Log</button>}
+            {isGM && <button onClick={clearLog} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#f85149' }}>Clear Log</button>}
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#0f3460', border: '1px solid #444', borderRadius: '8px 8px 0 0', padding: '1rem' }}>
+        <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#1c2128', border: '1px solid #444', borderRadius: '8px 8px 0 0', padding: '1rem' }}>
           {combined.length === 0 && (
-            <p style={{ color: '#888', textAlign: 'center', marginTop: '2rem' }}>
+            <p style={{ color: '#7d8590', textAlign: 'center', marginTop: '2rem' }}>
               No rolls yet. Roll from the Character Sheet or use Quick Roll!
             </p>
           )}
@@ -514,39 +908,39 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
             if (item.type === 'opposed') {
               const o = item.data;
               const isComplete = o.status === 'complete';
-              const winColor = o.winner === 'initiator' ? '#06d6a0' : o.winner === 'defender' ? '#e94560' : '#ffd60a';
+              const winColor = o.winner === 'initiator' ? '#3fb950' : o.winner === 'defender' ? '#f85149' : '#e3b341';
               return (
-                <div key={`opp-${o.id}`} className="message system" style={{ borderLeft: `3px solid ${isComplete ? winColor : '#ffd60a'}` }}>
+                <div key={`opp-${o.id}`} className="message system" style={{ borderLeft: `3px solid ${isComplete ? winColor : '#e3b341'}` }}>
                   <div className="message-author">
-                    <span style={{ color: '#e94560', fontSize: '0.8rem' }}>[Opposed Roll]</span>
+                    <span style={{ color: '#818cf8', fontSize: '0.8rem' }}>[Opposed Roll]</span>
                   </div>
                   <div className="message-text">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.3rem' }}>
                       <span>
-                        <strong>{o.initiatorCharacterName}</strong>
-                        {o.initiatorIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}> [NPC]</span>}
+                        <strong>{o.initiatorVehicleName ? `${o.initiatorVehicleName} (${o.initiatorCharacterName})` : o.initiatorCharacterName}</strong>
+                        {o.initiatorIsNPC && <span style={{ color: '#f0883e', fontSize: '0.8rem' }}> [NPC]</span>}
                         {' '}{o.initiatorSkillLabel}
-                        {' = '}<strong style={{ color: '#06d6a0' }}>{o.initiatorTotal}</strong>
+                        {' = '}<strong style={{ color: '#3fb950' }}>{o.initiatorTotal}</strong>
                       </span>
-                      <span style={{ color: '#888' }}>vs.</span>
+                      <span style={{ color: '#7d8590' }}>vs.</span>
                       <span>
-                        <strong>{o.defenderCharacterName}</strong>
-                        {o.defenderIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}> [NPC]</span>}
+                        <strong>{o.defenderVehicleName ? `${o.defenderVehicleName} (${o.defenderCharacterName})` : o.defenderCharacterName}</strong>
+                        {o.defenderIsNPC && <span style={{ color: '#f0883e', fontSize: '0.8rem' }}> [NPC]</span>}
                         {' '}{o.defenderSkillLabel}
-                        {' = '}<strong style={{ color: '#ffd60a' }}>{o.defenderTotal ?? '...'}</strong>
+                        {' = '}<strong style={{ color: '#e3b341' }}>{o.defenderTotal ?? '...'}</strong>
                       </span>
                     </div>
                   </div>
                   {isComplete && (
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: winColor, marginTop: '0.2rem' }}>
-                      {o.winner === 'initiator' ? `${o.initiatorCharacterName} wins` :
-                       o.winner === 'defender' ? `${o.defenderCharacterName} wins` : 'Tie'}
+                      {o.winner === 'initiator' ? `${o.initiatorVehicleName || o.initiatorCharacterName} wins` :
+                       o.winner === 'defender' ? `${o.defenderVehicleName || o.defenderCharacterName} wins` : 'Tie'}
                       {o.margin > 0 && ` by ${o.margin}`}
                       {o.winner === 'tie' && ' — PC wins ties vs NPC'}
                     </div>
                   )}
                   {!isComplete && (
-                    <div style={{ fontSize: '0.85rem', color: '#ffd60a', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#e3b341', fontStyle: 'italic', marginTop: '0.2rem' }}>
                       Waiting for {o.defenderCharacterName} to roll...
                     </div>
                   )}
@@ -561,19 +955,19 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
             const wildDie = roll.wildDie;
 
             if (roll.rollType === 'GM_ROLL') {
-              const outcomeColor = OUTCOME_COLORS[roll.outcome] || '#888';
+              const outcomeColor = OUTCOME_COLORS[roll.outcome] || '#7d8590';
               const outcomeLabel = OUTCOME_LABELS[roll.outcome] || roll.outcome;
               return (
                 <div key={roll.id} className="message system" style={{ borderLeft: `3px solid ${outcomeColor}` }}>
-                  <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#ffd60a', fontSize: '0.8rem' }}>[GM Roll]</span></div>
+                  <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#f0883e', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#e3b341', fontSize: '0.8rem' }}>[GM Roll]</span></div>
                   <div className="message-text">
                     <strong>{roll.skill}</strong> — {roll.total} vs DC {roll.dcValue}{' '}
                     <span style={{ color: outcomeColor, fontWeight: 700 }}>{outcomeLabel}</span>
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.2rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                     Dice: [{roll.diceRolled?.join(', ')}]
-                    {roll.complication && <span style={{ color: '#ef476f', fontWeight: 700 }}> COMPLICATION</span>}
-                    {roll.heroPointDelta > 0 && <span style={{ color: '#06d6a0' }}> +{roll.heroPointDelta} HP</span>}
+                    {roll.complication && <span style={{ color: '#f85149', fontWeight: 700 }}> COMPLICATION</span>}
+                    {roll.heroPointDelta > 0 && <span style={{ color: '#3fb950' }}> +{roll.heroPointDelta} HP</span>}
                   </div>
                   <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
                 </div>
@@ -583,9 +977,9 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
             if (roll.rollType === 'GM_ROLL_DECLINED') {
               return (
                 <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #888' }}>
-                  <div className="message-author">{charName} <span style={{ color: '#888', fontSize: '0.8rem' }}>[GM Roll — Declined]</span></div>
+                  <div className="message-author">{charName} <span style={{ color: '#7d8590', fontSize: '0.8rem' }}>[GM Roll — Declined]</span></div>
                   <div className="message-text">
-                    <strong>{roll.skill}</strong> — <span style={{ color: '#888', fontStyle: 'italic' }}>Declined</span>
+                    <strong>{roll.skill}</strong> — <span style={{ color: '#7d8590', fontStyle: 'italic' }}>Declined</span>
                   </div>
                   <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
                 </div>
@@ -594,14 +988,14 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
 
             if (roll.rollType === 'DAMAGE') {
               return (
-                <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #e94560' }}>
-                  <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#e94560', fontSize: '0.8rem' }}>[Damage]</span></div>
+                <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #f85149' }}>
+                  <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#f0883e', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#f85149', fontSize: '0.8rem' }}>[Damage]</span></div>
                   <div className="message-text">
-                    <strong>{roll.weaponName}</strong> ({roll.damageFormula}) — <strong style={{ color: '#e94560', fontSize: '1.1em' }}>{roll.total}</strong> damage
+                    <strong>{roll.weaponName}</strong> ({roll.damageFormula}) — <strong style={{ color: '#f85149', fontSize: '1.1em' }}>{roll.total}</strong> damage
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.2rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                     Dice: [{roll.diceRolled?.join(', ')}]
-                    {roll.rollFlag && <span style={{ color: '#ffd60a' }}> {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}</span>}
+                    {roll.rollFlag && <span style={{ color: '#e3b341' }}> {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}</span>}
                   </div>
                   <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
                 </div>
@@ -612,7 +1006,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
               <div key={roll.id} className="message system">
                 <div className="message-author">
                   {charName}
-                  {rollIsNPC && <span style={{ color: '#ff8c00', fontSize: '0.8rem', marginLeft: '0.3rem' }}>[NPC]</span>}
+                  {rollIsNPC && <span style={{ color: '#f0883e', fontSize: '0.8rem', marginLeft: '0.3rem' }}>[NPC]</span>}
                   {roll.rollFlag && (
                     <span className={`roll-flag-inline ${roll.rollFlag === 'REROLL' ? 'reroll' : 'doubledown'}`}>
                       {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}
@@ -622,21 +1016,21 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                 </div>
                 <div className="message-text">
                   <strong>{roll.skill}</strong>
-                  {roll.attribute && roll.attribute !== roll.skill && <span style={{ color: '#888' }}> ({roll.attribute})</span>}
-                  {' — '}{roll.diceCount}D6 = <strong style={{ color: '#06d6a0', fontSize: '1.1em' }}>{roll.total}</strong>
+                  {roll.attribute && roll.attribute !== roll.skill && <span style={{ color: '#7d8590' }}> ({roll.attribute})</span>}
+                  {' — '}{roll.diceCount}D6 = <strong style={{ color: '#3fb950', fontSize: '1.1em' }}>{roll.total}</strong>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                   Dice: [{roll.diceRolled?.join(', ')}]
                   {wildDie && (
                     <span>
                       {' | Wild: '}
-                      <span style={{ color: wildDie.rawFirst === 6 ? '#06d6a0' : wildDie.rawFirst === 1 ? '#ef476f' : '#ccc', fontWeight: 700 }}>
+                      <span style={{ color: wildDie.rawFirst === 6 ? '#3fb950' : wildDie.rawFirst === 1 ? '#f85149' : '#b1bac4', fontWeight: 700 }}>
                         {wildDie.rolls?.join(' + ')} = {wildDie.total}
                       </span>
-                      {wildDie.exploded && <span style={{ color: '#ffd60a' }}> EXPLODING!</span>}
+                      {wildDie.exploded && <span style={{ color: '#e3b341' }}> EXPLODING!</span>}
                     </span>
                   )}
-                  {roll.complication && <span style={{ color: '#ef476f', fontWeight: 700 }}> COMPLICATION!</span>}
+                  {roll.complication && <span style={{ color: '#f85149', fontWeight: 700 }}> COMPLICATION!</span>}
                 </div>
                 <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
               </div>
@@ -644,35 +1038,42 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
           })}
         </div>
 
-        <form onSubmit={handleChat} style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', backgroundColor: '#16213e', border: '1px solid #444', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+        <form onSubmit={handleChat} style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', backgroundColor: '#161b22', border: '1px solid #444', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
           <input
             type="text"
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
             placeholder="Type a message..."
-            style={{ flex: 1, padding: '0.6rem', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.6rem', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #444', borderRadius: '4px' }}
           />
           <button type="submit" style={{ padding: '0.6rem 1.25rem' }}>Send</button>
         </form>
       </div>
 
-      {rollModal && (rollModal.isOpposedInitiator ? initiatorChar : selectedCharacter) && (
-        <RollModal
-          rollInfo={rollModal}
-          character={rollModal.isOpposedInitiator ? initiatorChar : selectedCharacter}
-          onClose={() => {
-            setRollModal(null);
-            if (rollModal.isOpposedInitiator && oppPhase === 'rolling_initiator') {
-              resetOpposed();
-            }
-            fetchRolls();
-          }}
-          onHeroPointChange={handleHeroPointChange}
-          maxDice={maxDice}
-          isNPC={rollModal.isOpposedInitiator ? (initiatorChar?.isNPC || false) : (selectedCharacter?.isNPC || false)}
-          onRollComplete={rollModal.isOpposedInitiator ? handleInitiatorRollComplete : undefined}
-        />
-      )}
+      {rollModal && (() => {
+        const isVoppInit = rollModal.isVehicleOpposedInitiator;
+        const isOppInit = rollModal.isOpposedInitiator;
+        const isDmgOpp = rollModal.isDamageOpposed;
+        const char = isVoppInit ? voppAtkCrew : isOppInit ? initiatorChar : selectedCharacter;
+        if (!char) return null;
+        return (
+          <RollModal
+            rollInfo={rollModal}
+            character={char}
+            onClose={() => {
+              setRollModal(null);
+              if (isOppInit && oppPhase === 'rolling_initiator') resetOpposed();
+              if (isVoppInit && voppPhase === 'rolling_initiator') resetVehicleOpposed();
+              fetchRolls();
+            }}
+            onHeroPointChange={handleHeroPointChange}
+            maxDice={maxDice}
+            isNPC={char.isNPC || false}
+            isDamageMode={isDmgOpp || false}
+            onRollComplete={isVoppInit ? handleVehicleInitiatorComplete : isOppInit ? handleInitiatorRollComplete : undefined}
+          />
+        );
+      })()}
     </div>
   );
 }

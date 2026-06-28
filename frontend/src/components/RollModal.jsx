@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { rollDice, calculateTotal } from '../utils/dice';
+import { rollDice, calculateTotal, rollPlainDice } from '../utils/dice';
 import { getWoundPenalty } from '../data/wounds';
 import { getRollHints } from '../data/characterOptions';
 
-export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice, isNPC, onRollComplete }) {
+export default function RollModal({ rollInfo, character, onClose, onHeroPointChange, maxDice, isNPC, onRollComplete, isDamageMode }) {
   const { label, attrKey, attrLabel, attrDice, skillKey, skillLabel, skillDice, baseDice } = rollInfo;
-  const rollHints = getRollHints(character, attrKey, skillKey);
+  const rollHints = isDamageMode ? [] : getRollHints(character, attrKey, skillKey);
 
   const [phase, setPhase] = useState('setup'); // 'setup' | 'result'
   const [extraDice, setExtraDice] = useState(0);
@@ -55,6 +55,25 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
     const count = effectiveDice;
     if (count < 1) return;
 
+    if (isDamageMode) {
+      const plainResults = [];
+      for (let i = 0; i < count; i++) plainResults.push(Math.floor(Math.random() * 6) + 1);
+      const plainTotal = plainResults.reduce((a, b) => a + b, 0);
+      setDiceResults(plainResults.map((v, i) => ({ value: v, isWild: false, rolls: [v], rawFirst: v, exploded: false })));
+      setRollTotal({ total: plainTotal, complication: false, removedDie: null });
+      setRollFlag(flag);
+      setPhase('result');
+      try {
+        await axios.post(`${API_URL}/rolls/damage`, {
+          characterId: character.id, characterName: character.name, isNPC: isNPC || false,
+          weaponName: rollInfo.weaponName || label, damageFormula: rollInfo.damageFormula || `${baseDice}D`,
+          diceCount: count, diceRolled: plainResults, total: plainTotal, doubled, extraDice, rollFlag: flag,
+        });
+      } catch { /* roll still shows locally */ }
+      if (onRollComplete) onRollComplete(plainTotal, plainResults);
+      return;
+    }
+
     const results = rollDice(count);
     const { total, complication, removedDie } = calculateTotal(results);
 
@@ -63,7 +82,6 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
     setRollFlag(flag);
     setPhase('result');
 
-    // Save to backend
     try {
       const res = await axios.post(`${API_URL}/rolls/skill`, {
         characterId: character.id,
@@ -111,18 +129,24 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
 
         {phase === 'setup' && (
           <div className="roll-setup">
-            {/* Dice breakdown */}
-            <div className="dice-breakdown">
-              <span className="breakdown-attr">{attrLabel} {attrDice}D</span>
-              {skillLabel && (
-                <>
-                  <span className="breakdown-plus">+</span>
-                  <span className="breakdown-skill">{skillLabel} {skillDice}D</span>
-                </>
-              )}
-              <span className="breakdown-plus">=</span>
-              <span className="breakdown-total">{baseDice}D6</span>
-            </div>
+            {isDamageMode ? (
+              <div className="dice-breakdown">
+                <span className="breakdown-total" style={{ color: '#f85149' }}>{baseDice}D6</span>
+                <span style={{ color: '#7d8590', fontSize: '0.85rem', marginLeft: '0.5rem' }}>(plain d6, no wild die)</span>
+              </div>
+            ) : (
+              <div className="dice-breakdown">
+                <span className="breakdown-attr">{attrLabel} {attrDice}D</span>
+                {skillLabel && (
+                  <>
+                    <span className="breakdown-plus">+</span>
+                    <span className="breakdown-skill">{skillLabel} {skillDice}D</span>
+                  </>
+                )}
+                <span className="breakdown-plus">=</span>
+                <span className="breakdown-total">{baseDice}D6</span>
+              </div>
+            )}
 
             {!canAct && (
               <div className="wound-cant-act-notice">
@@ -170,7 +194,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             </div>
 
             {isCapped && (
-              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#e3b341', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#0d1117', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
               </div>
             )}
@@ -178,18 +202,20 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             {rollHints.length > 0 && (
               <div style={{ marginBottom: '0.5rem' }}>
                 {rollHints.map((h, i) => (
-                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#ef476f' : '#06d6a0'}` }}>
-                    <strong style={{ color: h.isWarning ? '#ef476f' : '#06d6a0' }}>{h.source}: {h.name}</strong>
-                    <span style={{ color: '#ccc', marginLeft: '0.4rem' }}>{h.note}</span>
+                  <div key={i} style={{ padding: '0.35rem 0.6rem', marginBottom: '0.25rem', borderRadius: '4px', fontSize: '0.82rem', backgroundColor: h.isWarning ? '#3d1a1a' : '#1a2e1a', borderLeft: `3px solid ${h.isWarning ? '#f85149' : '#3fb950'}` }}>
+                    <strong style={{ color: h.isWarning ? '#f85149' : '#3fb950' }}>{h.source}: {h.name}</strong>
+                    <span style={{ color: '#b1bac4', marginLeft: '0.4rem' }}>{h.note}</span>
                   </div>
                 ))}
               </div>
             )}
 
-            <p className="roll-info-text">
-              The first die is the <strong>Wild Die</strong>. If it rolls a 6, it explodes — roll again and add the result.
-              If the wild die rolls a 1, it's a <strong>Complication</strong> — the wild die counts as 0 and the highest other die is removed.
-            </p>
+            {!isDamageMode && (
+              <p className="roll-info-text">
+                The first die is the <strong>Wild Die</strong>. If it rolls a 6, it explodes — roll again and add the result.
+                If the wild die rolls a 1, it's a <strong>Complication</strong> — the wild die counts as 0 and the highest other die is removed.
+              </p>
+            )}
 
             {/* Hero points display */}
             <div className="hero-points-display">
@@ -215,8 +241,8 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             {/* Dice display */}
             <div className="dice-visual-row">
               {diceResults.map((die, i) => (
-                <div key={i} className={`die-face ${die.isWild ? 'wild' : ''} ${die.isWild && die.rawFirst === 6 ? 'wild-six' : ''} ${die.isWild && die.rawFirst === 1 ? 'wild-one' : ''}`}>
-                  {die.isWild ? (
+                <div key={i} className={`die-face ${!isDamageMode && die.isWild ? 'wild' : ''} ${!isDamageMode && die.isWild && die.rawFirst === 6 ? 'wild-six' : ''} ${!isDamageMode && die.isWild && die.rawFirst === 1 ? 'wild-one' : ''}`}>
+                  {!isDamageMode && die.isWild ? (
                     <div className="wild-die-display">
                       <span className="wild-label">WILD</span>
                       {die.rolls.map((r, j) => (
@@ -235,7 +261,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             </div>
 
             {/* Complication notice */}
-            {rollTotal?.complication && (
+            {!isDamageMode && rollTotal?.complication && (
               <div className="complication-notice">
                 COMPLICATION — Wild die rolled 1! Wild die = 0, highest other die ({rollTotal.removedDie}) removed.
               </div>

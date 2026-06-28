@@ -270,13 +270,13 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
         {vehicle && !editing && (
           <>
             <button onClick={startEdit}>Edit</button>
-            <button onClick={() => handleDelete(vehicle.id)} style={{ background: '#ef476f' }}>Delete</button>
+            <button onClick={() => handleDelete(vehicle.id)} style={{ background: '#f85149' }}>Delete</button>
           </>
         )}
         {editing && (
           <>
-            <button onClick={saveEdit} style={{ background: '#06d6a0' }}>Save</button>
-            <button onClick={cancelEdit} style={{ background: '#555' }}>Cancel</button>
+            <button onClick={saveEdit} style={{ background: '#3fb950' }}>Save</button>
+            <button onClick={cancelEdit} style={{ background: '#484f58' }}>Cancel</button>
           </>
         )}
       </div>
@@ -284,7 +284,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
       {/* Character selector */}
       {characters.length > 0 && !editing && (
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <label style={{ fontWeight: 600, color: '#aaa' }}>Crew Member:</label>
+          <label style={{ fontWeight: 600, color: '#8b949e' }}>Crew Member:</label>
           <select
             value={selectedCharId || ''}
             onChange={(e) => setSelectedCharId(e.target.value)}
@@ -293,7 +293,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
             {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           {selectedChar && (
-            <span style={{ color: '#888', fontSize: '0.85rem' }}>
+            <span style={{ color: '#7d8590', fontSize: '0.85rem' }}>
               Gunnery {getGunneryDice()}D | Jupiter Drive {getJupiterDriveDice()}D | Piloting {getPilotingSkillOnly()}D | Repair {getRepairDice()}D | HP: {selectedChar.heroPoints || 0}
             </span>
           )}
@@ -308,7 +308,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit">Create</button>
-            <button type="button" onClick={() => setShowCreate(false)} style={{ background: '#555' }}>Cancel</button>
+            <button type="button" onClick={() => setShowCreate(false)} style={{ background: '#484f58' }}>Cancel</button>
           </div>
         </form>
       )}
@@ -476,7 +476,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
             <div className="card">
               <h3>Navigation</h3>
-              <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
+              <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
                 <li>Jupiter Drive roll: Difficulty 15 (25 if rushed)</li>
                 <li>Then Computers roll: Difficulty 15</li>
                 <li><strong>Mishaps:</strong> 1D6 days off course, wrong planet, or interstellar collision (4D damage)</li>
@@ -485,7 +485,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
 
             <div className="card">
               <h3>Vehicle Combat</h3>
-              <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
+              <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
                 <li><strong>Ranges:</strong> Start at Long; close to Medium, Short</li>
                 <li><strong>Movement:</strong> Opposed Engine checks</li>
                 <li><strong>Attacking:</strong> Gunnery skill</li>
@@ -496,7 +496,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
 
             <div className="card">
               <h3>Damage &amp; Repair</h3>
-              <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
+              <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
                 <li>Repair uses <strong>Mechanical</strong> skill</li>
                 <li>Difficulty 10: Remove Stunned</li>
                 <li>Difficulty 15: Remove Wounded / Incapacitated</li>
@@ -507,7 +507,7 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
 
             <div className="card">
               <h3>Crew Roles</h3>
-              <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
+              <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
                 <li><strong>Captain:</strong> Directs movement</li>
                 <li><strong>Helm:</strong> Evasion rolls (Piloting + Maneuverability)</li>
                 <li><strong>Tactical:</strong> Attack rolls (Gunnery)</li>
@@ -521,8 +521,8 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
           <div className="card" style={{ marginTop: '1rem' }}>
             <h3>Notes</h3>
             {editing
-              ? <textarea value={vehicle.notes || ''} onChange={e => updateField('notes', e.target.value)} rows={4} style={{ width: '100%', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px', padding: '0.5rem', resize: 'vertical' }} />
-              : <p style={{ color: '#aaa', whiteSpace: 'pre-wrap' }}>{vehicle.notes || 'No notes.'}</p>}
+              ? <textarea value={vehicle.notes || ''} onChange={e => updateField('notes', e.target.value)} rows={4} style={{ width: '100%', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '4px', padding: '0.5rem', resize: 'vertical' }} />
+              : <p style={{ color: '#8b949e', whiteSpace: 'pre-wrap' }}>{vehicle.notes || 'No notes.'}</p>}
           </div>
         </div>
       )}
@@ -563,7 +563,7 @@ function VehicleActionRow({ label, description, dice, detail, onClick, disabled,
         <span className="vehicle-action-total">{dice}</span>
       </div>
       {disabledNote ? (
-        <span style={{ color: '#888', fontSize: '0.8rem', fontStyle: 'italic' }}>{disabledNote}</span>
+        <span style={{ color: '#7d8590', fontSize: '0.8rem', fontStyle: 'italic' }}>{disabledNote}</span>
       ) : (
         <button className="roll-btn" onClick={onClick} disabled={disabled}>Roll</button>
       )}
@@ -587,7 +587,7 @@ function VehicleWeaponSection({ weapons, editing, onChange, onDamageRoll }) {
         <h3>Weapons</h3>
         {editing && <button onClick={addWeapon} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Add</button>}
       </div>
-      {weapons.length === 0 && <p style={{ color: '#888' }}>No weapons mounted.</p>}
+      {weapons.length === 0 && <p style={{ color: '#7d8590' }}>No weapons mounted.</p>}
       {weapons.length > 0 && (
         <table className="weapon-table">
           <thead>
@@ -608,19 +608,19 @@ function VehicleWeaponSection({ weapons, editing, onChange, onDamageRoll }) {
                     <td><input value={w.name} onChange={e => updateWeapon(i, 'name', e.target.value)} /></td>
                     <td><input value={w.damage} onChange={e => updateWeapon(i, 'damage', e.target.value)} style={{ width: '80px' }} /></td>
                     <td><input value={w.notes} onChange={e => updateWeapon(i, 'notes', e.target.value)} /></td>
-                    <td><button onClick={() => removeWeapon(i)} style={{ background: '#ef476f', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button></td>
+                    <td><button onClick={() => removeWeapon(i)} style={{ background: '#f85149', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button></td>
                   </>
                 ) : (
                   <>
                     <td>{w.count}&times;</td>
                     <td>{w.name}</td>
                     <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ color: '#e94560', fontWeight: 600 }}>{w.damage}</span>
+                      <span style={{ color: '#818cf8', fontWeight: 600 }}>{w.damage}</span>
                       {w.damage && parseDamage(w.damage) && onDamageRoll && (
                         <button className="roll-btn roll-btn-sm" title={`Roll damage for ${w.name}`} onClick={() => onDamageRoll(w)}>Roll</button>
                       )}
                     </td>
-                    <td style={{ color: '#888' }}>{w.notes}</td>
+                    <td style={{ color: '#7d8590' }}>{w.notes}</td>
                   </>
                 )}
               </tr>
@@ -704,8 +704,8 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ borderColor: '#e94560' }}>
-        <div style={{ padding: '0.75rem', borderBottom: '1px solid #e94560', marginBottom: '1rem', color: '#e94560', fontWeight: 700 }}>
+      <div className="modal-content" style={{ borderColor: '#f85149' }}>
+        <div style={{ padding: '0.75rem', borderBottom: '1px solid #f85149', marginBottom: '1rem', color: '#f85149', fontWeight: 700 }}>
           DAMAGE ROLL — {damageInfo.weaponName} ({vehicleName})
         </div>
 
@@ -734,7 +734,7 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
                 <button type="button" onClick={() => setSizeAdv(sizeAdv + 1)} className="dice-adjust-btn">+</button>
               </div>
               {sizeAdv > 0 && (
-                <span style={{ color: '#06d6a0', fontSize: '0.8rem', marginLeft: '0.5rem' }}>+{sizeAdv}D</span>
+                <span style={{ color: '#3fb950', fontSize: '0.8rem', marginLeft: '0.5rem' }}>+{sizeAdv}D</span>
               )}
             </div>
 
@@ -757,7 +757,7 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
             </div>
 
             {isCapped && (
-              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#e3b341', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#0d1117', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
               </div>
             )}
@@ -778,15 +778,15 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
           <div className="roll-result-display">
             <div className="dice-visual-row">
               {diceResults.map((die, i) => (
-                <div key={i} className="die-face" style={{ backgroundColor: '#e94560' }}>
+                <div key={i} className="die-face" style={{ backgroundColor: '#f85149' }}>
                   <span className="die-number">{die}</span>
                 </div>
               ))}
             </div>
 
             <div className="vs-display" style={{ marginTop: '1.5rem' }}>
-              <span className="vs-total" style={{ color: '#e94560', fontSize: '2em' }}>{rollTotal?.total}</span>
-              <span className="vs-label" style={{ color: '#888' }}>Damage</span>
+              <span className="vs-total" style={{ color: '#f85149', fontSize: '2em' }}>{rollTotal?.total}</span>
+              <span className="vs-label" style={{ color: '#7d8590' }}>Damage</span>
             </div>
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}

@@ -8,10 +8,10 @@ export const OUTCOME_LABELS = {
 };
 
 export const OUTCOME_COLORS = {
-  EXCEPTIONAL_SUCCESS: '#ffd60a',
-  SUCCESS: '#06d6a0',
-  PARTIAL_SUCCESS: '#f9a825',
-  FAIL: '#ef476f',
+  EXCEPTIONAL_SUCCESS: '#e3b341',
+  SUCCESS: '#3fb950',
+  PARTIAL_SUCCESS: '#d29922',
+  FAIL: '#f85149',
   CRITICAL_FAIL: '#b71c1c',
-  PENDING_CHOICE: '#888',
+  PENDING_CHOICE: '#7d8590',
 };

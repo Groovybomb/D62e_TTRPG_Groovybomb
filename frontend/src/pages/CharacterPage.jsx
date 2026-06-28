@@ -211,15 +211,15 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
         {char && !editing && (
           <>
             <button onClick={startEdit}>Edit</button>
-            <button onClick={handleDuplicate} style={{ background: '#ffd60a', color: '#1a1a2e' }}>Duplicate</button>
-            <button onClick={handleInitiativeRoll} style={{ background: '#4cc9f0', color: '#1a1a2e' }}>Initiative</button>
-            <button onClick={() => handleDelete(char.id)} style={{ background: '#ef476f' }}>Delete</button>
+            <button onClick={handleDuplicate} style={{ background: '#e3b341', color: '#0d1117' }}>Duplicate</button>
+            <button onClick={handleInitiativeRoll} style={{ background: '#58a6ff', color: '#0d1117' }}>Initiative</button>
+            <button onClick={() => handleDelete(char.id)} style={{ background: '#f85149' }}>Delete</button>
           </>
         )}
         {editing && (
           <>
-            <button onClick={saveEdit} style={{ background: '#06d6a0' }}>Save</button>
-            <button onClick={cancelEdit} style={{ background: '#555' }}>Cancel</button>
+            <button onClick={saveEdit} style={{ background: '#3fb950' }}>Save</button>
+            <button onClick={cancelEdit} style={{ background: '#484f58' }}>Cancel</button>
           </>
         )}
       </div>
@@ -232,7 +232,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit">Create</button>
-            <button type="button" onClick={() => setShowCreate(false)} style={{ background: '#555' }}>Cancel</button>
+            <button type="button" onClick={() => setShowCreate(false)} style={{ background: '#484f58' }}>Cancel</button>
           </div>
         </form>
       )}
@@ -321,17 +321,17 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
           <div className="sheet-stat-row">
             <div className="sheet-stat">
               <span className="stat-label">Dodge{isProne ? ' (Prone)' : ''}</span>
-              <span className="stat-value computed" style={isProne ? { color: '#ff8c00' } : {}}>{dodge}</span>
+              <span className="stat-value computed" style={isProne ? { color: '#f0883e' } : {}}>{dodge}</span>
               <span className="stat-note">{isProne ? `Base ${baseDodge} + 10 ranged` : 'Perception × 5'}</span>
             </div>
             <div className="sheet-stat">
               <span className="stat-label">Parry{isProne ? ' (Prone)' : ''}</span>
-              <span className="stat-value computed" style={isProne ? { color: '#ff8c00' } : {}}>{parry}</span>
+              <span className="stat-value computed" style={isProne ? { color: '#f0883e' } : {}}>{parry}</span>
               <span className="stat-note">{isProne ? `Max 10 vs melee` : 'Agility × 5'}</span>
             </div>
           </div>
           {(fullDefDodge > baseDodge || fullDefParry > baseParry) && !isProne && (
-            <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#7d8590', marginTop: '0.25rem' }}>
               Full Defense: Dodge {fullDefDodge} (+Acrobatics {acrobatics}D) &bull; Parry {fullDefParry} (+Melee {melee}D)
             </div>
           )}
@@ -434,7 +434,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                     <div key={skillKey} className="skill-row">
                       <span className="skill-name">
                         {skillLabel}
-                        {special && <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '0.35rem' }}>({special.sourceLabel})</span>}
+                        {special && <span style={{ color: '#7d8590', fontSize: '0.75rem', marginLeft: '0.35rem' }}>({special.sourceLabel})</span>}
                       </span>
                       {special ? (
                         <span className="skill-dice" title={`From ${special.sourceLabel}`}>{skillDice > 0 ? skillDice : '-'}</span>
@@ -476,7 +476,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
       {/* Advanced Skills */}
       <div className="card" style={{ marginTop: '1rem' }}>
         <h3>Advanced</h3>
-        <p style={{ color: '#888', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+        <p style={{ color: '#7d8590', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
           Cannot be used untrained. Roll = advanced skill + base skill + attribute.
         </p>
         <div className="skill-list">
@@ -492,7 +492,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
               <div key={advKey} className="skill-row">
                 <span className="skill-name">
                   {advDef.label}
-                  <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                  <span style={{ color: '#7d8590', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
                     ({baseSkillLabel})
                   </span>
                 </span>
@@ -543,28 +543,30 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
       <div className="card" style={{ marginTop: '1rem' }}>
         <h3>Notes</h3>
         {editing
-          ? <textarea value={char.notes || ''} onChange={e => onFieldChange('notes', e.target.value)} rows={4} style={{ width: '100%', backgroundColor: '#0f3460', color: '#eee', border: '1px solid #444', borderRadius: '4px', padding: '0.5rem', resize: 'vertical' }} />
-          : <p style={{ color: '#aaa', whiteSpace: 'pre-wrap' }}>{char.notes || 'No notes.'}</p>}
+          ? <textarea value={char.notes || ''} onChange={e => onFieldChange('notes', e.target.value)} rows={4} style={{ width: '100%', backgroundColor: '#1c2128', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '4px', padding: '0.5rem', resize: 'vertical' }} />
+          : <p style={{ color: '#8b949e', whiteSpace: 'pre-wrap' }}>{char.notes || 'No notes.'}</p>}
       </div>
 
       {/* Dice Modifier Reminders */}
       {!editing && (
-        <div className="card" style={{ marginTop: '1rem', borderColor: '#555' }}>
-          <h3 style={{ color: '#888' }}>Dice Modifier Reminders</h3>
-          <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
-            <li><strong style={{ color: '#e94560' }}>Running</strong> &mdash; &minus;1D to all actions this round (use Extra Dice: &minus;1)</li>
-            <li><strong style={{ color: '#e94560' }}>Multi-Action</strong> &mdash; &minus;1D per extra action this round (use Extra Dice: &minus;1 per extra action)</li>
-            <li><strong style={{ color: '#06d6a0' }}>Preparing / Aiming</strong> &mdash; spend a full round to gain +1D on the next action (use Extra Dice: +1)</li>
-            <li><strong style={{ color: '#06d6a0' }}>Full Defense</strong> &mdash; sacrifice all actions to add Melee to Parry and Acrobatics to Dodge for the round</li>
+        <div className="card" style={{ marginTop: '1rem', borderColor: '#484f58' }}>
+          <h3 style={{ color: '#7d8590' }}>Dice Modifier Reminders</h3>
+          <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
+            <li><strong style={{ color: '#f85149' }}>Hero Points</strong> &mdash; No more than one Hero Point can be spent on a roll.</li>
+            <li><strong style={{ color: '#818cf8' }}>Running</strong> &mdash; &minus;1D to all actions this round (use Extra Dice: &minus;1)</li>
+            <li><strong style={{ color: '#818cf8' }}>Multi-Action</strong> &mdash; &minus;1D per extra action this round (use Extra Dice: &minus;1 per extra action)</li>
+            <li><strong style={{ color: '#818cf8' }}>Tiebreaker</strong> &mdash; PC vs PC ties are broken by comparing wild die values</li>
+            <li><strong style={{ color: '#3fb950' }}>Preparing / Aiming</strong> &mdash; spend a full round to gain +1D on the next action (use Extra Dice: +1)</li>
+            <li><strong style={{ color: '#3fb950' }}>Full Defense</strong> &mdash; sacrifice all actions to add Melee to Parry and Acrobatics to Dodge for the round</li>
           </ul>
-          <h4 style={{ color: '#888', marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Scale Bonuses (Person vs. Vehicle)</h4>
-          <ul style={{ color: '#aaa', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
-            <li><strong style={{ color: '#06d6a0' }}>Smaller Size Attack Bonus</strong> &mdash; +1D per size category (use Extra Dice)</li>
-            <li><strong style={{ color: '#06d6a0' }}>Smaller Size Dodge Bonus</strong> &mdash; +3 per size category (add to Dodge, not dice)</li>
-            <li><strong style={{ color: '#e94560' }}>Larger Size Damage Bonus</strong> &mdash; +1D per size category to damage (use Extra Dice on damage roll)</li>
-            <li><strong style={{ color: '#e94560' }}>Larger Size Resist Bonus</strong> &mdash; +1D per size category to resist damage (use Extra Dice)</li>
+          <h4 style={{ color: '#7d8590', marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Scale Bonuses (Person vs. Vehicle)</h4>
+          <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
+            <li><strong style={{ color: '#3fb950' }}>Smaller Size Attack Bonus</strong> &mdash; +1D per size category (use Extra Dice)</li>
+            <li><strong style={{ color: '#3fb950' }}>Smaller Size Dodge Bonus</strong> &mdash; +3 per size category (add to Dodge, not dice)</li>
+            <li><strong style={{ color: '#f85149' }}>Larger Size Damage Bonus</strong> &mdash; +1D per size category to damage (use Extra Dice on damage roll)</li>
+            <li><strong style={{ color: '#f85149' }}>Larger Size Resist Bonus</strong> &mdash; +1D per size category to resist damage (use Extra Dice)</li>
           </ul>
-          <div style={{ color: '#666', fontSize: '0.78rem', marginTop: '0.35rem', paddingLeft: '1.2rem' }}>
+          <div style={{ color: '#6e7681', fontSize: '0.78rem', marginTop: '0.35rem', paddingLeft: '1.2rem' }}>
             Scale tiers: Person (+0) &rarr; Speeder (+1) &rarr; Tank (+2) &rarr; Light Freighter (+3) &rarr; Heavy Freighter (+4) &rarr; Capital Ship (+5)
           </div>
         </div>
@@ -595,29 +597,29 @@ function WeaponSection({ weapons, editing, onChange, character, onDamageRoll, re
         <h3>Weapons</h3>
         {editing && (
           <div style={{ display: 'flex', gap: '0.25rem' }}>
-            {referenceData && <button onClick={() => setShowPicker(!showPicker)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', backgroundColor: showPicker ? '#e94560' : '#06d6a0', color: '#1a1a2e', fontWeight: 600 }}>{showPicker ? 'Cancel' : '+ Book'}</button>}
+            {referenceData && <button onClick={() => setShowPicker(!showPicker)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', backgroundColor: showPicker ? '#818cf8' : '#3fb950', color: '#0d1117', fontWeight: 600 }}>{showPicker ? 'Cancel' : '+ Book'}</button>}
             <button onClick={addWeapon} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Custom</button>
           </div>
         )}
       </div>
       {editing && showPicker && referenceData && (
-        <div style={{ marginBottom: '0.75rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #444', borderRadius: '4px', background: '#16213e' }}>
+        <div style={{ marginBottom: '0.75rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #30363d', borderRadius: '4px', background: '#161b22' }}>
           {Object.entries(referenceData).map(([category, refs]) => (
             <div key={category}>
-              <div style={{ padding: '0.3rem 0.6rem', background: '#1a1a2e', color: '#ffd60a', fontSize: '0.8rem', fontWeight: 700, position: 'sticky', top: 0 }}>{category}</div>
+              <div style={{ padding: '0.3rem 0.6rem', background: '#0d1117', color: '#e3b341', fontSize: '0.8rem', fontWeight: 700, position: 'sticky', top: 0 }}>{category}</div>
               {refs.map((ref, i) => (
-                <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.35rem 0.6rem 0.35rem 1rem', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '0.85rem' }}
-                  onMouseOver={e => e.currentTarget.style.background = '#0f3460'}
+                <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.35rem 0.6rem 0.35rem 1rem', cursor: 'pointer', borderBottom: '1px solid #21262d', fontSize: '0.85rem' }}
+                  onMouseOver={e => e.currentTarget.style.background = '#1c2128'}
                   onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                  <strong style={{ color: '#06d6a0' }}>{ref.name}</strong>
-                  <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>{ref.damage}{ref.ammo ? `, Ammo ${ref.ammo}` : ''}</span>
+                  <strong style={{ color: '#3fb950' }}>{ref.name}</strong>
+                  <span style={{ color: '#8b949e', marginLeft: '0.5rem' }}>{ref.damage}{ref.ammo ? `, Ammo ${ref.ammo}` : ''}</span>
                 </div>
               ))}
             </div>
           ))}
         </div>
       )}
-      {weapons.length === 0 && <p style={{ color: '#888' }}>No weapons.</p>}
+      {weapons.length === 0 && <p style={{ color: '#7d8590' }}>No weapons.</p>}
       {weapons.length > 0 && (
         <table className="weapon-table">
           <thead>
@@ -642,7 +644,7 @@ function WeaponSection({ weapons, editing, onChange, character, onDamageRoll, re
                     <td><input value={w.shortRange} onChange={e => updateWeapon(i, 'shortRange', e.target.value)} style={{ width: '50px' }} /></td>
                     <td><input value={w.mediumRange} onChange={e => updateWeapon(i, 'mediumRange', e.target.value)} style={{ width: '50px' }} /></td>
                     <td><input value={w.longRange} onChange={e => updateWeapon(i, 'longRange', e.target.value)} style={{ width: '50px' }} /></td>
-                    <td><button onClick={() => removeWeapon(i)} style={{ background: '#ef476f', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button></td>
+                    <td><button onClick={() => removeWeapon(i)} style={{ background: '#f85149', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button></td>
                   </>
                 ) : (
                   <>
@@ -717,74 +719,74 @@ function ListSection({ title, items, editing, onChange, fields, referenceData, r
         <h3>{title}</h3>
         {editing && (
           <div style={{ display: 'flex', gap: '0.25rem' }}>
-            {referenceData && <button onClick={() => setShowPicker(!showPicker)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', backgroundColor: showPicker ? '#e94560' : '#06d6a0', color: '#1a1a2e', fontWeight: 600 }}>{showPicker ? 'Cancel' : '+ Book'}</button>}
+            {referenceData && <button onClick={() => setShowPicker(!showPicker)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', backgroundColor: showPicker ? '#818cf8' : '#3fb950', color: '#0d1117', fontWeight: 600 }}>{showPicker ? 'Cancel' : '+ Book'}</button>}
             <button onClick={addItem} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>+ Custom</button>
           </div>
         )}
       </div>
       {editing && showPicker && referenceData && (
-        <div style={{ marginBottom: '0.75rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #444', borderRadius: '4px', background: '#16213e' }}>
+        <div style={{ marginBottom: '0.75rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #30363d', borderRadius: '4px', background: '#161b22' }}>
           {isGrouped ? (
             Object.entries(referenceData).map(([category, refs]) => (
               <div key={category}>
-                <div style={{ padding: '0.3rem 0.6rem', background: '#1a1a2e', color: '#ffd60a', fontSize: '0.8rem', fontWeight: 700, position: 'sticky', top: 0 }}>{category}</div>
+                <div style={{ padding: '0.3rem 0.6rem', background: '#0d1117', color: '#e3b341', fontSize: '0.8rem', fontWeight: 700, position: 'sticky', top: 0 }}>{category}</div>
                 {refs.map((ref, i) => (
-                  <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.35rem 0.6rem 0.35rem 1rem', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '0.85rem' }}
-                    onMouseOver={e => e.currentTarget.style.background = '#0f3460'}
+                  <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.35rem 0.6rem 0.35rem 1rem', cursor: 'pointer', borderBottom: '1px solid #21262d', fontSize: '0.85rem' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#1c2128'}
                     onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                    <strong style={{ color: '#06d6a0' }}>{ref.name}</strong>
-                    <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>{ref.description}</span>
+                    <strong style={{ color: '#3fb950' }}>{ref.name}</strong>
+                    <span style={{ color: '#8b949e', marginLeft: '0.5rem' }}>{ref.description}</span>
                   </div>
                 ))}
               </div>
             ))
           ) : (
             flatRef.map((ref, i) => (
-              <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.4rem 0.6rem', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '0.85rem' }}
-                onMouseOver={e => e.currentTarget.style.background = '#0f3460'}
+              <div key={i} onClick={() => addFromReference(ref)} style={{ padding: '0.4rem 0.6rem', cursor: 'pointer', borderBottom: '1px solid #21262d', fontSize: '0.85rem' }}
+                onMouseOver={e => e.currentTarget.style.background = '#1c2128'}
                 onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                <strong style={{ color: '#06d6a0' }}>{ref.name}</strong>
-                {ref.cost != null && <span style={{ color: '#ffd60a', marginLeft: '0.5rem' }}>({ref.cost} pts{ref.rank ? '/rank' : ''})</span>}
-                <div style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '0.15rem' }}>{ref.effect}</div>
+                <strong style={{ color: '#3fb950' }}>{ref.name}</strong>
+                {ref.cost != null && <span style={{ color: '#e3b341', marginLeft: '0.5rem' }}>({ref.cost} pts{ref.rank ? '/rank' : ''})</span>}
+                <div style={{ color: '#8b949e', fontSize: '0.8rem', marginTop: '0.15rem' }}>{ref.effect}</div>
               </div>
             ))
           )}
         </div>
       )}
       {armorPrompt && (
-        <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: '#1a2e1a', border: '1px solid #06d6a0', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.85rem', color: '#ccc' }}>Set armor to <strong style={{ color: '#06d6a0' }}>{armorPrompt.value}D</strong> for {armorPrompt.name}?</span>
+        <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: '#122117', border: '1px solid #3fb950', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.85rem', color: '#b1bac4' }}>Set armor to <strong style={{ color: '#3fb950' }}>{armorPrompt.value}D</strong> for {armorPrompt.name}?</span>
           <div style={{ display: 'flex', gap: '0.35rem' }}>
-            <button onClick={() => { onArmorUpdate(armorPrompt.value); setArmorPrompt(null); }} style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#06d6a0', color: '#1a1a2e', fontWeight: 600, border: 'none', borderRadius: '3px' }}>Yes</button>
-            <button onClick={() => setArmorPrompt(null)} style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#555', color: '#eee', border: 'none', borderRadius: '3px' }}>No</button>
+            <button onClick={() => { onArmorUpdate(armorPrompt.value); setArmorPrompt(null); }} style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#3fb950', color: '#0d1117', fontWeight: 600, border: 'none', borderRadius: '3px' }}>Yes</button>
+            <button onClick={() => setArmorPrompt(null)} style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#484f58', color: '#e6edf3', border: 'none', borderRadius: '3px' }}>No</button>
           </div>
         </div>
       )}
-      {items.length === 0 && !showPicker && !armorPrompt && <p style={{ color: '#888' }}>None.</p>}
+      {items.length === 0 && !showPicker && !armorPrompt && <p style={{ color: '#7d8590' }}>None.</p>}
       {items.map((item, i) => {
         const refEffect = getRefEffect(item.name);
         const isExpanded = expandedEffect[i];
         return (
-          <div key={i} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: '#0f3460', borderRadius: '4px' }}>
+          <div key={i} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: '#1c2128', borderRadius: '4px' }}>
             {editing ? (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {fields.map(f => (
-                  <input key={f} value={item[f] || ''} onChange={e => updateItem(i, f, e.target.value)} placeholder={f.charAt(0).toUpperCase() + f.slice(1)} style={{ flex: f === 'description' ? 2 : f === 'rank' ? 0 : 1, width: f === 'rank' ? '50px' : undefined, minWidth: f === 'rank' ? '50px' : '60px', padding: '0.3rem', backgroundColor: '#16213e', color: '#eee', border: '1px solid #444', borderRadius: '3px' }} />
+                  <input key={f} value={item[f] || ''} onChange={e => updateItem(i, f, e.target.value)} placeholder={f.charAt(0).toUpperCase() + f.slice(1)} style={{ flex: f === 'description' ? 2 : f === 'rank' ? 0 : 1, width: f === 'rank' ? '50px' : undefined, minWidth: f === 'rank' ? '50px' : '60px', padding: '0.3rem', backgroundColor: '#161b22', color: '#e6edf3', border: '1px solid #30363d', borderRadius: '3px' }} />
                 ))}
-                <button onClick={() => removeItem(i)} style={{ background: '#ef476f', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button>
+                <button onClick={() => removeItem(i)} style={{ background: '#f85149', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>X</button>
               </div>
             ) : (
               <div>
                 <span style={{ cursor: refEffect ? 'pointer' : 'default' }} onClick={() => refEffect && setExpandedEffect(prev => ({ ...prev, [i]: !prev[i] }))}>
                   <strong>{item.name}</strong>
-                  {item.rank && <span style={{ color: '#e94560' }}> (Rank {item.rank})</span>}
-                  {item.description && !refEffect && <span style={{ color: '#aaa' }}> — {item.description}</span>}
-                  {refEffect && <span style={{ color: '#555', marginLeft: '0.4rem', fontSize: '0.8rem' }}>{isExpanded ? '▾' : '▸'}</span>}
+                  {item.rank && <span style={{ color: '#818cf8' }}> (Rank {item.rank})</span>}
+                  {item.description && !refEffect && <span style={{ color: '#8b949e' }}> — {item.description}</span>}
+                  {refEffect && <span style={{ color: '#484f58', marginLeft: '0.4rem', fontSize: '0.8rem' }}>{isExpanded ? '▾' : '▸'}</span>}
                 </span>
                 {refEffect && isExpanded && (
-                  <div style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '0.3rem', paddingLeft: '0.5rem', borderLeft: '2px solid #e94560' }}>{refEffect}</div>
+                  <div style={{ color: '#8b949e', fontSize: '0.8rem', marginTop: '0.3rem', paddingLeft: '0.5rem', borderLeft: '2px solid #818cf8' }}>{refEffect}</div>
                 )}
-                {!refEffect && !item.description && <span style={{ color: '#666' }}> (custom)</span>}
+                {!refEffect && !item.description && <span style={{ color: '#6e7681' }}> (custom)</span>}
               </div>
             )}
           </div>
@@ -877,9 +879,9 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{ borderColor: '#e94560' }} onClick={e => e.stopPropagation()}>
+      <div className="modal-content" style={{ borderColor: '#f85149' }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>&times;</button>
-        <div style={{ padding: '0.75rem', borderBottom: '1px solid #e94560', marginBottom: '1rem', color: '#e94560', fontWeight: 700 }}>
+        <div style={{ padding: '0.75rem', borderBottom: '1px solid #f85149', marginBottom: '1rem', color: '#f85149', fontWeight: 700 }}>
           DAMAGE ROLL — {damageInfo.weaponName}
         </div>
 
@@ -919,7 +921,7 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
             </div>
 
             {isCapped && (
-              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#e3b341', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#0d1117', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
               </div>
             )}
@@ -938,15 +940,15 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
           <div className="roll-result-display">
             <div className="dice-visual-row">
               {diceResults.map((die, i) => (
-                <div key={i} className="die-face" style={{ backgroundColor: '#e94560' }}>
+                <div key={i} className="die-face" style={{ backgroundColor: '#f85149' }}>
                   <span className="die-number">{die}</span>
                 </div>
               ))}
             </div>
 
             <div className="vs-display" style={{ marginTop: '1.5rem' }}>
-              <span className="vs-total" style={{ color: '#e94560', fontSize: '2em' }}>{rollTotal?.total}</span>
-              <span className="vs-label" style={{ color: '#888' }}>Damage</span>
+              <span className="vs-total" style={{ color: '#f85149', fontSize: '2em' }}>{rollTotal?.total}</span>
+              <span className="vs-label" style={{ color: '#7d8590' }}>Damage</span>
             </div>
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}

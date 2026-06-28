@@ -99,7 +99,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
         <button className="modal-close" onClick={onClose}>&times;</button>
 
         <h2 className="modal-title">{label}</h2>
-        <div style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>{vehicleName}</div>
+        <div style={{ textAlign: 'center', color: '#7d8590', fontSize: '0.85rem', marginBottom: '1rem' }}>{vehicleName}</div>
 
         {phase === 'setup' && (
           <div className="roll-setup">
@@ -153,7 +153,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
                   <button type="button" onClick={() => setSizeAdv(sizeAdv + 1)} className="dice-adjust-btn">+</button>
                 </div>
                 {sizeAdv > 0 && (
-                  <span style={{ color: '#06d6a0', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+                  <span style={{ color: '#3fb950', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
                     {sizeBonus.type === 'dice' ? `+${sizeBonusDice}D` : `+${sizeBonusFlat}`}
                   </span>
                 )}
@@ -182,7 +182,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
             </div>
 
             {isCapped && (
-              <div style={{ color: '#ffd60a', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#1a1a2e', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#e3b341', fontSize: '0.85rem', padding: '0.4rem 0.6rem', backgroundColor: '#0d1117', borderRadius: '4px', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Dice capped at {maxDice}D6 (would be {rawDice}D6)
               </div>
             )}

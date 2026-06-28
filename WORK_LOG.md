@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 1.6.0 — Opposed Rolls (live), collapsible panel with preset pairings, defender popup modal.
+**Version:** 1.7.0 — Modern dark mode palette + Character Opposed Rolls + Vehicle Opposed Rolls.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -344,7 +344,7 @@ Before committing, verify:
 ### v1.6.0: Opposed Rolls (2026-06-27)
 - [x] **Opposed Roll Panel** — collapsible "Opposed Roll" section on Roll Log / Chat tab with full setup → rolling → waiting → complete flow
   - [x] Initiator/Defender character selectors (all characters visible, NPC tags shown)
-  - [x] 12 preset pairings from D6 2e rulebook across 3 categories: Combat (4), Social (4), Skill (3) + Damage vs Resistance (disabled, uses weapon buttons)
+  - [x] 11 preset pairings from D6 2e rulebook across 3 categories: Combat (4), Social (4), Skill (3) — Damage vs Resistance reworked in v1.6.1 with weapon picker
   - [x] Preset buttons show live dice pools (green for attacker, yellow for defender) based on selected characters
   - [x] Phase transitions: setup → rolling_initiator → waiting/complete
   - [x] Complete result panel shows both totals, winner highlight, margin, "New Opposed Roll" button
@@ -379,6 +379,46 @@ Before committing, verify:
 - [x] **Preset Data** — `frontend/src/data/opposedPresets.js` with `OPPOSED_PRESETS`, `getStaticDefense()`, `getSkillLabel()`, `getDefenderDicePool()`, `determineWinner()`
 - [x] **Clear Log integration** — Clear Log button on Roll Log tab now also clears opposed rolls
 - [x] **Browser tested** — static defense (Shooting vs Dodge), NPC vs NPC active roll (Stealth vs Investigation), NPC vs Player active roll (Intimidation vs Willpower), roll log display, waiting→complete transition all verified
+
+### v1.7.0: Modern Dark Mode Palette (2026-06-27)
+- [x] **Full color palette modernization** — replaced the navy + hot pink theme with a neutral charcoal + indigo palette inspired by GitHub's dark mode
+- [x] **Background colors** — `#1a1a2e` → `#0d1117`, `#16213e` → `#161b22`, `#0f3460` → `#1c2128`
+- [x] **Accent color** — `#e94560` → `#818cf8` (soft indigo) for headings, buttons, tags, selected states
+- [x] **Danger color** — `#ef476f` → `#f85149` for delete buttons, damage rolls, losing side in opposed rolls
+- [x] **Success color** — `#06d6a0` → `#3fb950` for save buttons, success states, winning side
+- [x] **Warning color** — `#ffd60a` → `#e3b341` for caution states, dice caps, DC displays
+- [x] **NPC orange** — `#ff8c00` → `#f0883e`
+- [x] **Border/gray system** — `#444` → `#30363d`, `#333` → `#21262d`, `#555` → `#484f58`
+- [x] **Text gray hierarchy** — `#eee` → `#e6edf3`, `#ccc` → `#b1bac4`, `#aaa` → `#8b949e`, `#888` → `#7d8590`, `#666` → `#6e7681`
+- [x] **Semantic backgrounds** — success bg `#1a2e1a` → `#122117`, danger bg `#3d1a1a` → `#2a1215`, neutral bg `#2a2a3e` → `#1c1c2a`
+- [x] **Dual-semantic `#e94560` handling** — accent contexts use `#818cf8`, danger/damage contexts use `#f85149` (manually disambiguated in JSX files)
+- [x] **Files updated:** App.css, all 5 page components (LoginPage, GamePage, CharacterPage, GameMasterPage, VehiclePage), all 4 modal components (RollModal, GMRollModal, OpposedRollModal, VehicleRollModal), all 3 data files (wounds.js, vehicleWounds.js, outcomes.js)
+- [x] **Browser verified** — no old colors in computed styles, no console errors
+
+### v1.6.1: Character & Vehicle Opposed Rolls Rework (2026-06-27)
+- [x] **Renamed "Opposed Roll" → "Character Opposed Rolls"** — clearer distinction from vehicle rolls
+- [x] **Removed Gunnery from character presets** — Gunnery belongs in Vehicle Opposed Rolls, not character vs character
+- [x] **Damage vs Resistance weapon picker** — selecting the Damage preset now shows a weapon dropdown from the initiator's character sheet; weapon's damage formula (e.g., 4D6) determines dice count for a plain d6 roll (no wild die)
+- [x] **RollModal `isDamageMode` prop** — new mode that rolls plain d6 instead of wild die; hides wild die explanation, complication notice, and wild styling; posts to `/api/rolls/damage` endpoint
+- [x] **Vehicle Opposed Rolls panel** — new collapsible section on Roll Log / Chat tab for vehicle-vs-vehicle combat
+  - [x] Attacker side: Vehicle selector + Crew Member selector
+  - [x] Defender side: Vehicle selector + Crew Member selector (defender vehicle list excludes attacker's vehicle)
+  - [x] 3 presets: Gunnery vs Defense (static), Gunnery vs Evade (active), Damage vs Resist (active)
+  - [x] Preset buttons show live dice pools from selected vehicles/crew
+  - [x] Vehicle weapon picker for Damage vs Resist preset
+  - [x] Phase displays: setup → rolling_initiator → waiting → complete
+  - [x] Complete result panel shows vehicle names, both totals, winner highlight, margin
+- [x] **Vehicle Gunnery** — crew member's Perception + Gunnery skill, rolled via RollModal with wild die
+- [x] **Vehicle Evade** — Piloting skill + Maneuverability dice, with flat Defense bonus (Hull×5 + Shield) added to total after roll
+  - [x] `defenderBaseDice` stored in opposed roll record overrides character skill lookup in OpposedRollModal
+  - [x] `defenderFlatBonus` added to dice total in OpposedRollModal result display
+- [x] **Vehicle Resist Damage** — Hull + Shield dice combined, wild die roll via OpposedRollModal
+- [x] **Vehicle damage rolls** — weapon selected from vehicle's weapon list, plain d6 (isDamageMode), dice count from damage formula
+- [x] **Opposed roll type field** — `type: 'vehicle'` or `type: 'character'` stored in opposed roll records; backend accepts vehicle IDs/names
+- [x] **Roll log vehicle names** — opposed roll entries show vehicle names when present (e.g., "Heavy Nova (Rex Stardust)")
+- [x] **Helper functions** — `getVehicleGunneryDice()`, `getVehicleEvadeDice()`, `getVehicleResistDice()`, `getVehiclePilotingSkill()` in GamePage
+- [x] **Data exports** — `VEHICLE_OPPOSED_PRESETS`, `getVehicleDefense()`, `parseDamageFormula()` added to `opposedPresets.js`
+- [x] **Browser tested** — Character damage with weapon picker, Vehicle Gunnery vs Defense (static), Vehicle Gunnery vs Evade (active with flat bonus), roll log with vehicle names all verified
 
 ### v1.0.0 Refactoring & Documentation
 - [x] **Extracted shared `API_URL`** — created `frontend/src/config.js`, removed 6 duplicate declarations across pages/components
@@ -477,7 +517,7 @@ The dice rolling system follows D6 Second Edition rules:
 ### What Still Needs Work
 - [ ] **WebSocket** — true real-time (currently polling every 3-5s, works but not instant)
 - [ ] **Game sessions** — group players, manage initiative, track resources
-- [x] **Opposed rolls** — collapsible panel on Game page with 12 presets, static + active defense, defender popup modal
+- [x] **Opposed rolls** — Character panel (11 presets + weapon-based damage) and Vehicle panel (Gunnery/Evade/Resist with weapon picker), static + active defense, defender popup modal
 - [ ] **Password hashing** — currently plain text (use bcrypt)
 - [ ] **JWT tokens** — proper authentication (currently just user ID)
 - [ ] **Input validation** — form validation on client and server
@@ -717,7 +757,7 @@ Current db.json structure:
     { "id", "characterId", "characterName", "total", "diceResults", "isNPC", "isVehicle", "createdAt" }
   ],
   "opposedRolls": [
-    { "id", "initiatorUserId", "initiatorCharacterId", "initiatorCharacterName", "initiatorIsNPC", "preset", "initiatorSkillLabel", "initiatorDiceCount", "initiatorDiceRolled", "initiatorWildDie", "initiatorTotal", "initiatorComplication", "defenderUserId", "defenderCharacterId", "defenderCharacterName", "defenderIsNPC", "defenderSkillLabel", "defenderIsStatic", "defenderTotal", "defenderDiceCount", "defenderDiceRolled", "defenderWildDie", "defenderComplication", "winner", "margin", "status", "createdAt" }
+    { "id", "type", "initiatorUserId", "initiatorCharacterId", "initiatorCharacterName", "initiatorIsNPC", "initiatorVehicleId", "initiatorVehicleName", "preset", "initiatorSkillLabel", "initiatorDiceCount", "initiatorDiceRolled", "initiatorWildDie", "initiatorTotal", "initiatorComplication", "defenderUserId", "defenderCharacterId", "defenderCharacterName", "defenderIsNPC", "defenderVehicleId", "defenderVehicleName", "defenderSkillLabel", "defenderIsStatic", "defenderTotal", "defenderBaseDice", "defenderFlatBonus", "defenderDiceCount", "defenderDiceRolled", "defenderWildDie", "defenderComplication", "winner", "margin", "status", "createdAt" }
   ],
   "gameSessions": []
 }
@@ -808,8 +848,21 @@ Current db.json structure:
 - [x] Clear Log also clears opposed rolls
 - [x] Waiting → complete transition detected via polling (useEffect on opposedRolls state)
 
+### Character & Vehicle Opposed Rolls v1.6.1 (Verified 2026-06-27)
+- [x] Character Opposed Rolls renamed from "Opposed Roll"
+- [x] Gunnery preset removed from character opposed rolls
+- [x] Damage vs Resistance: weapon picker dropdown shows initiator's weapons
+- [x] Damage roll: plain d6 (no wild die), correct dice count from weapon formula
+- [x] Damage opposed roll creates pending_defender with Resistance skill label
+- [x] Vehicle Opposed Rolls panel: vehicle/crew selectors, 3 preset buttons with dice info
+- [x] Defender vehicle list excludes attacker's vehicle
+- [x] Vehicle Gunnery vs Defense (static): Gunnery skill roll → immediate comparison to Defense value
+- [x] Vehicle Gunnery vs Evade (active): creates pending roll with defenderBaseDice and defenderFlatBonus
+- [x] Vehicle opposed roll records: type="vehicle", vehicle IDs/names stored
+- [x] Roll log shows vehicle names for vehicle opposed rolls
+
 ---
 
 **Last Updated:** 2026-06-27
-**Last Work Done:** Opposed Rolls — collapsible panel with 12 presets, static/active defense, defender popup modal
-**Status:** v1.6.0 + all prior features + opposed rolls system
+**Last Work Done:** Character & Vehicle Opposed Rolls rework — renamed panel, weapon pickers for damage, vehicle opposed rolls panel with Gunnery/Evade/Resist presets
+**Status:** v1.6.1 + all prior features + character and vehicle opposed roll systems
