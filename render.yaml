@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: d62e-ttrpg
+    runtime: node
+    plan: free
+    buildCommand: npm install && cd frontend && npm install && VITE_API_URL=/api npm run build
+    startCommand: cd backend && node src/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PORT
+        value: 5000
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

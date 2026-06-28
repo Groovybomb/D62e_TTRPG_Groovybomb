@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import userRoutes from './routes/users.js';
 import characterRoutes from './routes/characters.js';
 import rollRoutes from './routes/rolls.js';
@@ -11,8 +13,9 @@ import initiativeRoutes from './routes/initiative.js';
 import opposedRollRoutes from './routes/opposedRolls.js';
 import { initDb } from './db.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.BACKEND_PORT || 5000;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 5000;
 
 // Middleware
 app.use(cors());
@@ -40,9 +43,12 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/initiative', initiativeRoutes);
 app.use('/api/opposed-rolls', opposedRollRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
+// Serve frontend static files in production
+const frontendDist = join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDist));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path === '/health') return next();
+  res.sendFile(join(frontendDist, 'index.html'));
 });
 
 // Error handler
