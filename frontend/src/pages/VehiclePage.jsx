@@ -683,7 +683,7 @@ function VehicleDamageModal({ damageInfo, vehicleName, character, onClose, onHer
     try {
       await axios.post(`${API_URL}/rolls/damage`, {
         characterId: character?.id,
-        characterName: character?.name || vehicleName,
+        characterName: character?.name || '',
         weaponName: `${damageInfo.weaponName} (${vehicleName})`,
         damageFormula: damageInfo.damageFormula,
         diceCount: count,

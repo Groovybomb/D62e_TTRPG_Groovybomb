@@ -61,8 +61,9 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
     try {
       const res = await axios.post(`${API_URL}/rolls/skill`, {
         characterId: character?.id,
+        characterName: character?.name || vehicleName,
         skill: `${label} (${vehicleName})`,
-        attribute: vehicleName,
+        attribute: '',
         diceCount: count,
         diceRolled: results.map(d => d.value),
         wildDie: {
