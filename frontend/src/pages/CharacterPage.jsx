@@ -282,7 +282,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
 }
 
 function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvancedSkillChange, onFieldChange, onRoll, onDamageRoll, onWoundChange }) {
-  const isProne = (char.stunState || 'none') === 'prone';
+  const isProne = !!char.isProne;
   const baseDodge = (char.attributes.perception?.dice || 0) * 5;
   const baseParry = (char.attributes.agility?.dice || 0) * 5;
   const dodge = isProne ? baseDodge + 10 : baseDodge;
@@ -368,6 +368,15 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                 {ss.label}
               </button>
             ))}
+            <button
+              className={`wound-state-btn ${isProne ? 'active' : ''}`}
+              style={isProne
+                ? { color: '#f0883e', borderColor: '#f0883e', backgroundColor: '#f0883e20', marginLeft: '0.5rem' }
+                : { marginLeft: '0.5rem' }}
+              onClick={() => onWoundChange('isProne', !isProne)}
+            >
+              Prone
+            </button>
           </div>
         </div>
         {(() => {

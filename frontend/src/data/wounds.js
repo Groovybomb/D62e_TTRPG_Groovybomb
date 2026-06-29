@@ -10,7 +10,6 @@ export const STUN_STATES = [
   { key: 'none', label: 'Clear', penalty: 0, color: '#3fb950' },
   { key: 'staggered', label: 'Staggered', penalty: 1, color: '#e3b341' },
   { key: 'stunned', label: 'Stunned', penalty: 0, color: '#818cf8' },
-  { key: 'prone', label: 'Prone', penalty: 0, color: '#f0883e' },
 ];
 
 export function getWoundPenalty(character) {

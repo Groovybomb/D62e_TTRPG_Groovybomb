@@ -12,6 +12,7 @@ function parseRow(row) {
     parsed[f] = JSON.parse(row[f] || (f === 'attributes' || f === 'advancedSkills' ? '{}' : '[]'));
   }
   parsed.isNPC = !!row.isNPC;
+  parsed.isProne = !!row.isProne;
   return parsed;
 }
 
@@ -49,6 +50,7 @@ router.post('/', async (req, res) => {
     advancedSkills: defaultAdvancedSkills(),
     woundLevel: 'healthy',
     stunState: 'none',
+    isProne: false,
     weapons: [],
     talents: [],
     flaws: [],
@@ -61,12 +63,12 @@ router.post('/', async (req, res) => {
   };
 
   await db.execute({
-    sql: `INSERT INTO characters (id, userId, name, heroPoints, armor, attributes, advancedSkills, woundLevel, stunState, weapons, talents, flaws, perks, cybernetics, items, notes, isNPC, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO characters (id, userId, name, heroPoints, armor, attributes, advancedSkills, woundLevel, stunState, isProne, weapons, talents, flaws, perks, cybernetics, items, notes, isNPC, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       character.id, character.userId, character.name, character.heroPoints, character.armor,
       JSON.stringify(character.attributes), JSON.stringify(character.advancedSkills),
-      character.woundLevel, character.stunState,
+      character.woundLevel, character.stunState, character.isProne ? 1 : 0,
       JSON.stringify(character.weapons), JSON.stringify(character.talents),
       JSON.stringify(character.flaws), JSON.stringify(character.perks),
       JSON.stringify(character.cybernetics), JSON.stringify(character.items),
@@ -122,7 +124,7 @@ router.patch('/:characterId', async (req, res) => {
   }
 
   const character = parseRow(result.rows[0]);
-  const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'woundLevel', 'stunState', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items', 'notes', 'isNPC'];
+  const allowed = ['name', 'heroPoints', 'armor', 'attributes', 'advancedSkills', 'woundLevel', 'stunState', 'isProne', 'weapons', 'talents', 'flaws', 'perks', 'cybernetics', 'items', 'notes', 'isNPC'];
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
@@ -133,11 +135,11 @@ router.patch('/:characterId', async (req, res) => {
   character.updatedAt = new Date().toISOString();
 
   await db.execute({
-    sql: `UPDATE characters SET name=?, heroPoints=?, armor=?, attributes=?, advancedSkills=?, woundLevel=?, stunState=?, weapons=?, talents=?, flaws=?, perks=?, cybernetics=?, items=?, notes=?, isNPC=?, updatedAt=? WHERE id=?`,
+    sql: `UPDATE characters SET name=?, heroPoints=?, armor=?, attributes=?, advancedSkills=?, woundLevel=?, stunState=?, isProne=?, weapons=?, talents=?, flaws=?, perks=?, cybernetics=?, items=?, notes=?, isNPC=?, updatedAt=? WHERE id=?`,
     args: [
       character.name, character.heroPoints, character.armor,
       JSON.stringify(character.attributes), JSON.stringify(character.advancedSkills),
-      character.woundLevel, character.stunState,
+      character.woundLevel, character.stunState, character.isProne ? 1 : 0,
       JSON.stringify(character.weapons), JSON.stringify(character.talents),
       JSON.stringify(character.flaws), JSON.stringify(character.perks),
       JSON.stringify(character.cybernetics), JSON.stringify(character.items),

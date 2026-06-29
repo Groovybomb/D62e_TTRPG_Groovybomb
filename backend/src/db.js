@@ -30,6 +30,7 @@ const schema = `
     advancedSkills TEXT DEFAULT '{}',
     woundLevel TEXT DEFAULT 'healthy',
     stunState TEXT DEFAULT 'none',
+    isProne INTEGER DEFAULT 0,
     weapons TEXT DEFAULT '[]',
     talents TEXT DEFAULT '[]',
     flaws TEXT DEFAULT '[]',
@@ -208,6 +209,16 @@ export async function initDb() {
   try {
     await db.execute('ALTER TABLE opposed_rolls ADD COLUMN damageApplied TEXT');
   } catch { /* column already exists */ }
+
+  // Add isProne column if missing (prone is separate from stun track)
+  try {
+    await db.execute('ALTER TABLE characters ADD COLUMN isProne INTEGER DEFAULT 0');
+  } catch { /* column already exists */ }
+
+  // Migrate existing prone stunState to isProne flag
+  try {
+    await db.execute("UPDATE characters SET isProne = 1, stunState = 'none' WHERE stunState = 'prone'");
+  } catch { /* ignore */ }
 
   const settings = await db.execute('SELECT key FROM game_settings WHERE key = ?', ['maxDice']);
   if (settings.rows.length === 0) {

@@ -5,7 +5,7 @@ import db from '../db.js';
 const router = express.Router();
 
 const CHARACTER_WOUND_ORDER = ['healthy', 'wounded', 'incapacitated', 'mortallyWounded', 'dead'];
-const CHARACTER_STUN_ORDER = ['none', 'staggered', 'stunned', 'prone'];
+const CHARACTER_STUN_ORDER = ['none', 'staggered', 'stunned'];
 const VEHICLE_WOUND_ORDER = ['undamaged', 'light', 'heavy', 'severe', 'destroyed'];
 const WOUND_LABELS = { healthy: 'Healthy', wounded: 'Wounded', incapacitated: 'Incapacitated', mortallyWounded: 'Mortally Wounded', dead: 'Dead' };
 const STUN_LABELS = { none: 'Clear', staggered: 'Staggered', stunned: 'Stunned', prone: 'Prone' };
@@ -37,6 +37,7 @@ function calculateCharacterDamageEffect(damageTotal, brawnTotal, currentWoundLev
     return {
       entityType: 'character',
       killingBlow: true,
+      isProne: true,
       woundLevel: { old: CHARACTER_WOUND_ORDER[woundIdx], new: 'dead' },
     };
   }
@@ -59,6 +60,7 @@ function calculateCharacterDamageEffect(damageTotal, brawnTotal, currentWoundLev
   const result = { entityType: 'character' };
   if (newWoundIdx !== woundIdx) {
     result.woundLevel = { old: CHARACTER_WOUND_ORDER[woundIdx], new: CHARACTER_WOUND_ORDER[newWoundIdx] };
+    result.isProne = true;
   }
   if (newStunIdx !== stunIdx) {
     result.stunState = { old: CHARACTER_STUN_ORDER[stunIdx], new: CHARACTER_STUN_ORDER[newStunIdx] };
@@ -83,6 +85,9 @@ function formatDamageMessage(defenderName, effect, isVehicle, damageTotal, brawn
   }
   if (effect.stunState) {
     parts.push(`Stun: ${STUN_LABELS[effect.stunState.old]} → ${STUN_LABELS[effect.stunState.new]}`);
+  }
+  if (effect.isProne) {
+    parts.push('Falls prone!');
   }
   return parts.join(' ');
 }
@@ -127,11 +132,13 @@ async function applyDamage(opposedRoll) {
     const updates = {};
     if (effect.woundLevel) updates.woundLevel = effect.woundLevel.new;
     if (effect.stunState) updates.stunState = effect.stunState.new;
+    if (effect.isProne) updates.isProne = 1;
 
     const setClauses = [];
     const args = [];
     if (updates.woundLevel) { setClauses.push('woundLevel=?'); args.push(updates.woundLevel); }
     if (updates.stunState) { setClauses.push('stunState=?'); args.push(updates.stunState); }
+    if (updates.isProne) { setClauses.push('isProne=?'); args.push(updates.isProne); }
     setClauses.push('updatedAt=?');
     args.push(new Date().toISOString());
     args.push(opposedRoll.defenderCharacterId);

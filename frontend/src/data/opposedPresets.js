@@ -115,13 +115,13 @@ export function getStaticDefense(character, stat) {
   if (stat === 'dodge') {
     const percDice = character.attributes?.perception?.dice || 2;
     let dodge = percDice * 5;
-    if (character.stunState === 'prone') dodge = percDice * 5 + 10;
+    if (character.isProne) dodge = percDice * 5 + 10;
     return { value: dodge, label: 'Dodge' };
   }
   if (stat === 'parry') {
     const agiDice = character.attributes?.agility?.dice || 2;
     let parry = agiDice * 5;
-    if (character.stunState === 'prone') parry = Math.min(parry, 10);
+    if (character.isProne) parry = Math.min(parry, 10);
     return { value: parry, label: 'Parry' };
   }
   return { value: 0, label: stat };
