@@ -11,6 +11,7 @@ import gmRollRoutes from './routes/gmRolls.js';
 import settingsRoutes from './routes/settings.js';
 import initiativeRoutes from './routes/initiative.js';
 import opposedRollRoutes from './routes/opposedRolls.js';
+import tabletopRoutes from './routes/tabletop.js';
 import { initDb } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -42,6 +43,7 @@ app.use('/api/gm-rolls', gmRollRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/initiative', initiativeRoutes);
 app.use('/api/opposed-rolls', opposedRollRoutes);
+app.use('/api/tabletop', tabletopRoutes);
 
 // Serve frontend static files in production
 const frontendDist = join(__dirname, '../../frontend/dist');

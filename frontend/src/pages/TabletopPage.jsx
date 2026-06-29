@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { WOUND_LEVELS, STUN_STATES } from '../data/wounds';
@@ -23,6 +23,10 @@ const VGA_COLORS = [
   { name: 'White', hex: '#FFFFFF' },
 ];
 
+const GRID_SIZE = 30;
+const ZOOM_LEVELS = [18, 24, 36, 48, 60];
+const DEFAULT_ZOOM = 2;
+
 function isLightColor(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -30,39 +34,63 @@ function isLightColor(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
 }
 
-const GRID_SIZE = 30;
-const ZOOM_LEVELS = [16, 20, 24, 30, 36];
-const DEFAULT_ZOOM = 2;
+function genTokenId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
 
-let nextTokenId = 1;
+const emptyGrid = () => Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
 
 function TabletopPage() {
   const [mode, setMode] = useState('select');
   const [selectedColor, setSelectedColor] = useState('#AA0000');
   const [tokens, setTokens] = useState([]);
-  const [grid, setGrid] = useState(() => Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null)));
-  const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
+  const [grid, setGrid] = useState(emptyGrid);
   const [characters, setCharacters] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
   const [addEntityId, setAddEntityId] = useState('');
   const [addSize, setAddSize] = useState(1);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
   const dragTokenId = useRef(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const serverState = useRef({ grid: null, tokens: null, updatedAt: null });
+  const saveTimer = useRef(null);
+
+  const saveToServer = useCallback((newGrid, newTokens) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
       try {
-        const [charRes, vehRes] = await Promise.all([
+        const res = await axios.put(`${API_URL}/tabletop`, { grid: newGrid, tokens: newTokens });
+        serverState.current = { grid: newGrid, tokens: newTokens, updatedAt: res.data.updatedAt };
+      } catch { /* ignore */ }
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const [tabletopRes, charRes, vehRes] = await Promise.all([
+          axios.get(`${API_URL}/tabletop`),
           axios.get(`${API_URL}/characters`),
           axios.get(`${API_URL}/vehicles`),
         ]);
         setCharacters(charRes.data);
         setVehicles(vehRes.data);
+        if (tabletopRes.data && tabletopRes.data.updatedAt !== serverState.current.updatedAt) {
+          serverState.current = {
+            grid: tabletopRes.data.grid,
+            tokens: tabletopRes.data.tokens,
+            updatedAt: tabletopRes.data.updatedAt,
+          };
+          setGrid(tabletopRes.data.grid && tabletopRes.data.grid.length === GRID_SIZE
+            ? tabletopRes.data.grid : emptyGrid());
+          setTokens(tabletopRes.data.tokens || []);
+        }
       } catch { /* ignore */ }
     };
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
+    poll();
+    const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -95,35 +123,42 @@ function TabletopPage() {
     return VEHICLE_WOUND_LEVELS.find(w => w.key === veh.woundLevel)?.label || veh.woundLevel;
   };
 
+  const updateTokens = (newTokens) => {
+    setTokens(newTokens);
+    saveToServer(grid, newTokens);
+  };
+
+  const updateGrid = (newGrid) => {
+    setGrid(newGrid);
+    saveToServer(newGrid, tokens);
+  };
+
   const handleAddToken = () => {
     if (!addEntityId) return;
     const isChar = characters.some(c => c.id === addEntityId);
-    setTokens(prev => [...prev, {
-      id: nextTokenId++,
+    const newTokens = [...tokens, {
+      id: genTokenId(),
       entityId: addEntityId,
       entityType: isChar ? 'character' : 'vehicle',
       color: selectedColor,
       size: addSize,
       row: null,
       col: null,
-    }]);
+    }];
+    updateTokens(newTokens);
     setAddEntityId('');
   };
 
   const paintCell = (row, col) => {
-    setGrid(prev => {
-      const next = prev.map(r => [...r]);
-      next[row][col] = selectedColor;
-      return next;
-    });
+    const newGrid = grid.map(r => [...r]);
+    newGrid[row][col] = selectedColor;
+    updateGrid(newGrid);
   };
 
   const eraseCell = (row, col) => {
-    setGrid(prev => {
-      const next = prev.map(r => [...r]);
-      next[row][col] = null;
-      return next;
-    });
+    const newGrid = grid.map(r => [...r]);
+    newGrid[row][col] = null;
+    updateGrid(newGrid);
   };
 
   const handleCellMouseDown = (e, row, col) => {
@@ -169,7 +204,7 @@ function TabletopPage() {
     const token = tokens.find(t => t.id === id);
     if (!token) return;
     if (row + token.size > GRID_SIZE || col + token.size > GRID_SIZE) return;
-    setTokens(prev => prev.map(t => t.id === id ? { ...t, row, col } : t));
+    updateTokens(tokens.map(t => t.id === id ? { ...t, row, col } : t));
     dragTokenId.current = null;
   };
 
@@ -177,7 +212,7 @@ function TabletopPage() {
     e.preventDefault();
     const id = dragTokenId.current;
     if (id === null) return;
-    setTokens(prev => prev.map(t => t.id === id ? { ...t, row: null, col: null } : t));
+    updateTokens(tokens.map(t => t.id === id ? { ...t, row: null, col: null } : t));
     dragTokenId.current = null;
   };
 
@@ -189,12 +224,12 @@ function TabletopPage() {
 
   const handleDeleteToken = () => {
     if (!contextMenu) return;
-    setTokens(prev => prev.filter(t => t.id !== contextMenu.tokenId));
+    updateTokens(tokens.filter(t => t.id !== contextMenu.tokenId));
     setContextMenu(null);
   };
 
   const handleClearGrid = () => {
-    setGrid(Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null)));
+    updateGrid(emptyGrid());
   };
 
   const cellSize = ZOOM_LEVELS[zoomLevel];
@@ -354,7 +389,7 @@ function TabletopPage() {
                   style={{
                     gridRow: r + 1,
                     gridColumn: c + 1,
-                    backgroundColor: grid[r][c] || undefined,
+                    backgroundColor: grid[r]?.[c] || undefined,
                   }}
                   onMouseDown={(e) => handleCellMouseDown(e, r, c)}
                   onMouseEnter={() => handleCellMouseEnter(r, c)}

@@ -183,6 +183,13 @@ const schema = `
     value TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS tabletop (
+    id TEXT PRIMARY KEY DEFAULT 'shared',
+    grid TEXT DEFAULT '[]',
+    tokens TEXT DEFAULT '[]',
+    updatedAt TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS initiative (
     id TEXT PRIMARY KEY,
     characterId TEXT,

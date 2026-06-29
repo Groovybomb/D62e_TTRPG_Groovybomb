@@ -173,8 +173,10 @@ function App() {
         {currentPage === 'game' && currentUser && (
           <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} maxDice={maxDice} />
         )}
-        {currentPage === 'tabletop' && currentUser && (
-          <TabletopPage />
+        {currentUser && (
+          <div style={{ display: currentPage === 'tabletop' ? 'block' : 'none' }}>
+            <TabletopPage />
+          </div>
         )}
         {currentPage === 'gm' && currentUser && currentUser.isGM && (
           <GameMasterPage userId={currentUser.id} displayName={currentUser.displayName} maxDice={maxDice} onMaxDiceChange={(val) => setMaxDice(val)} />
