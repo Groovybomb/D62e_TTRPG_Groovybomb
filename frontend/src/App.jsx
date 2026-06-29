@@ -7,6 +7,7 @@ import CharacterPage from './pages/CharacterPage';
 import VehiclePage from './pages/VehiclePage';
 import GamePage from './pages/GamePage';
 import GameMasterPage from './pages/GameMasterPage';
+import TabletopPage from './pages/TabletopPage';
 import GMRollModal from './components/GMRollModal';
 import OpposedRollModal from './components/OpposedRollModal';
 
@@ -15,6 +16,7 @@ function getTabs(isGM) {
     { key: 'characters', label: isGM ? 'NPCs' : 'Character Sheet' },
     { key: 'vehicles', label: isGM ? 'NPC Vehicles' : 'Vehicle' },
     { key: 'game', label: 'Roll Log / Chat' },
+    { key: 'tabletop', label: 'Tabletop' },
     { key: 'gm', label: 'Game Master' },
   ];
 }
@@ -170,6 +172,9 @@ function App() {
         )}
         {currentPage === 'game' && currentUser && (
           <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} maxDice={maxDice} />
+        )}
+        {currentPage === 'tabletop' && currentUser && (
+          <TabletopPage />
         )}
         {currentPage === 'gm' && currentUser && currentUser.isGM && (
           <GameMasterPage userId={currentUser.id} displayName={currentUser.displayName} maxDice={maxDice} onMaxDiceChange={(val) => setMaxDice(val)} />
