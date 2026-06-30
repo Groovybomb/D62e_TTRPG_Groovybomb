@@ -97,7 +97,7 @@ router.post('/:id/respond', async (req, res) => {
   const {
     characterId, characterName, userId,
     diceCount, diceRolled, wildDie, total, complication, removedDie,
-    doubled, extraDice, rollFlag, linkedResponseId,
+    doubled, extraDice, extraPips, rollFlag, linkedResponseId,
     outcome, outcomeChoice, heroPointDelta, neededExplosion,
   } = req.body;
 
@@ -121,6 +121,7 @@ router.post('/:id/respond', async (req, res) => {
     removedDie: removedDie || null,
     doubled: doubled || false,
     extraDice: extraDice || 0,
+    extraPips: extraPips || 0,
     rollFlag: rollFlag || null,
     linkedResponseId: linkedResponseId || null,
     outcome: outcome || null,
@@ -131,15 +132,15 @@ router.post('/:id/respond', async (req, res) => {
   };
 
   await db.execute({
-    sql: `INSERT INTO gm_roll_responses (id, requestId, characterId, characterName, userId, diceCount, diceRolled, wildDie, total, complication, removedDie, doubled, extraDice, rollFlag, linkedResponseId, outcome, outcomeChoice, heroPointDelta, neededExplosion, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO gm_roll_responses (id, requestId, characterId, characterName, userId, diceCount, diceRolled, wildDie, total, complication, removedDie, doubled, extraDice, extraPips, rollFlag, linkedResponseId, outcome, outcomeChoice, heroPointDelta, neededExplosion, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       response.id, response.requestId, response.characterId, response.characterName, response.userId,
       response.diceCount, JSON.stringify(response.diceRolled),
       response.wildDie ? JSON.stringify(response.wildDie) : null,
       response.total, response.complication ? 1 : 0,
       response.removedDie ? JSON.stringify(response.removedDie) : null,
-      response.doubled ? 1 : 0, response.extraDice, response.rollFlag, response.linkedResponseId,
+      response.doubled ? 1 : 0, response.extraDice, response.extraPips, response.rollFlag, response.linkedResponseId,
       response.outcome, response.outcomeChoice, response.heroPointDelta,
       response.neededExplosion ? 1 : 0, response.createdAt,
     ],
@@ -148,8 +149,8 @@ router.post('/:id/respond', async (req, res) => {
   // Also save to rolls table as GM_ROLL for the roll log
   const rollId = generateId();
   await db.execute({
-    sql: `INSERT INTO rolls (id, rollType, characterId, requestId, skill, attribute, diceCount, diceRolled, wildDie, total, complication, removedDie, doubled, extraDice, rollFlag, dcValue, outcome, outcomeChoice, heroPointDelta, neededExplosion, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO rolls (id, rollType, characterId, requestId, skill, attribute, diceCount, diceRolled, wildDie, total, complication, removedDie, doubled, extraDice, extraPips, rollFlag, dcValue, outcome, outcomeChoice, heroPointDelta, neededExplosion, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       rollId, 'GM_ROLL', characterId, request.id,
       request.skillLabel || request.attributeLabel || request.label,
@@ -158,7 +159,7 @@ router.post('/:id/respond', async (req, res) => {
       wildDie ? JSON.stringify(wildDie) : null,
       total || 0, complication ? 1 : 0,
       removedDie ? JSON.stringify(removedDie) : null,
-      doubled ? 1 : 0, extraDice || 0, rollFlag || null,
+      doubled ? 1 : 0, extraDice || 0, extraPips || 0, rollFlag || null,
       request.dcValue, outcome || null, outcomeChoice || null,
       heroPointDelta || 0, neededExplosion ? 1 : 0, now,
     ],

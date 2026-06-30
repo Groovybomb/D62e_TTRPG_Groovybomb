@@ -2,22 +2,13 @@ import { useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { rollDice, calculateTotal } from '../utils/dice';
-import { getDicePool, ATTRIBUTE_DEFINITIONS, SPECIAL_SKILLS } from '../data/attributes';
+import { getDicePool, ATTRIBUTE_DEFINITIONS, SPECIAL_SKILLS, getSkillBonusPips } from '../data/attributes';
 import { getWoundPenalty } from '../data/wounds';
 import { getRollHints } from '../data/characterOptions';
 import { determineWinner } from '../data/opposedPresets';
 
 export default function OpposedRollModal({ opposedRoll, character, onClose, onHeroPointChange, maxDice }) {
   const [phase, setPhase] = useState('setup');
-  const [extraDice, setExtraDice] = useState(0);
-  const [doubled, setDoubled] = useState(false);
-  const [doubleSource, setDoubleSource] = useState(null);
-  const [diceResults, setDiceResults] = useState([]);
-  const [rollTotal, setRollTotal] = useState(null);
-  const [rollFlag, setRollFlag] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [damageApplied, setDamageApplied] = useState(null);
-
   const isVehicle = opposedRoll.type === 'vehicle';
   const flatBonus = opposedRoll.defenderFlatBonus || 0;
 
@@ -35,6 +26,17 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
       if (defSkillKey) break;
     }
   }
+  const oppBasePips = defAttrKey && defSkillKey ? getSkillBonusPips(character, defAttrKey, defSkillKey) : 0;
+
+  const [extraDice, setExtraDice] = useState(0);
+  const [extraPips, setExtraPips] = useState(oppBasePips);
+  const [doubled, setDoubled] = useState(false);
+  const [doubleSource, setDoubleSource] = useState(null);
+  const [diceResults, setDiceResults] = useState([]);
+  const [rollTotal, setRollTotal] = useState(null);
+  const [rollFlag, setRollFlag] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [damageApplied, setDamageApplied] = useState(null);
 
   const baseDice = opposedRoll.defenderBaseDice
     ? opposedRoll.defenderBaseDice
@@ -73,10 +75,10 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
     if (count < 1) return;
     const results = rollDice(count);
     const { total: diceTotal, complication, removedDie } = calculateTotal(results);
-    const total = diceTotal + flatBonus;
+    const total = diceTotal + flatBonus + extraPips;
 
     setDiceResults(results);
-    setRollTotal({ total, diceTotal, complication, removedDie });
+    setRollTotal({ total, diceTotal, complication, removedDie, pips: extraPips });
     setRollFlag(flag);
     setPhase('result');
   };
@@ -159,6 +161,15 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
               </div>
             </div>
 
+            <div className="extra-dice-row">
+              <label>Extra Pips:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setExtraPips(extraPips - 1)} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{extraPips}</span>
+                <button type="button" onClick={() => setExtraPips(extraPips + 1)} className="dice-adjust-btn">+</button>
+              </div>
+            </div>
+
             <div className="double-section">
               {!doubled ? (
                 <>
@@ -232,7 +243,7 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
 
             <div className="roll-total">
               Your Total: <span className="total-number">{rollTotal?.total}</span>
-              {flatBonus > 0 && <span style={{ color: '#3fb950', fontSize: '0.85rem', marginLeft: '0.3rem' }}>(dice {rollTotal?.diceTotal} + {flatBonus} bonus)</span>}
+              {(flatBonus > 0 || rollTotal?.pips) && <span style={{ color: '#3fb950', fontSize: '0.85rem', marginLeft: '0.3rem' }}>(dice {rollTotal?.diceTotal}{flatBonus > 0 ? ` + ${flatBonus} bonus` : ''}{rollTotal?.pips ? ` ${rollTotal.pips > 0 ? '+' : ''}${rollTotal.pips} pips` : ''})</span>}
               <span style={{ color: '#7d8590', fontSize: '0.9rem', marginLeft: '0.5rem' }}>vs. {opposedRoll.initiatorTotal}</span>
             </div>
 

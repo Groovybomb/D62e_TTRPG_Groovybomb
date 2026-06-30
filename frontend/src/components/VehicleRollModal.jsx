@@ -8,6 +8,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
 
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
+  const [extraPips, setExtraPips] = useState(0);
   const [sizeAdv, setSizeAdv] = useState(0);
   const [doubled, setDoubled] = useState(false);
   const [doubleSource, setDoubleSource] = useState(null);
@@ -51,10 +52,10 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
 
     const results = rollDice(count);
     const { total: diceTotal, complication, removedDie } = calculateTotal(results);
-    const total = diceTotal + totalFlatBonus;
+    const total = diceTotal + totalFlatBonus + extraPips;
 
     setDiceResults(results);
-    setRollTotal({ total, diceTotal, complication, removedDie, sizeBonusFlat });
+    setRollTotal({ total, diceTotal, complication, removedDie, sizeBonusFlat, pips: extraPips });
     setRollFlag(flag);
     setPhase('result');
 
@@ -77,6 +78,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
         removedDie,
         doubled,
         extraDice,
+        extraPips,
         rollFlag: flag,
         linkedRollId: savedRollId,
       });
@@ -142,6 +144,15 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
                 <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
+              </div>
+            </div>
+
+            <div className="extra-dice-row">
+              <label>Extra Pips:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setExtraPips(extraPips - 1)} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{extraPips}</span>
+                <button type="button" onClick={() => setExtraPips(extraPips + 1)} className="dice-adjust-btn">+</button>
               </div>
             </div>
 
@@ -241,11 +252,12 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
             )}
 
             <div className="roll-total">
-              {(flatBonus > 0 || rollTotal?.sizeBonusFlat > 0) ? (
+              {(flatBonus > 0 || rollTotal?.sizeBonusFlat > 0 || rollTotal?.pips) ? (
                 <>
                   Dice: {rollTotal?.diceTotal}
                   {flatBonus > 0 && <> + {flatBonusLabel}: {flatBonus}</>}
                   {rollTotal?.sizeBonusFlat > 0 && <> + Size: {rollTotal.sizeBonusFlat}</>}
+                  {rollTotal?.pips !== 0 && rollTotal?.pips != null && <> + Pips: {rollTotal.pips}</>}
                   {' = '}
                   <span className="total-number">{rollTotal?.total}</span>
                 </>

@@ -2,15 +2,20 @@ import { useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { rollDice, calculateTotal, evaluateGMRollOutcome } from '../utils/dice';
-import { getDicePool, SPECIAL_SKILLS } from '../data/attributes';
+import { getDicePool, SPECIAL_SKILLS, getSkillBonusPips } from '../data/attributes';
 import { getWoundPenalty } from '../data/wounds';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import { getRollHints } from '../data/characterOptions';
 
 export default function GMRollModal({ request, character, onClose, onHeroPointChange, maxDice, onDecline }) {
+  const basePips = (request.attribute && request.skill)
+    ? getSkillBonusPips(character, request.attribute, request.skill)
+    : 0;
+
   const [phase, setPhase] = useState('setup');
   const rollHints = getRollHints(character, request.attribute, request.skill);
   const [extraDice, setExtraDice] = useState(0);
+  const [extraPips, setExtraPips] = useState(basePips);
   const [doubled, setDoubled] = useState(false);
   const [doubleSource, setDoubleSource] = useState(null);
   const [diceResults, setDiceResults] = useState([]);
@@ -61,12 +66,13 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
     if (count < 1) return;
 
     const results = rollDice(count);
-    const { total, complication, removedDie } = calculateTotal(results);
+    const { total: diceTotal, complication, removedDie } = calculateTotal(results);
+    const total = diceTotal + extraPips;
     const wildDie = results[0];
     const evaluation = evaluateGMRollOutcome(total, wildDie, request.dcValue);
 
     setDiceResults(results);
-    setRollTotal({ total, complication, removedDie });
+    setRollTotal({ total, complication, removedDie, pips: extraPips });
     setOutcomeInfo(evaluation);
     setRollFlag(flag);
     setPhase('result');
@@ -91,6 +97,7 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
         removedDie,
         doubled,
         extraDice,
+        extraPips,
         rollFlag: flag,
         linkedResponseId: responseId,
         outcome: evaluation.outcome,
@@ -221,6 +228,15 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
               </div>
             </div>
 
+            <div className="extra-dice-row">
+              <label>Extra Pips:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setExtraPips(extraPips - 1)} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{extraPips}</span>
+                <button type="button" onClick={() => setExtraPips(extraPips + 1)} className="dice-adjust-btn">+</button>
+              </div>
+            </div>
+
             <div className="double-section">
               {!doubled ? (
                 <>
@@ -303,6 +319,7 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
 
             <div className="vs-display">
               <span className="vs-total">{rollTotal?.total}</span>
+              {rollTotal?.pips !== 0 && rollTotal?.pips != null && <span style={{ color: '#e3b341', fontSize: '0.75rem' }}>({rollTotal.pips > 0 ? '+' : ''}{rollTotal.pips} pips)</span>}
               <span className="vs-label">vs</span>
               <span className="vs-dc">DC {request.dcValue}</span>
             </div>

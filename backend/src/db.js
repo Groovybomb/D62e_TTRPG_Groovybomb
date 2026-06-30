@@ -227,6 +227,14 @@ export async function initDb() {
     await db.execute("UPDATE characters SET isProne = 1, stunState = 'none' WHERE stunState = 'prone'");
   } catch { /* ignore */ }
 
+  // Add extraPips column if missing
+  try {
+    await db.execute('ALTER TABLE rolls ADD COLUMN extraPips INTEGER DEFAULT 0');
+  } catch { /* column already exists */ }
+  try {
+    await db.execute('ALTER TABLE gm_roll_responses ADD COLUMN extraPips INTEGER DEFAULT 0');
+  } catch { /* column already exists */ }
+
   const settings = await db.execute('SELECT key FROM game_settings WHERE key = ?', ['maxDice']);
   if (settings.rows.length === 0) {
     await db.execute({

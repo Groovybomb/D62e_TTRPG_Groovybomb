@@ -11,6 +11,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
 
   const [phase, setPhase] = useState('setup'); // 'setup' | 'result'
   const [extraDice, setExtraDice] = useState(0);
+  const [extraPips, setExtraPips] = useState(rollInfo.bonusPips || 0);
   const [doubled, setDoubled] = useState(false);
   const [doubleSource, setDoubleSource] = useState(null); // 'heroPoint' | 'exceptional' | null
   const [diceResults, setDiceResults] = useState([]);
@@ -58,16 +59,17 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
     if (isDamageMode) {
       const plainResults = [];
       for (let i = 0; i < count; i++) plainResults.push(Math.floor(Math.random() * 6) + 1);
-      const plainTotal = plainResults.reduce((a, b) => a + b, 0);
+      const plainDiceTotal = plainResults.reduce((a, b) => a + b, 0);
+      const plainTotal = plainDiceTotal + extraPips;
       setDiceResults(plainResults.map((v, i) => ({ value: v, isWild: false, rolls: [v], rawFirst: v, exploded: false })));
-      setRollTotal({ total: plainTotal, complication: false, removedDie: null });
+      setRollTotal({ total: plainTotal, complication: false, removedDie: null, pips: extraPips });
       setRollFlag(flag);
       setPhase('result');
       try {
         await axios.post(`${API_URL}/rolls/damage`, {
           characterId: character.id, characterName: character.name, isNPC: isNPC || false,
           weaponName: rollInfo.weaponName || label, damageFormula: rollInfo.damageFormula || `${baseDice}D`,
-          diceCount: count, diceRolled: plainResults, total: plainTotal, doubled, extraDice, rollFlag: flag,
+          diceCount: count, diceRolled: plainResults, total: plainTotal, doubled, extraDice, extraPips, rollFlag: flag,
         });
       } catch { /* roll still shows locally */ }
       if (onRollComplete) onRollComplete(plainTotal, plainResults);
@@ -75,10 +77,11 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
     }
 
     const results = rollDice(count);
-    const { total, complication, removedDie } = calculateTotal(results);
+    const { total: diceTotal, complication, removedDie } = calculateTotal(results);
+    const total = diceTotal + extraPips;
 
     setDiceResults(results);
-    setRollTotal({ total, complication, removedDie });
+    setRollTotal({ total, complication, removedDie, pips: extraPips });
     setRollFlag(flag);
     setPhase('result');
 
@@ -102,6 +105,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
         removedDie,
         doubled,
         extraDice,
+        extraPips,
         rollFlag: flag,
         linkedRollId: savedRollId,
       });
@@ -168,6 +172,16 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
                 <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
+              </div>
+            </div>
+
+            {/* Extra pips */}
+            <div className="extra-dice-row">
+              <label>Extra Pips:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setExtraPips(extraPips - 1)} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{extraPips}</span>
+                <button type="button" onClick={() => setExtraPips(extraPips + 1)} className="dice-adjust-btn">+</button>
               </div>
             </div>
 
@@ -270,6 +284,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
             {/* Total */}
             <div className="roll-total">
               Total: <span className="total-number">{rollTotal?.total}</span>
+              {rollTotal?.pips !== 0 && rollTotal?.pips != null && <span style={{ color: '#e3b341', fontSize: '0.85rem', marginLeft: '0.3rem' }}>({rollTotal.pips > 0 ? '+' : ''}{rollTotal.pips} pips)</span>}
             </div>
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}

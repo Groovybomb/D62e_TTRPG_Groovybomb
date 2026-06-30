@@ -1000,6 +1000,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                     Dice: [{roll.diceRolled?.join(', ')}]
+                    {roll.extraPips !== 0 && roll.extraPips != null && <span style={{ color: '#e3b341' }}> +{roll.extraPips} pips</span>}
                     {roll.complication && <span style={{ color: '#f85149', fontWeight: 700 }}> COMPLICATION</span>}
                     {roll.heroPointDelta > 0 && <span style={{ color: '#3fb950' }}> +{roll.heroPointDelta} HP</span>}
                   </div>
@@ -1029,6 +1030,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                     Dice: [{roll.diceRolled?.join(', ')}]
+                    {roll.extraPips !== 0 && roll.extraPips != null && <span style={{ color: '#e3b341' }}> +{roll.extraPips} pips</span>}
                     {roll.rollFlag && <span style={{ color: '#e3b341' }}> {roll.rollFlag === 'REROLL' ? 'RE-ROLL' : 'DOUBLE DOWN'}</span>}
                   </div>
                   <div className="message-time">{new Date(roll.createdAt).toLocaleTimeString()}</div>
@@ -1055,6 +1057,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                   Dice: [{roll.diceRolled?.join(', ')}]
+                  {roll.extraPips !== 0 && roll.extraPips != null && <span style={{ color: '#e3b341' }}> +{roll.extraPips} pips</span>}
                   {wildDie && (
                     <span>
                       {' | Wild: '}

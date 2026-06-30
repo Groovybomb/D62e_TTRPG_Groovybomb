@@ -25,7 +25,7 @@ router.post('/skill', async (req, res) => {
   const {
     characterId, characterName, skill, attribute, diceCount,
     diceRolled, wildDie, total, complication, removedDie,
-    doubled, extraDice, rollFlag, linkedRollId, isNPC,
+    doubled, extraDice, extraPips, rollFlag, linkedRollId, isNPC,
   } = req.body;
 
   if (!characterId || !skill) {
@@ -48,21 +48,22 @@ router.post('/skill', async (req, res) => {
     removedDie: removedDie || null,
     doubled: doubled || false,
     extraDice: extraDice || 0,
+    extraPips: extraPips || 0,
     rollFlag: rollFlag || null,
     linkedRollId: linkedRollId || null,
     createdAt: new Date().toISOString(),
   };
 
   await db.execute({
-    sql: `INSERT INTO rolls (id, rollType, characterId, characterName, isNPC, skill, attribute, diceCount, diceRolled, wildDie, total, complication, removedDie, doubled, extraDice, rollFlag, linkedRollId, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO rolls (id, rollType, characterId, characterName, isNPC, skill, attribute, diceCount, diceRolled, wildDie, total, complication, removedDie, doubled, extraDice, extraPips, rollFlag, linkedRollId, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       roll.id, roll.rollType, roll.characterId, roll.characterName, roll.isNPC ? 1 : 0,
       roll.skill, roll.attribute, roll.diceCount,
       JSON.stringify(roll.diceRolled), roll.wildDie ? JSON.stringify(roll.wildDie) : null,
       roll.total, roll.complication ? 1 : 0,
       roll.removedDie ? JSON.stringify(roll.removedDie) : null,
-      roll.doubled ? 1 : 0, roll.extraDice, roll.rollFlag, roll.linkedRollId, roll.createdAt,
+      roll.doubled ? 1 : 0, roll.extraDice, roll.extraPips, roll.rollFlag, roll.linkedRollId, roll.createdAt,
     ],
   });
 
@@ -104,7 +105,7 @@ router.post('/attack', async (req, res) => {
 
 // POST /api/rolls/damage - Store a damage roll
 router.post('/damage', async (req, res) => {
-  const { characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag, isNPC } = req.body;
+  const { characterId, characterName, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, extraPips, rollFlag, isNPC } = req.body;
 
   if (!characterId || !weaponName) {
     return res.status(400).json({ error: 'characterId and weaponName required' });
@@ -123,18 +124,19 @@ router.post('/damage', async (req, res) => {
     total: total || 0,
     doubled: doubled || false,
     extraDice: extraDice || 0,
+    extraPips: extraPips || 0,
     rollFlag: rollFlag || null,
     createdAt: new Date().toISOString(),
   };
 
   await db.execute({
-    sql: `INSERT INTO rolls (id, rollType, characterId, characterName, isNPC, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, rollFlag, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO rolls (id, rollType, characterId, characterName, isNPC, weaponName, damageFormula, diceCount, diceRolled, total, doubled, extraDice, extraPips, rollFlag, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       roll.id, roll.rollType, roll.characterId, roll.characterName, roll.isNPC ? 1 : 0,
       roll.weaponName, roll.damageFormula, roll.diceCount,
       JSON.stringify(roll.diceRolled), roll.total,
-      roll.doubled ? 1 : 0, roll.extraDice, roll.rollFlag, roll.createdAt,
+      roll.doubled ? 1 : 0, roll.extraDice, roll.extraPips, roll.rollFlag, roll.createdAt,
     ],
   });
 

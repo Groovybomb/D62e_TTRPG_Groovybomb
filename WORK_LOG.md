@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 2.3.0 — D6 2e character damage rules, crew station dropdowns, crew-based popup routing.
+**Version:** 3.1.0 — Extra Pips on all roll modals, skill bonus dice/pips on character sheet.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -419,6 +419,25 @@ Before committing, verify:
 - [x] **Helper functions** — `getVehicleGunneryDice()`, `getVehicleEvadeDice()`, `getVehicleResistDice()`, `getVehiclePilotingSkill()` in GamePage
 - [x] **Data exports** — `VEHICLE_OPPOSED_PRESETS`, `getVehicleDefense()`, `parseDamageFormula()` added to `opposedPresets.js`
 - [x] **Browser tested** — Character damage with weapon picker, Vehicle Gunnery vs Defense (static), Vehicle Gunnery vs Evade (active with flat bonus), roll log with vehicle names all verified
+
+### v3.1.0: Extra Pips & Skill Bonus Dice/Pips (2026-06-30)
+- [x] **Extra Pips on all roll modals** — flat value added to rolled total, adjustable via +/- buttons next to Extra Dice
+  - [x] RollModal (skill/attribute rolls), GMRollModal, OpposedRollModal, VehicleRollModal, DamageRollModal (in CharacterPage)
+  - [x] Pips shown in result display with yellow color when non-zero
+  - [x] Saved to backend `rolls` and `gm_roll_responses` tables via new `extraPips` column
+  - [x] Displayed in Roll Log for SKILL, GM_ROLL, and DAMAGE roll types
+- [x] **Skill bonus dice & pips on character sheet** — skill editing now has 3 fields instead of 1:
+  - [x] Skill Dice (white border) — base skill level
+  - [x] Bonus Dice (green border) — extra dice added to the pool
+  - [x] Bonus Pips (yellow border) — auto-populates Extra Pips in roll modals
+  - [x] `parseSkillValue()` handles backward compatibility (old numeric format + new object format)
+  - [x] `getSkillBonusPips()` extracts bonus pips for auto-population
+  - [x] `getDicePool()` updated: attrDice + skill.dice + skill.bonusDice
+  - [x] Character sheet display: shows `+ND` in green, `+N` in yellow for bonuses
+  - [x] Total dice column: shows `{totalDice}D+{bonusPips}` when pips > 0
+  - [x] Legend shown above attributes grid when editing
+- [x] **Database migration** — `ALTER TABLE rolls ADD COLUMN extraPips INTEGER DEFAULT 0` and same for `gm_roll_responses`
+- [x] **Browser tested** — Stormtrooper Shooting (bonusDice=1, bonusPips=2) verified: correct pool size, pips auto-populated, pips shown in roll log
 
 ### v2.3.0: D6 2e Character Damage, Crew Dropdowns, Crew Popup Routing (2026-06-28)
 - [x] **Vehicle Damage & Repair reference updated** — Changed repair difficulty text from character wound terms (Stunned, Wounded, Mortally Wounded) to vehicle wound terms (Light, Heavy, Severe damage).
@@ -875,6 +894,6 @@ Schema auto-created on startup via `initDb()` in `backend/src/db.js`.
 
 ---
 
-**Last Updated:** 2026-06-28
-**Last Work Done:** D6 2e character damage rules, crew station dropdowns, crew-based popup routing
-**Status:** v2.3.0 — D6 2e character damage, crew dropdowns, crew popup routing
+**Last Updated:** 2026-06-30
+**Last Work Done:** Extra Pips on all roll modals, skill bonus dice/pips on character sheet
+**Status:** v3.1.0 — Extra Pips, skill bonus dice/pips

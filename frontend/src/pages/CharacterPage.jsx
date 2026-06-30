@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { ATTRIBUTE_DEFINITIONS, ADVANCED_SKILL_DEFINITIONS, SPECIAL_SKILLS, getDicePool, getAdvancedDicePool } from '../data/attributes';
+import { ATTRIBUTE_DEFINITIONS, ADVANCED_SKILL_DEFINITIONS, SPECIAL_SKILLS, getDicePool, getAdvancedDicePool, parseSkillValue } from '../data/attributes';
 import { WOUND_LEVELS, STUN_STATES, getWoundPenalty } from '../data/wounds';
 import { TALENTS, PERKS, FLAWS, CYBERNETICS, ITEMS, WEAPONS, getRollHints } from '../data/characterOptions';
 import RollModal from '../components/RollModal';
@@ -82,15 +82,18 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
     setEditData({ ...editData, attributes: { ...editData.attributes, [attrKey]: { ...editData.attributes[attrKey], dice: val } } });
   };
 
-  const updateSkillDice = (attrKey, skillKey, value) => {
+  const updateSkillDice = (attrKey, skillKey, field, value) => {
     const val = Math.max(0, parseInt(value) || 0);
+    const currentSkill = editData.attributes[attrKey].skills[skillKey];
+    const parsed = parseSkillValue(currentSkill);
+    const updated = { ...parsed, [field]: val };
     setEditData({
       ...editData,
       attributes: {
         ...editData.attributes,
         [attrKey]: {
           ...editData.attributes[attrKey],
-          skills: { ...editData.attributes[attrKey].skills, [skillKey]: val },
+          skills: { ...editData.attributes[attrKey].skills, [skillKey]: updated },
         },
       },
     });
@@ -288,8 +291,10 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
   const dodge = isProne ? baseDodge + 10 : baseDodge;
   const parry = isProne ? Math.min(baseParry, 10) : baseParry;
 
-  const acrobatics = char.attributes.agility?.skills?.acrobatics || 0;
-  const melee = char.attributes.agility?.skills?.melee || 0;
+  const acrobaticsData = parseSkillValue(char.attributes.agility?.skills?.acrobatics);
+  const meleeData = parseSkillValue(char.attributes.agility?.skills?.melee);
+  const acrobatics = acrobaticsData.dice + acrobaticsData.bonusDice;
+  const melee = meleeData.dice + meleeData.bonusDice;
   const fullDefDodge = baseDodge + (acrobatics * 5);
   const fullDefParry = baseParry + (melee * 5);
 
@@ -399,6 +404,11 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
       </div>
 
       {/* Attributes and Skills grid */}
+      {editing && (
+        <div style={{ marginBottom: '0.5rem', fontSize: '0.78rem', color: '#7d8590', textAlign: 'center' }}>
+          Skill fields: <span style={{ color: '#e6edf3' }}>Skill Dice</span> &bull; <span style={{ color: '#3fb950' }}>Bonus Dice</span> &bull; <span style={{ color: '#e3b341' }}>Bonus Pips</span>
+        </div>
+      )}
       <div className="attributes-grid">
         {Object.entries(ATTRIBUTE_DEFINITIONS).map(([attrKey, attrDef]) => {
           const attr = char.attributes[attrKey];
@@ -434,10 +444,18 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
               <div className="skill-list">
                 {Object.entries(attrDef.skills).map(([skillKey, skillLabel]) => {
                   const special = SPECIAL_SKILLS[skillKey];
-                  const skillDice = special
-                    ? (char[special.sourceField] || 0)
-                    : (attr.skills[skillKey] || 0);
-                  const totalDice = attr.dice + skillDice;
+                  let skillDice, bonusDice, bonusPips;
+                  if (special) {
+                    skillDice = char[special.sourceField] || 0;
+                    bonusDice = 0;
+                    bonusPips = 0;
+                  } else {
+                    const parsed = parseSkillValue(attr.skills[skillKey]);
+                    skillDice = parsed.dice;
+                    bonusDice = parsed.bonusDice;
+                    bonusPips = parsed.bonusPips;
+                  }
+                  const totalDice = attr.dice + skillDice + bonusDice;
                   const displayLabel = special ? special.sourceLabel : skillLabel;
                   return (
                     <div key={skillKey} className="skill-row">
@@ -448,12 +466,20 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                       {special ? (
                         <span className="skill-dice" title={`From ${special.sourceLabel}`}>{skillDice > 0 ? skillDice : '-'}</span>
                       ) : editing ? (
-                        <input type="number" min="0" value={skillDice} onChange={e => onSkillChange(attrKey, skillKey, e.target.value)} className="dice-input" />
+                        <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                          <input type="number" min="0" value={skillDice} onChange={e => onSkillChange(attrKey, skillKey, 'dice', e.target.value)} className="dice-input" title="Skill Dice" />
+                          <input type="number" min="0" value={bonusDice} onChange={e => onSkillChange(attrKey, skillKey, 'bonusDice', e.target.value)} className="dice-input" title="Bonus Dice" style={{ borderColor: '#3fb950' }} />
+                          <input type="number" min="0" value={bonusPips} onChange={e => onSkillChange(attrKey, skillKey, 'bonusPips', e.target.value)} className="dice-input" title="Bonus Pips" style={{ borderColor: '#e3b341' }} />
+                        </div>
                       ) : (
-                        <span className="skill-dice">{skillDice > 0 ? skillDice : '-'}</span>
+                        <span className="skill-dice">
+                          {skillDice > 0 ? skillDice : '-'}
+                          {bonusDice > 0 && <span style={{ color: '#3fb950', fontSize: '0.8rem' }}> +{bonusDice}D</span>}
+                          {bonusPips > 0 && <span style={{ color: '#e3b341', fontSize: '0.8rem' }}> +{bonusPips}</span>}
+                        </span>
                       )}
-                      <span className="total-dice" title={`${attrDef.label} ${attr.dice}D + ${displayLabel} ${skillDice}D`}>
-                        {totalDice}D
+                      <span className="total-dice" title={`${attrDef.label} ${attr.dice}D + ${displayLabel} ${skillDice}D${bonusDice > 0 ? ` + Bonus ${bonusDice}D` : ''}${bonusPips > 0 ? ` + ${bonusPips} pips` : ''}`}>
+                        {totalDice}D{bonusPips > 0 ? `+${bonusPips}` : ''}
                       </span>
                       {!editing && (
                         <button
@@ -465,8 +491,9 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                             attrDice: attr.dice,
                             skillKey,
                             skillLabel: displayLabel,
-                            skillDice,
+                            skillDice: skillDice + bonusDice,
                             baseDice: totalDice,
+                            bonusPips,
                             ...(special?.skipWoundPenalty && { skipWoundPenalty: true }),
                           })}
                         >
@@ -493,7 +520,9 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
             const advDice = char.advancedSkills?.[advKey] || 0;
             const attr = char.attributes[advDef.baseAttribute];
             const attrDice = attr?.dice || 0;
-            const baseSkillDice = attr?.skills?.[advDef.baseSkill] || 0;
+            const baseSkillParsed = parseSkillValue(attr?.skills?.[advDef.baseSkill]);
+            const baseSkillDice = baseSkillParsed.dice + baseSkillParsed.bonusDice;
+            const baseSkillPips = baseSkillParsed.bonusPips;
             const totalDice = advDice > 0 ? advDice + baseSkillDice + attrDice : 0;
             const baseAttrDef = ATTRIBUTE_DEFINITIONS[advDef.baseAttribute];
             const baseSkillLabel = baseAttrDef.skills[advDef.baseSkill];
@@ -525,6 +554,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                       skillLabel: `${advDef.label} + ${baseSkillLabel}`,
                       skillDice: advDice + baseSkillDice,
                       baseDice: totalDice,
+                      bonusPips: baseSkillPips,
                     })}
                   >
                     Roll
@@ -808,6 +838,7 @@ function ListSection({ title, items, editing, onChange, fields, referenceData, r
 function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, maxDice, isNPC }) {
   const [phase, setPhase] = useState('setup');
   const [extraDice, setExtraDice] = useState(0);
+  const [extraPips, setExtraPips] = useState(0);
   const [doubled, setDoubled] = useState(false);
   const [doubleSource, setDoubleSource] = useState(null);
   const [diceResults, setDiceResults] = useState([]);
@@ -849,10 +880,11 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
     for (let i = 0; i < count; i++) {
       results.push(Math.floor(Math.random() * 6) + 1);
     }
-    const total = results.reduce((a, b) => a + b, 0);
+    const diceTotal = results.reduce((a, b) => a + b, 0);
+    const total = diceTotal + extraPips;
 
     setDiceResults(results);
-    setRollTotal({ total, results });
+    setRollTotal({ total, results, pips: extraPips });
     setPhase('result');
 
     try {
@@ -867,6 +899,7 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
         total,
         doubled,
         extraDice,
+        extraPips,
         rollFlag: flag,
       });
     } catch { /* roll still shows locally */ }
@@ -908,6 +941,15 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
                 <button type="button" onClick={() => setExtraDice(extraDice - 1)} className="dice-adjust-btn">-</button>
                 <span className="extra-dice-value">{extraDice}</span>
                 <button type="button" onClick={() => setExtraDice(extraDice + 1)} className="dice-adjust-btn">+</button>
+              </div>
+            </div>
+
+            <div className="extra-dice-row">
+              <label>Extra Pips:</label>
+              <div className="extra-dice-controls">
+                <button type="button" onClick={() => setExtraPips(extraPips - 1)} className="dice-adjust-btn">-</button>
+                <span className="extra-dice-value">{extraPips}</span>
+                <button type="button" onClick={() => setExtraPips(extraPips + 1)} className="dice-adjust-btn">+</button>
               </div>
             </div>
 
@@ -958,6 +1000,7 @@ function DamageRollModal({ damageInfo, character, onClose, onHeroPointChange, ma
             <div className="vs-display" style={{ marginTop: '1.5rem' }}>
               <span className="vs-total" style={{ color: '#f85149', fontSize: '2em' }}>{rollTotal?.total}</span>
               <span className="vs-label" style={{ color: '#7d8590' }}>Damage</span>
+              {rollTotal?.pips !== 0 && rollTotal?.pips != null && <span style={{ color: '#e3b341', fontSize: '0.85rem' }}>({rollTotal.pips > 0 ? '+' : ''}{rollTotal.pips} pips)</span>}
             </div>
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}

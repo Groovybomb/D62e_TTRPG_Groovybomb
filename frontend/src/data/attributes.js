@@ -108,7 +108,8 @@ export function getAdvancedDicePool(character, advancedKey) {
   if (advancedDice === 0) return 0;
   const attr = character.attributes[def.baseAttribute];
   if (!attr) return 0;
-  return advancedDice + (attr.skills[def.baseSkill] || 0) + (attr.dice || 0);
+  const baseSkill = parseSkillValue(attr.skills[def.baseSkill]);
+  return advancedDice + baseSkill.dice + baseSkill.bonusDice + (attr.dice || 0);
 }
 
 export function getAllSkills() {
@@ -125,6 +126,20 @@ export const SPECIAL_SKILLS = {
   resistance: { sourceField: 'armor', sourceLabel: 'Armor', skipWoundPenalty: true },
 };
 
+export function parseSkillValue(val) {
+  if (typeof val === 'object' && val !== null) {
+    return { dice: val.dice || 0, bonusDice: val.bonusDice || 0, bonusPips: val.bonusPips || 0 };
+  }
+  return { dice: val || 0, bonusDice: 0, bonusPips: 0 };
+}
+
+export function getSkillBonusPips(character, attrKey, skillKey) {
+  const attr = character.attributes?.[attrKey];
+  if (!attr) return 0;
+  if (SPECIAL_SKILLS[skillKey]) return 0;
+  return parseSkillValue(attr.skills?.[skillKey]).bonusPips;
+}
+
 export function getDicePool(character, attrKey, skillKey) {
   const attr = character.attributes[attrKey];
   if (!attr) return 0;
@@ -133,6 +148,6 @@ export function getDicePool(character, attrKey, skillKey) {
   if (special) {
     return attrDice + (character[special.sourceField] || 0);
   }
-  const skillDice = attr.skills[skillKey] || 0;
-  return attrDice + skillDice;
+  const skill = parseSkillValue(attr.skills[skillKey]);
+  return attrDice + skill.dice + skill.bonusDice;
 }
