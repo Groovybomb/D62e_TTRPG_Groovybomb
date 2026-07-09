@@ -78,7 +78,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
   const cancelEdit = () => { setEditing(false); setEditData(null); };
 
   const updateAttrDice = (attrKey, value) => {
-    const val = Math.max(1, Math.min(5, parseInt(value) || 0));
+    const val = Math.max(1, parseInt(value) || 0);
     setEditData({ ...editData, attributes: { ...editData.attributes, [attrKey]: { ...editData.attributes[attrKey], dice: val } } });
   };
 
