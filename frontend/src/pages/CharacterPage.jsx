@@ -419,7 +419,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                 <span className="attribute-name">{attrDef.label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {editing
-                    ? <input type="number" min="1" max="5" value={attr.dice} onChange={e => onAttrChange(attrKey, e.target.value)} className="dice-input" />
+                    ? <input type="number" min="1" value={attr.dice} onChange={e => onAttrChange(attrKey, e.target.value)} className="dice-input" />
                     : <span className="dice-badge">{attr.dice}D</span>}
                   {!editing && (
                     <button
