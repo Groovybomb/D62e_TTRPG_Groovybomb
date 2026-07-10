@@ -235,6 +235,14 @@ export async function initDb() {
     await db.execute('ALTER TABLE gm_roll_responses ADD COLUMN extraPips INTEGER DEFAULT 0');
   } catch { /* column already exists */ }
 
+  // Add dodgePips and parryPips columns if missing
+  try {
+    await db.execute('ALTER TABLE characters ADD COLUMN dodgePips INTEGER DEFAULT 0');
+  } catch { /* column already exists */ }
+  try {
+    await db.execute('ALTER TABLE characters ADD COLUMN parryPips INTEGER DEFAULT 0');
+  } catch { /* column already exists */ }
+
   const settings = await db.execute('SELECT key FROM game_settings WHERE key = ?', ['maxDice']);
   if (settings.rows.length === 0) {
     await db.execute({

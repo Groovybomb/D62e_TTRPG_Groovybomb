@@ -114,13 +114,15 @@ export const VEHICLE_OPPOSED_PRESETS = [
 export function getStaticDefense(character, stat) {
   if (stat === 'dodge') {
     const percDice = character.attributes?.perception?.dice || 2;
-    let dodge = percDice * 5;
-    if (character.isProne) dodge = percDice * 5 + 10;
+    const pips = character.dodgePips || 0;
+    let dodge = percDice * 5 + pips;
+    if (character.isProne) dodge = percDice * 5 + pips + 10;
     return { value: dodge, label: 'Dodge' };
   }
   if (stat === 'parry') {
     const agiDice = character.attributes?.agility?.dice || 2;
-    let parry = agiDice * 5;
+    const pips = character.parryPips || 0;
+    let parry = agiDice * 5 + pips;
     if (character.isProne) parry = Math.min(parry, 10);
     return { value: parry, label: 'Parry' };
   }

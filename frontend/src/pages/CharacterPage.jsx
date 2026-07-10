@@ -286,8 +286,8 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
 
 function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvancedSkillChange, onFieldChange, onRoll, onDamageRoll, onWoundChange }) {
   const isProne = !!char.isProne;
-  const baseDodge = (char.attributes.perception?.dice || 0) * 5;
-  const baseParry = (char.attributes.agility?.dice || 0) * 5;
+  const baseDodge = (char.attributes.perception?.dice || 0) * 5 + (char.dodgePips || 0);
+  const baseParry = (char.attributes.agility?.dice || 0) * 5 + (char.parryPips || 0);
   const dodge = isProne ? baseDodge + 10 : baseDodge;
   const parry = isProne ? Math.min(baseParry, 10) : baseParry;
 
@@ -327,12 +327,20 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
             <div className="sheet-stat">
               <span className="stat-label">Dodge{isProne ? ' (Prone)' : ''}</span>
               <span className="stat-value computed" style={isProne ? { color: '#f0883e' } : {}}>{dodge}</span>
-              <span className="stat-note">{isProne ? `Base ${baseDodge} + 10 ranged` : 'Perception × 5'}</span>
+              {editing
+                ? <span className="stat-note" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    Pips: <input type="number" value={char.dodgePips || 0} onChange={e => onFieldChange('dodgePips', parseInt(e.target.value) || 0)} className="stat-input" style={{ width: '3rem' }} />
+                  </span>
+                : <span className="stat-note">{isProne ? `Base ${baseDodge} + 10 ranged` : `Perception × 5${char.dodgePips ? ` + ${char.dodgePips}` : ''}`}</span>}
             </div>
             <div className="sheet-stat">
               <span className="stat-label">Parry{isProne ? ' (Prone)' : ''}</span>
               <span className="stat-value computed" style={isProne ? { color: '#f0883e' } : {}}>{parry}</span>
-              <span className="stat-note">{isProne ? `Max 10 vs melee` : 'Agility × 5'}</span>
+              {editing
+                ? <span className="stat-note" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    Pips: <input type="number" value={char.parryPips || 0} onChange={e => onFieldChange('parryPips', parseInt(e.target.value) || 0)} className="stat-input" style={{ width: '3rem' }} />
+                  </span>
+                : <span className="stat-note">{isProne ? `Max 10 vs melee` : `Agility × 5${char.parryPips ? ` + ${char.parryPips}` : ''}`}</span>}
             </div>
           </div>
           {(fullDefDodge > baseDodge || fullDefParry > baseParry) && !isProne && (

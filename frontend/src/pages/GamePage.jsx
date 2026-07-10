@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { ATTRIBUTE_DEFINITIONS, getDicePool, SPECIAL_SKILLS } from '../data/attributes';
+import { ATTRIBUTE_DEFINITIONS, getDicePool, SPECIAL_SKILLS, parseSkillValue, getSkillBonusPips } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import { OPPOSED_PRESETS, VEHICLE_OPPOSED_PRESETS, getStaticDefense, getVehicleDefense, getSkillLabel, determineWinner, parseDamageFormula } from '../data/opposedPresets';
 import { rollDice, calculateTotal } from '../utils/dice';
@@ -116,11 +116,13 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
     const attr = selectedCharacter?.attributes[attrKey];
     if (!attrDef || !attr) return;
     const skillLabel = attrDef.skills[skillKey];
-    const skillDice = attr.skills[skillKey] || 0;
+    const parsed = parseSkillValue(attr.skills[skillKey]);
+    const skillDice = parsed.dice + parsed.bonusDice;
     setRollModal({
       label: `${skillLabel} (${attrDef.label})`,
       attrKey, attrLabel: attrDef.label, attrDice: attr.dice,
       skillKey, skillLabel, skillDice, baseDice: attr.dice + skillDice,
+      bonusPips: parsed.bonusPips,
     });
   };
 
@@ -179,15 +181,20 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
 
     const skillLabel = attrDef.skills[skill];
     const special = SPECIAL_SKILLS[skill];
-    const skillDice = special
-      ? (initiatorChar[special.sourceField] || 0)
-      : (attrData.skills[skill] || 0);
+    let skillDice, bonusPips = 0;
+    if (special) {
+      skillDice = initiatorChar[special.sourceField] || 0;
+    } else {
+      const parsed = parseSkillValue(attrData.skills[skill]);
+      skillDice = parsed.dice + parsed.bonusDice;
+      bonusPips = parsed.bonusPips;
+    }
     const baseDice = attrData.dice + skillDice;
 
     setRollModal({
       label: `${skillLabel} (${attrDef.label})`,
       attrKey: attr, attrLabel: attrDef.label, attrDice: attrData.dice,
-      skillKey: skill, skillLabel, skillDice, baseDice,
+      skillKey: skill, skillLabel, skillDice, baseDice, bonusPips,
       skipWoundPenalty: special?.skipWoundPenalty,
       isOpposedInitiator: true,
     });
@@ -362,12 +369,14 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
       const attrData = voppAtkCrew.attributes?.[attr];
       if (!attrDef || !attrData) return;
       const skillLabel = attrDef.skills[skill];
-      const skillDice = attrData.skills[skill] || 0;
+      const parsed = parseSkillValue(attrData.skills[skill]);
+      const skillDice = parsed.dice + parsed.bonusDice;
       const baseDice = attrData.dice + skillDice;
       setRollModal({
         label: `${skillLabel} (${attrDef.label}) — ${voppAtkVehicle.name}`,
         attrKey: attr, attrLabel: attrDef.label, attrDice: attrData.dice,
         skillKey: skill, skillLabel, skillDice, baseDice,
+        bonusPips: parsed.bonusPips,
         isVehicleOpposedInitiator: true,
       });
       setVoppPhase('rolling_initiator');
