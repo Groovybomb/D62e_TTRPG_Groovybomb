@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import VehicleRollModal from '../components/VehicleRollModal';
 import { VEHICLE_WOUND_LEVELS, getVehicleWoundPenalty } from '../data/vehicleWounds';
+import { parseSkillValue } from '../data/attributes';
 
 const STAT_DEFS = [
   { key: 'navicomp', label: 'Navicomp' },
@@ -142,22 +143,26 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
     const jd = selectedChar.advancedSkills?.jupiterDrive || 0;
     if (jd === 0) return 0;
     const mech = selectedChar.attributes?.mechanical;
-    return jd + (mech?.dice || 0) + (mech?.skills?.navigation || 0);
+    const nav = parseSkillValue(mech?.skills?.navigation);
+    return jd + (mech?.dice || 0) + nav.dice + nav.bonusDice;
   };
   const getPilotingSkillOnly = () => {
     if (!selectedChar) return 0;
-    return selectedChar.attributes?.mechanical?.skills?.piloting || 0;
+    const pilot = parseSkillValue(selectedChar.attributes?.mechanical?.skills?.piloting);
+    return pilot.dice + pilot.bonusDice;
   };
   const getGunneryDice = () => {
     if (!selectedChar) return 0;
     const perc = selectedChar.attributes?.perception;
-    return (perc?.dice || 0) + (perc?.skills?.gunnery || 0);
+    const gunnery = parseSkillValue(perc?.skills?.gunnery);
+    return (perc?.dice || 0) + gunnery.dice + gunnery.bonusDice;
   };
 
   const getRepairDice = () => {
     if (!selectedChar) return 0;
     const mech = selectedChar.attributes?.mechanical;
-    return (mech?.dice || 0) + (mech?.skills?.useRepairMech || 0);
+    const repair = parseSkillValue(mech?.skills?.useRepairMech);
+    return (mech?.dice || 0) + repair.dice + repair.bonusDice;
   };
 
   const handleWoundChange = async (value) => {

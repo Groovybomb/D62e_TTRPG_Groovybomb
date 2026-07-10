@@ -324,12 +324,14 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
   const getVehicleGunneryDice = (char) => {
     if (!char) return 0;
     const perc = char.attributes?.perception;
-    return (perc?.dice || 0) + (perc?.skills?.gunnery || 0);
+    const gunnery = parseSkillValue(perc?.skills?.gunnery);
+    return (perc?.dice || 0) + gunnery.dice + gunnery.bonusDice;
   };
 
   const getVehiclePilotingSkill = (char) => {
     if (!char) return 0;
-    return char.attributes?.mechanical?.skills?.piloting || 0;
+    const pilot = parseSkillValue(char.attributes?.mechanical?.skills?.piloting);
+    return pilot.dice + pilot.bonusDice;
   };
 
   const getVehicleEvadeDice = (char, vehicle) => {

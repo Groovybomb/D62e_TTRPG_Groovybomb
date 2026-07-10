@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { ATTRIBUTE_DEFINITIONS, DIFFICULTY_TABLE, getDicePool } from '../data/attributes';
+import { ATTRIBUTE_DEFINITIONS, DIFFICULTY_TABLE, getDicePool, parseSkillValue } from '../data/attributes';
 import { OUTCOME_LABELS, OUTCOME_COLORS } from '../data/outcomes';
 import { rollPlainDice } from '../utils/dice';
 
@@ -764,8 +764,12 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                       const attr = char.attributes[attrKey];
                       if (!attr) return null;
                       const skills = Object.entries(attrDef.skills)
-                        .map(([sk, sl]) => ({ key: sk, label: sl, dice: attr.skills?.[sk] || 0, total: (attr.dice || 0) + (attr.skills?.[sk] || 0) }))
-                        .filter(s => s.dice > 0);
+                        .map(([sk, sl]) => {
+                          const parsed = parseSkillValue(attr.skills?.[sk]);
+                          const dice = parsed.dice + parsed.bonusDice;
+                          return { key: sk, label: sl, dice, total: (attr.dice || 0) + dice, bonusPips: parsed.bonusPips };
+                        })
+                        .filter(s => s.dice > 0 || s.bonusPips > 0);
                       return (
                         <div key={attrKey} style={{ marginBottom: '0.4rem' }}>
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
@@ -775,7 +779,7 @@ export default function GameMasterPage({ userId, displayName, maxDice, onMaxDice
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingLeft: '0.5rem', fontSize: '0.75rem', color: '#8b949e' }}>
                               {skills.map(s => (
                                 <span key={s.key} style={{ backgroundColor: '#161b22', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
-                                  {s.label} +{s.dice}D = {s.total}D
+                                  {s.label} +{s.dice}D = {s.total}D{s.bonusPips > 0 ? `+${s.bonusPips}` : ''}
                                 </span>
                               ))}
                             </div>
