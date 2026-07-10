@@ -19,6 +19,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const [rollFlag, setRollFlag] = useState(null); // null | 'REROLL' | 'DOUBLE_DOWN'
   const [linkedRollId, setLinkedRollId] = useState(null);
   const [savedRollId, setSavedRollId] = useState(null);
+  const [hpChoice, setHpChoice] = useState(null); // null | { delta, label } once player picks a wild-6 outcome
 
   const { penalty: woundPenalty, reasons: woundReasons, canAct } = getWoundPenalty(character);
   const applyWoundPenalty = !rollInfo.skipWoundPenalty;
@@ -55,6 +56,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const executeRoll = async (flag = null) => {
     const count = effectiveDice;
     if (count < 1) return;
+    setHpChoice(null);
 
     if (isDamageMode) {
       const plainResults = [];
@@ -123,6 +125,17 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const handleDoubleDown = () => {
     executeRoll('DOUBLE_DOWN');
   };
+
+  const handleHeroChoice = (delta, label) => {
+    if (delta > 0) onHeroPointChange(heroPoints + delta);
+    setHpChoice({ delta, label });
+  };
+
+  // Wild die exploded on a 6: offer the player the four possible Hero Point outcomes.
+  // Only for normal player skill/attribute rolls (not damage, NPCs, or opposed/initiative flows).
+  const wildSix = !isDamageMode && diceResults.length > 0 && diceResults[0].isWild && diceResults[0].rawFirst === 6;
+  const showHeroChoice = wildSix && !isNPC && !onRollComplete;
+  const choicePending = showHeroChoice && !hpChoice;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -289,27 +302,69 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
 
             {doubled && <div className="doubled-note">{doubleSource === 'exceptional' ? 'Doubled dice (Exceptional Success)' : 'Doubled dice (Hero Point spent)'}</div>}
 
+            {/* Wild die 6 — player selects the Hero Point result based on what the GM reports */}
+            {choicePending && (
+              <div className="outcome-section">
+                <p className="choice-prompt">Your wild die exploded (6)! Ask your GM the result, then choose your Hero Point award:</p>
+                <div className="choice-buttons">
+                  <button onClick={() => handleHeroChoice(2, 'Success')} className="choice-btn success">
+                    <strong>Success</strong>
+                    <span>+2 Hero Points</span>
+                  </button>
+                  <button onClick={() => handleHeroChoice(1, 'Success')} className="choice-btn success">
+                    <strong>Success</strong>
+                    <span>+1 Hero Point</span>
+                    <span className="choice-note">(needed explosion to beat DC)</span>
+                  </button>
+                  <button onClick={() => handleHeroChoice(1, 'Exceptional Success')} className="choice-btn exceptional">
+                    <strong>Exceptional Success</strong>
+                    <span>+1 Hero Point</span>
+                  </button>
+                  <button onClick={() => handleHeroChoice(0, 'Failed')} className="choice-btn choose-fail">
+                    <strong>Failed DC</strong>
+                    <span>+0 Hero Points</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {hpChoice && (
+              <div className="outcome-section">
+                <div className="hp-delta">
+                  {hpChoice.label} — {hpChoice.delta > 0 ? `+${hpChoice.delta} Hero Point${hpChoice.delta > 1 ? 's' : ''}` : 'No Hero Points'}
+                </div>
+              </div>
+            )}
+
             <div className="hero-points-display">
               Hero Points: <strong>{character.heroPoints}</strong>
             </div>
 
             {/* Action buttons */}
             <div className="result-actions">
-              <button onClick={handleReroll} disabled={character.heroPoints < 1} className="reroll-btn">
-                Re-Roll (costs 1 Hero Point)
-              </button>
-              <button onClick={handleDoubleDown} className="doubledown-btn">
-                Double Down (free, but complication on 2nd failure)
-              </button>
-              <button onClick={onClose} className="close-result-btn">
-                Close
-              </button>
+              {!hpChoice && (
+                <>
+                  <button onClick={handleReroll} disabled={character.heroPoints < 1} className="reroll-btn">
+                    Re-Roll (costs 1 Hero Point)
+                  </button>
+                  <button onClick={handleDoubleDown} className="doubledown-btn">
+                    Double Down (free, but complication on 2nd failure)
+                  </button>
+                </>
+              )}
+              {!choicePending && (
+                <button onClick={onClose} className="close-result-btn">
+                  Close
+                </button>
+              )}
             </div>
 
-            <p className="result-info-text">
-              <strong>Re-Roll:</strong> Spend a Hero Point to roll again.<br />
-              <strong>Double Down:</strong> Roll again for free — but if you fail a second time, a complication is added. You must roll <em>greater than</em> the difficulty (not equal).
-            </p>
+            {!hpChoice && (
+              <p className="result-info-text">
+                <strong>Re-Roll:</strong> Spend a Hero Point to roll again.<br />
+                <strong>Double Down:</strong> Roll again for free — but if you fail a second time, a complication is added. You must roll <em>greater than</em> the difficulty (not equal).
+              </p>
+            )}
           </div>
         )}
       </div>
