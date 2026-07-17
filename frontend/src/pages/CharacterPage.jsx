@@ -44,6 +44,9 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
   };
 
   const handleDelete = async (id) => {
+    const target = characters.find(c => c.id === id);
+    const name = target?.name || 'this character';
+    if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;
     try {
       await axios.delete(`${API_URL}/characters/${id}`);
       const updated = characters.filter(c => c.id !== id);
