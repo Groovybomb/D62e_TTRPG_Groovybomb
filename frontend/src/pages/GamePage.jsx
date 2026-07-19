@@ -8,7 +8,7 @@ import { rollDice, calculateTotal } from '../utils/dice';
 import { getWoundPenalty } from '../data/wounds';
 import RollModal from '../components/RollModal';
 
-export default function GamePage({ userId, displayName, isGM, maxDice }) {
+export default function GamePage({ userId, displayName, isGM, maxDice, refreshKey }) {
   const [characters, setCharacters] = useState([]);
   const [allCharacters, setAllCharacters] = useState([]);
   const [selectedCharacter, setSelectedCharacter] = useState(null);
@@ -51,6 +51,10 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
     return () => { clearInterval(rollInterval); clearInterval(msgInterval); clearInterval(oppInterval); };
   }, [userId]);
 
+  // Re-fetch characters when a globally-mounted modal (GM Roll, Opposed Roll) spends a
+  // Hero Point elsewhere — those update App.jsx's state, not this page's own.
+  useEffect(() => { fetchCharacters(); }, [refreshKey]);
+
   const fetchCharacters = async () => {
     try {
       const [allRes, mineRes] = await Promise.all([
@@ -59,7 +63,10 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
       ]);
       setAllCharacters(allRes.data);
       setCharacters(mineRes.data);
-      if (mineRes.data.length > 0 && !selectedCharacter) setSelectedCharacter(mineRes.data[0]);
+      setSelectedCharacter(prev => {
+        if (!prev) return mineRes.data[0] || null;
+        return mineRes.data.find(c => c.id === prev.id) || prev;
+      });
     } catch { /* ignore */ }
   };
 
@@ -1037,7 +1044,7 @@ export default function GamePage({ userId, displayName, isGM, maxDice }) {
                 <div key={roll.id} className="message system" style={{ borderLeft: '3px solid #f85149' }}>
                   <div className="message-author">{charName} {rollIsNPC && <span style={{ color: '#f0883e', fontSize: '0.8rem' }}>[NPC]</span>} <span style={{ color: '#f85149', fontSize: '0.8rem' }}>[Damage]</span></div>
                   <div className="message-text">
-                    <strong>{roll.weaponName}</strong> ({roll.damageFormula}) — <strong style={{ color: '#f85149', fontSize: '1.1em' }}>{roll.total}</strong> damage
+                    <strong>{roll.weaponName}</strong> ({roll.diceCount}D6) — <strong style={{ color: '#f85149', fontSize: '1.1em' }}>{roll.total}</strong> damage
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#7d8590', marginTop: '0.2rem' }}>
                     Dice: [{roll.diceRolled?.join(', ')}]

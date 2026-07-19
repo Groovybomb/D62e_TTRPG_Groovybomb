@@ -21,7 +21,7 @@ const CREW_ROLES = [
   { key: 'engineer', label: 'Engineer', duty: 'Repairs' },
 ];
 
-export default function VehiclePage({ userId, maxDice, isNPC }) {
+export default function VehiclePage({ userId, maxDice, isNPC, refreshKey }) {
   const [vehicles, setVehicles] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -41,6 +41,10 @@ export default function VehiclePage({ userId, maxDice, isNPC }) {
     const interval = setInterval(fetchVehicles, 3000);
     return () => clearInterval(interval);
   }, [isNPC]);
+
+  // Re-fetch crew characters when a globally-mounted modal (GM Roll, Opposed Roll) spends a
+  // Hero Point elsewhere — those update App.jsx's state, not this page's own.
+  useEffect(() => { fetchCharacters(); }, [refreshKey]);
 
   const fetchVehicles = async () => {
     try {

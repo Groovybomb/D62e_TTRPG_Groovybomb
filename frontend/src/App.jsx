@@ -168,10 +168,10 @@ function App() {
           <CharacterPage userId={currentUser.id} maxDice={maxDice} refreshKey={characterRefreshKey} selectedCharacterId={selectedCharacterId} onSelectCharacter={setSelectedCharacterId} isNPC={!!currentUser.isGM} />
         )}
         {currentPage === 'vehicles' && currentUser && (
-          <VehiclePage userId={currentUser.id} maxDice={maxDice} isNPC={!!currentUser.isGM} />
+          <VehiclePage userId={currentUser.id} maxDice={maxDice} isNPC={!!currentUser.isGM} refreshKey={characterRefreshKey} />
         )}
         {currentPage === 'game' && currentUser && (
-          <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} maxDice={maxDice} />
+          <GamePage userId={currentUser.id} displayName={currentUser.displayName} isGM={currentUser.isGM} maxDice={maxDice} refreshKey={characterRefreshKey} />
         )}
         {currentUser && (
           <div style={{ display: currentPage === 'tabletop' ? 'block' : 'none' }}>
