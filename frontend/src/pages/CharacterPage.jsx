@@ -81,7 +81,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
   const cancelEdit = () => { setEditing(false); setEditData(null); };
 
   const updateAttrDice = (attrKey, value) => {
-    const val = Math.max(1, parseInt(value) || 0);
+    const val = Math.max(0, parseInt(value) || 0);
     setEditData({ ...editData, attributes: { ...editData.attributes, [attrKey]: { ...editData.attributes[attrKey], dice: val } } });
   };
 
@@ -288,6 +288,7 @@ export default function CharacterPage({ userId, maxDice, refreshKey, selectedCha
 }
 
 function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvancedSkillChange, onFieldChange, onRoll, onDamageRoll, onWoundChange }) {
+  const [showDamageInfo, setShowDamageInfo] = useState(false);
   const isProne = !!char.isProne;
   const baseDodge = (char.attributes.perception?.dice || 0) * 5 + (char.dodgePips || 0);
   const baseParry = (char.attributes.agility?.dice || 0) * 5 + (char.parryPips || 0);
@@ -355,7 +356,22 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
       </div>
 
       {/* Wound Tracker */}
-      <div className="wound-tracker">
+      <div className="wound-tracker" style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => setShowDamageInfo(true)}
+          title="Damage rules reference"
+          style={{
+            position: 'absolute', top: '0.5rem', right: '0.5rem',
+            width: '1.5rem', height: '1.5rem', borderRadius: '50%',
+            border: '1px solid #30363d', backgroundColor: '#1c2128',
+            color: '#7d8590', fontSize: '0.8rem', fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 0, lineHeight: 1,
+          }}
+        >
+          ?
+        </button>
         <div className="wound-track-section">
           <span className="wound-track-label">Wound Level</span>
           <div className="wound-track-buttons">
@@ -414,6 +430,72 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
         })()}
       </div>
 
+      {showDamageInfo && (
+        <div className="modal-overlay" onClick={() => setShowDamageInfo(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <button className="modal-close" onClick={() => setShowDamageInfo(false)}>&times;</button>
+            <h2 className="modal-title">Damage Rules Reference</h2>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '1px solid #30363d', color: '#7d8590', fontSize: '0.8rem', textTransform: 'uppercase' }}>Wound Level</th>
+                  <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '1px solid #30363d', color: '#7d8590', fontSize: '0.8rem', textTransform: 'uppercase' }}>Effect</th>
+                </tr>
+              </thead>
+              <tbody>
+                {WOUND_LEVELS.map(wl => (
+                  <tr key={wl.key}>
+                    <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid #21262d', color: wl.color, fontWeight: 600 }}>{wl.label}</td>
+                    <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid #21262d', color: '#b1bac4' }}>
+                      {wl.key === 'healthy' && 'No penalty'}
+                      {wl.key === 'wounded' && '−1D to all skill/attribute rolls'}
+                      {(wl.key === 'incapacitated' || wl.key === 'mortallyWounded') && "Can't act"}
+                      {wl.key === 'dead' && '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '1px solid #30363d', color: '#7d8590', fontSize: '0.8rem', textTransform: 'uppercase' }}>Condition</th>
+                  <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '1px solid #30363d', color: '#7d8590', fontSize: '0.8rem', textTransform: 'uppercase' }}>Effect</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STUN_STATES.map(ss => (
+                  <tr key={ss.key}>
+                    <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid #21262d', color: ss.color, fontWeight: 600 }}>{ss.label}</td>
+                    <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid #21262d', color: '#b1bac4' }}>
+                      {ss.key === 'none' && 'No penalty'}
+                      {ss.key === 'staggered' && '−1D to all skill/attribute rolls'}
+                      {ss.key === 'stunned' && "Can't act"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <p style={{ color: '#b1bac4', fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '1rem' }}>
+              <strong style={{ color: '#f0883e' }}>Prone</strong> is a separate toggle: Dodge becomes Base +10 (harder to hit at range), Parry is capped at 10 (easier to hit in melee).
+            </p>
+
+            <ul style={{ color: '#b1bac4', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.8', margin: 0 }}>
+              <li>Resistance total &gt; Damage &rarr; defender is <strong style={{ color: '#e3b341' }}>Staggered</strong> (or <strong style={{ color: '#818cf8' }}>Stunned</strong> if already Staggered). No wound.</li>
+              <li>Resistance total &le; Damage &rarr; wound level <strong>advances one step</strong>, and the defender <strong style={{ color: '#f0883e' }}>falls Prone</strong>.
+                <ul style={{ paddingLeft: '1.2rem', marginTop: '0.3rem' }}>
+                  <li>If the Resistance roll also had a Complication (wild die rolled a 1) &rarr; wound jumps straight to at least <strong style={{ color: '#c70039' }}>Mortally Wounded</strong> instead of just one step.</li>
+                </ul>
+              </li>
+              <li><strong style={{ color: '#f85149' }}>Killing Blow</strong>: if Resistance total is less than half the Damage total &rarr; instantly <strong style={{ color: '#6e7681' }}>Dead</strong> + falls Prone, overriding everything else.</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Attributes and Skills grid */}
       {editing && (
         <div style={{ marginBottom: '0.5rem', fontSize: '0.78rem', color: '#7d8590', textAlign: 'center' }}>
@@ -430,7 +512,7 @@ function CharacterSheet({ char, editing, onAttrChange, onSkillChange, onAdvanced
                 <span className="attribute-name">{attrDef.label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {editing
-                    ? <input type="number" min="1" value={attr.dice} onChange={e => onAttrChange(attrKey, e.target.value)} className="dice-input" />
+                    ? <input type="number" min="0" value={attr.dice} onChange={e => onAttrChange(attrKey, e.target.value)} className="dice-input" />
                     : <span className="dice-badge">{attr.dice}D</span>}
                   {!editing && (
                     <button
