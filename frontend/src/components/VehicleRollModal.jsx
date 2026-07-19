@@ -17,7 +17,7 @@ export default function VehicleRollModal({ rollInfo, character, onClose, onHeroP
   const [rollFlag, setRollFlag] = useState(null);
   const [savedRollId, setSavedRollId] = useState(null);
 
-  const penalizedBase = Math.max(1, baseDice - woundPenalty);
+  const penalizedBase = woundPenalty > 0 ? Math.max(1, baseDice - woundPenalty) : baseDice;
   const sizeBonusDice = sizeBonus?.type === 'dice' ? sizeAdv * (sizeBonus?.rate || 1) : 0;
   const sizeBonusFlat = sizeBonus?.type === 'flat' ? sizeAdv * (sizeBonus?.rate || 3) : 0;
   const totalFlatBonus = flatBonus + sizeBonusFlat;

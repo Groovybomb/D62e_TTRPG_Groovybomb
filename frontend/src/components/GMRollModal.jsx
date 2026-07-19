@@ -34,7 +34,7 @@ export default function GMRollModal({ request, character, onClose, onHeroPointCh
   const { penalty: woundPenalty, reasons: woundReasons, canAct } = getWoundPenalty(character);
   const applyWoundPenalty = !SPECIAL_SKILLS[request.skill]?.skipWoundPenalty;
   const effectivePenalty = applyWoundPenalty ? woundPenalty : 0;
-  const penalizedBase = Math.max(1, baseDice - effectivePenalty);
+  const penalizedBase = effectivePenalty > 0 ? Math.max(1, baseDice - effectivePenalty) : baseDice;
   const rawDice = doubled ? (penalizedBase + extraDice) * 2 : penalizedBase + extraDice;
   const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
   const isCapped = maxDice && rawDice > maxDice;

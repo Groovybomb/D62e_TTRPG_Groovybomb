@@ -24,7 +24,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
   const { penalty: woundPenalty, reasons: woundReasons, canAct } = getWoundPenalty(character);
   const applyWoundPenalty = !rollInfo.skipWoundPenalty;
   const effectivePenalty = applyWoundPenalty ? woundPenalty : 0;
-  const penalizedBase = Math.max(1, baseDice - effectivePenalty);
+  const penalizedBase = effectivePenalty > 0 ? Math.max(1, baseDice - effectivePenalty) : baseDice;
   const rawDice = doubled ? (penalizedBase + extraDice) * 2 : penalizedBase + extraDice;
   const effectiveDice = maxDice ? Math.min(rawDice, maxDice) : rawDice;
   const isCapped = maxDice && rawDice > maxDice;
@@ -131,11 +131,16 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
     setHpChoice({ delta, label });
   };
 
-  // Wild die exploded on a 6: offer the player the four possible Hero Point outcomes.
-  // Only for normal player skill/attribute rolls (not damage, NPCs, or opposed/initiative flows).
+  // Wild die exploded on a 6, or rolled a 1 (Complication): offer the player the possible
+  // Hero Point outcomes. Only for normal player skill/attribute rolls (not damage, NPCs, or
+  // opposed/initiative flows) — those don't know the DC to compare against.
   const wildSix = !isDamageMode && diceResults.length > 0 && diceResults[0].isWild && diceResults[0].rawFirst === 6;
+  const wildOne = !isDamageMode && diceResults.length > 0 && diceResults[0].isWild && diceResults[0].rawFirst === 1;
   const showHeroChoice = wildSix && !isNPC && !onRollComplete;
+  const showOneChoice = wildOne && !isNPC && !onRollComplete;
   const choicePending = showHeroChoice && !hpChoice;
+  const oneChoicePending = showOneChoice && !hpChoice;
+  const anyChoicePending = choicePending || oneChoicePending;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -328,6 +333,29 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
               </div>
             )}
 
+            {/* Wild die 1 (Complication) — player selects the Hero Point result based on what the GM reports */}
+            {oneChoicePending && (
+              <div className="outcome-section">
+                <p className="choice-prompt">Your wild die rolled a 1 (Complication)! Ask your GM the result, then choose your Hero Point award:</p>
+                <div className="choice-buttons">
+                  <button onClick={() => handleHeroChoice(1, 'Partial Success')} className="choice-btn partial">
+                    <strong>Partial Success</strong>
+                    <span>+1 Hero Point</span>
+                    <span className="choice-note">(you beat the DC)</span>
+                  </button>
+                  <button onClick={() => handleHeroChoice(2, 'Choose to Fail')} className="choice-btn choose-fail">
+                    <strong>Choose to Fail</strong>
+                    <span>+2 Hero Points</span>
+                  </button>
+                  <button onClick={() => handleHeroChoice(1, 'Critical Fail')} className="choice-btn choose-fail">
+                    <strong>Critical Fail</strong>
+                    <span>+1 Hero Point</span>
+                    <span className="choice-note">(you did not beat the DC)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {hpChoice && (
               <div className="outcome-section">
                 <div className="hp-delta">
@@ -352,7 +380,7 @@ export default function RollModal({ rollInfo, character, onClose, onHeroPointCha
                   </button>
                 </>
               )}
-              {!choicePending && (
+              {!anyChoicePending && (
                 <button onClick={onClose} className="close-result-btn">
                   Close
                 </button>
