@@ -243,7 +243,7 @@ export default function OpposedRollModal({ opposedRoll, character, onClose, onHe
 
             <div className="roll-total">
               Your Total: <span className="total-number">{rollTotal?.total}</span>
-              {(flatBonus > 0 || rollTotal?.pips) && <span style={{ color: '#3fb950', fontSize: '0.85rem', marginLeft: '0.3rem' }}>(dice {rollTotal?.diceTotal}{flatBonus > 0 ? ` + ${flatBonus} bonus` : ''}{rollTotal?.pips ? ` ${rollTotal.pips > 0 ? '+' : ''}${rollTotal.pips} pips` : ''})</span>}
+              {(flatBonus > 0 || (rollTotal?.pips !== 0 && rollTotal?.pips != null)) && <span style={{ color: '#3fb950', fontSize: '0.85rem', marginLeft: '0.3rem' }}>(dice {rollTotal?.diceTotal}{flatBonus > 0 ? ` + ${flatBonus} bonus` : ''}{rollTotal?.pips ? ` ${rollTotal.pips > 0 ? '+' : ''}${rollTotal.pips} pips` : ''})</span>}
               <span style={{ color: '#7d8590', fontSize: '0.9rem', marginLeft: '0.5rem' }}>vs. {opposedRoll.initiatorTotal}</span>
             </div>
 
