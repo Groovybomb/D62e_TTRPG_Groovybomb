@@ -4,7 +4,7 @@ This document tracks all completed work, current progress, and next steps. **Upd
 
 ## 🎯 TL;DR — Current Status
 
-**Version:** 3.1.0 — Extra Pips on all roll modals, skill bonus dice/pips on character sheet.
+**Version:** 3.2.0 — Bug fixes from playtesting: attribute dice cap, skill-object crashes, Hero Point cross-tab sync, damage roll log, wild-1 Hero Point choice, 0-dice pools, Dodge/Parry pips, damage rules reference.
 
 **What's Working (v1.1.0):**
 - Max dice cap (GM-settable global limit, applies to all roll modals, polled every 3s by all clients)
@@ -419,6 +419,18 @@ Before committing, verify:
 - [x] **Helper functions** — `getVehicleGunneryDice()`, `getVehicleEvadeDice()`, `getVehicleResistDice()`, `getVehiclePilotingSkill()` in GamePage
 - [x] **Data exports** — `VEHICLE_OPPOSED_PRESETS`, `getVehicleDefense()`, `parseDamageFormula()` added to `opposedPresets.js`
 - [x] **Browser tested** — Character damage with weapon picker, Vehicle Gunnery vs Defense (static), Vehicle Gunnery vs Evade (active with flat bonus), roll log with vehicle names all verified
+
+### v3.2.0: Playtesting Bug Fixes (2026-06-30 / 2026-07-18)
+- [x] **Removed attribute dice cap** — attribute dice input no longer capped at 5 (JS clamp and HTML `max` attribute both removed); attributes can also now be set to 0 for edge cases (min changed from 1 to 0 on `updateAttrDice` and its input)
+- [x] **Fixed skill-object crashes** — `GamePage.jsx` (Quick Roll, character/vehicle opposed roll initiators), `VehiclePage.jsx` (Jupiter Drive/Piloting/Gunnery/Repair dice), and `GameMasterPage.jsx` (expanded skill breakdown) all read raw skill values without `parseSkillValue()`, crashing React ("Objects are not valid as a React child") once a skill had bonus dice/pips stored as an object instead of a plain number. All now parse correctly.
+- [x] **Dodge/Parry bonus pips** — new `dodgePips`/`parryPips` fields on characters, editable on the character sheet, included in `getStaticDefense()` for opposed rolls
+- [x] **Hero Point choice on wild-6 for plain rolls** — Quick Roll and Character Sheet rolls now offer the same 4-outcome Hero Point choice as GM rolls when the wild die explodes (6), since the player (not the app) knows whether the GM's DC was met
+- [x] **Hero Point choice on wild-1 for plain rolls** — same treatment for a wild die rolling 1 (Complication): Partial Success (+1 HP), Choose to Fail (+2 HP, a house rule not in the official rulebook), or Critical Fail (+1 HP)
+- [x] **Delete confirmation** — character sheet Delete button now confirms ("Delete <name>? This cannot be undone.") before deleting
+- [x] **Fixed damage roll log showing wrong dice count** — roll log parenthetical showed the weapon's static base formula (e.g. "7D") instead of the actual dice rolled after doubling/extra dice; now shows `{roll.diceCount}D6`, matching the dice actually rolled
+- [x] **Fixed Hero Points not syncing across tabs** — `GMRollModal`/`OpposedRollModal` are mounted globally and can spend a Hero Point while a player is on the Roll Log/Chat or Vehicle tab; those pages never refetched their own character data afterward (only the Character Sheet tab did). Added the same `refreshKey`-triggered refetch to `GamePage.jsx` and `VehiclePage.jsx`, and fixed `GamePage.jsx`'s `selectedCharacter` to actually update on refetch instead of only being set once
+- [x] **Fixed 0-dice pools being forced to a minimum of 1D6** — all four roll modals computed `Math.max(1, baseDice - woundPenalty)` unconditionally, so a legitimately 0-dice pool (e.g. an attribute set to 0) got silently bumped to 1D6 even with no wound penalty applied. Floor now only applies when a wound penalty is actually being subtracted.
+- [x] **Damage rules reference popup** — "?" button on the character sheet's wound tracker opens a popup with the Wound Level/Condition tables, Prone note, and Resistance-vs-Damage rules, matching the app's existing modal styling
 
 ### v3.1.0: Extra Pips & Skill Bonus Dice/Pips (2026-06-30)
 - [x] **Extra Pips on all roll modals** — flat value added to rolled total, adjustable via +/- buttons next to Extra Dice
@@ -894,6 +906,6 @@ Schema auto-created on startup via `initDb()` in `backend/src/db.js`.
 
 ---
 
-**Last Updated:** 2026-06-30
-**Last Work Done:** Extra Pips on all roll modals, skill bonus dice/pips on character sheet
-**Status:** v3.1.0 — Extra Pips, skill bonus dice/pips
+**Last Updated:** 2026-07-18
+**Last Work Done:** Playtesting bug fixes — dice cap/min, skill-object crashes, Dodge/Parry pips, wild-6/wild-1 Hero Point choices, delete confirmation, damage roll log, cross-tab Hero Point sync, 0-dice pools, damage rules reference popup
+**Status:** v3.2.0 — Playtesting bug fixes
