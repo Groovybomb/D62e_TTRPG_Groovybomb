@@ -131,8 +131,7 @@ export function getStaticDefense(character, stat) {
 
 export function getVehicleDefense(vehicle) {
   const hull = vehicle.stats?.hull || 0;
-  const shield = vehicle.stats?.shield || 0;
-  return hull * 5 + shield;
+  return hull * 5;
 }
 
 export function getSkillLabel(attrKey, skillKey) {

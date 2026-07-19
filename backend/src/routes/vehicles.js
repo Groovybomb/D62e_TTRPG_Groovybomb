@@ -37,19 +37,20 @@ router.post('/', async (req, res) => {
     stats: defaultStats(),
     weapons: [],
     crew: crew || defaultCrew(),
-    woundLevel: 'undamaged',
+    woundLevel: 'healthy',
+    stunState: 'none',
     notes: '',
     isNPC: isNPC || false,
     createdAt: new Date().toISOString(),
   };
 
   await db.execute({
-    sql: `INSERT INTO vehicles (id, userId, name, stats, weapons, crew, woundLevel, notes, isNPC, createdAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO vehicles (id, userId, name, stats, weapons, crew, woundLevel, stunState, notes, isNPC, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       vehicle.id, vehicle.userId, vehicle.name,
       JSON.stringify(vehicle.stats), JSON.stringify(vehicle.weapons), JSON.stringify(vehicle.crew),
-      vehicle.woundLevel, vehicle.notes, vehicle.isNPC ? 1 : 0, vehicle.createdAt,
+      vehicle.woundLevel, vehicle.stunState, vehicle.notes, vehicle.isNPC ? 1 : 0, vehicle.createdAt,
     ],
   });
 
@@ -94,7 +95,7 @@ router.patch('/:id', async (req, res) => {
   if (result.rows.length === 0) return res.status(404).json({ error: 'Vehicle not found' });
 
   const vehicle = parseRow(result.rows[0]);
-  const allowed = ['name', 'stats', 'weapons', 'crew', 'woundLevel', 'notes', 'isNPC'];
+  const allowed = ['name', 'stats', 'weapons', 'crew', 'woundLevel', 'stunState', 'notes', 'isNPC'];
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
@@ -105,10 +106,10 @@ router.patch('/:id', async (req, res) => {
   vehicle.updatedAt = new Date().toISOString();
 
   await db.execute({
-    sql: `UPDATE vehicles SET name=?, stats=?, weapons=?, crew=?, woundLevel=?, notes=?, isNPC=?, updatedAt=? WHERE id=?`,
+    sql: `UPDATE vehicles SET name=?, stats=?, weapons=?, crew=?, woundLevel=?, stunState=?, notes=?, isNPC=?, updatedAt=? WHERE id=?`,
     args: [
       vehicle.name, JSON.stringify(vehicle.stats), JSON.stringify(vehicle.weapons),
-      JSON.stringify(vehicle.crew), vehicle.woundLevel, vehicle.notes,
+      JSON.stringify(vehicle.crew), vehicle.woundLevel, vehicle.stunState, vehicle.notes,
       vehicle.isNPC ? 1 : 0, vehicle.updatedAt, vehicle.id,
     ],
   });

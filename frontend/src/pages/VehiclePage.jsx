@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import VehicleRollModal from '../components/VehicleRollModal';
-import { VEHICLE_WOUND_LEVELS, getVehicleWoundPenalty } from '../data/vehicleWounds';
+import { VEHICLE_WOUND_LEVELS, VEHICLE_STUN_STATES, getVehicleWoundPenalty } from '../data/vehicleWounds';
 import { parseSkillValue } from '../data/attributes';
 
 const STAT_DEFS = [
@@ -141,7 +141,7 @@ export default function VehiclePage({ userId, maxDice, isNPC, refreshKey }) {
     return c ? `${c.name}${c.isNPC ? ' [NPC]' : ''}` : 'Unassigned';
   };
 
-  const getDefense = (stats) => (stats.hull || 0) * 5 + (stats.shield || 0);
+  const getDefense = (stats) => (stats.hull || 0) * 5;
   const getJupiterDriveDice = () => {
     if (!selectedChar) return 0;
     const jd = selectedChar.advancedSkills?.jupiterDrive || 0;
@@ -169,18 +169,18 @@ export default function VehiclePage({ userId, maxDice, isNPC, refreshKey }) {
     return (mech?.dice || 0) + repair.dice + repair.bonusDice;
   };
 
-  const handleWoundChange = async (value) => {
+  const handleWoundChange = async (field, value) => {
     if (!vehicle) return;
     try {
-      await axios.patch(`${API_URL}/vehicles/${vehicle.id}`, { woundLevel: value });
-      setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, woundLevel: value } : v));
-      if (editing) setEditData(prev => prev ? { ...prev, woundLevel: value } : prev);
+      await axios.patch(`${API_URL}/vehicles/${vehicle.id}`, { [field]: value });
+      setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, [field]: value } : v));
+      if (editing) setEditData(prev => prev ? { ...prev, [field]: value } : prev);
     } catch { /* ignore */ }
   };
 
-  const vwp = vehicle ? getVehicleWoundPenalty(vehicle) : { penalty: 0, label: 'Undamaged', canOperate: true };
+  const vwp = vehicle ? getVehicleWoundPenalty(vehicle) : { penalty: 0, reasons: [], canOperate: true };
   const woundRollProps = vwp.penalty > 0 || !vwp.canOperate
-    ? { woundPenalty: vwp.penalty, woundLabel: `${vwp.label} Damage`, canOperate: vwp.canOperate }
+    ? { woundPenalty: vwp.penalty, woundLabel: vwp.reasons.join(', '), canOperate: vwp.canOperate }
     : {};
 
   const openMovementRoll = () => {
@@ -383,18 +383,33 @@ export default function VehiclePage({ userId, maxDice, isNPC, refreshKey }) {
                 {VEHICLE_WOUND_LEVELS.map(wl => (
                   <button
                     key={wl.key}
-                    className={`wound-state-btn ${(vehicle.woundLevel || 'undamaged') === wl.key ? 'active' : ''}`}
-                    style={(vehicle.woundLevel || 'undamaged') === wl.key ? { color: wl.color, borderColor: wl.color, backgroundColor: wl.color + '20' } : {}}
-                    onClick={() => handleWoundChange(wl.key)}
+                    className={`wound-state-btn ${(vehicle.woundLevel || 'healthy') === wl.key ? 'active' : ''}`}
+                    style={(vehicle.woundLevel || 'healthy') === wl.key ? { color: wl.color, borderColor: wl.color, backgroundColor: wl.color + '20' } : {}}
+                    onClick={() => handleWoundChange('woundLevel', wl.key)}
                   >
                     {wl.label}
                   </button>
                 ))}
               </div>
             </div>
+            <div className="wound-track-section">
+              <span className="wound-track-label">Condition</span>
+              <div className="wound-track-buttons">
+                {VEHICLE_STUN_STATES.map(ss => (
+                  <button
+                    key={ss.key}
+                    className={`wound-state-btn ${(vehicle.stunState || 'none') === ss.key ? 'active' : ''}`}
+                    style={(vehicle.stunState || 'none') === ss.key ? { color: ss.color, borderColor: ss.color, backgroundColor: ss.color + '20' } : {}}
+                    onClick={() => handleWoundChange('stunState', ss.key)}
+                  >
+                    {ss.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             {vwp.penalty > 0 && (
               <div className="wound-penalty-summary">
-                Penalty: &minus;{vwp.penalty}D to all vehicle action rolls ({vwp.label} Damage)
+                Penalty: &minus;{vwp.penalty}D to all vehicle action rolls ({vwp.reasons.join(', ')})
               </div>
             )}
             {!vwp.canOperate && (
@@ -535,9 +550,9 @@ export default function VehiclePage({ userId, maxDice, isNPC, refreshKey }) {
               <h3>Damage &amp; Repair</h3>
               <ul style={{ color: '#8b949e', fontSize: '0.85rem', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
                 <li>Repair uses <strong>Mechanical</strong> skill</li>
-                <li>Difficulty 10: Repair Light damage</li>
-                <li>Difficulty 15: Repair Heavy damage</li>
-                <li>Difficulty 20: Repair Severe damage</li>
+                <li>Difficulty 10: Repair Stunned</li>
+                <li>Difficulty 15: Repair Wounded or Incapacitated</li>
+                <li>Difficulty 20: Repair Mortally Wounded</li>
                 <li>Hacking uses <strong>Computers</strong> skill</li>
               </ul>
             </div>

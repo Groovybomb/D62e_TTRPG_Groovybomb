@@ -50,7 +50,8 @@ const schema = `
     stats TEXT DEFAULT '{}',
     weapons TEXT DEFAULT '[]',
     crew TEXT DEFAULT '{}',
-    woundLevel TEXT DEFAULT 'undamaged',
+    woundLevel TEXT DEFAULT 'healthy',
+    stunState TEXT DEFAULT 'none',
     notes TEXT DEFAULT '',
     isNPC INTEGER DEFAULT 0,
     createdAt TEXT,
@@ -242,6 +243,19 @@ export async function initDb() {
   try {
     await db.execute('ALTER TABLE characters ADD COLUMN parryPips INTEGER DEFAULT 0');
   } catch { /* column already exists */ }
+
+  // Add stunState column to vehicles if missing (vehicles now share the character wound/stun system)
+  try {
+    await db.execute("ALTER TABLE vehicles ADD COLUMN stunState TEXT DEFAULT 'none'");
+  } catch { /* column already exists */ }
+
+  // Migrate legacy vehicle damage-state labels to the character-aligned scale
+  try {
+    await db.execute("UPDATE vehicles SET woundLevel = 'healthy' WHERE woundLevel = 'undamaged'");
+    await db.execute("UPDATE vehicles SET woundLevel = 'wounded' WHERE woundLevel = 'light'");
+    await db.execute("UPDATE vehicles SET woundLevel = 'incapacitated' WHERE woundLevel = 'heavy'");
+    await db.execute("UPDATE vehicles SET woundLevel = 'mortallyWounded' WHERE woundLevel = 'severe'");
+  } catch { /* ignore */ }
 
   const settings = await db.execute('SELECT key FROM game_settings WHERE key = ?', ['maxDice']);
   if (settings.rows.length === 0) {

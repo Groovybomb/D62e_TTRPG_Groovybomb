@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { WOUND_LEVELS, STUN_STATES } from '../data/wounds';
-import { VEHICLE_WOUND_LEVELS } from '../data/vehicleWounds';
+import { VEHICLE_WOUND_LEVELS, VEHICLE_STUN_STATES } from '../data/vehicleWounds';
 
 const VGA_COLORS = [
   { name: 'Black', hex: '#000000' },
@@ -119,8 +119,13 @@ function TabletopPage() {
       return parts.length > 0 ? parts.join(', ') : null;
     }
     const veh = vehicles.find(v => v.id === token.entityId);
-    if (!veh || !veh.woundLevel || veh.woundLevel === 'undamaged') return null;
-    return VEHICLE_WOUND_LEVELS.find(w => w.key === veh.woundLevel)?.label || veh.woundLevel;
+    if (!veh) return null;
+    const parts = [];
+    if (veh.woundLevel && veh.woundLevel !== 'healthy')
+      parts.push(VEHICLE_WOUND_LEVELS.find(w => w.key === veh.woundLevel)?.label || veh.woundLevel);
+    if (veh.stunState && veh.stunState !== 'none')
+      parts.push(VEHICLE_STUN_STATES.find(s => s.key === veh.stunState)?.label || veh.stunState);
+    return parts.length > 0 ? parts.join(', ') : null;
   };
 
   const updateTokens = (newTokens) => {
